@@ -171,6 +171,22 @@ test.describe("The generated hero background", () => {
     await expect(backdrop).toBeAttached();
     await expect(backdrop.locator("canvas")).toBeAttached();
 
+    // It covers the hero completely — a background that stops short of an edge
+    // leaves a band of bare gradient, which is what the letterbox used to be.
+    const covers = await page.evaluate(() => {
+      const hero = document
+        .querySelector('[data-testid="hero"]')!
+        .getBoundingClientRect();
+      const canvas = document
+        .querySelector('[data-testid="hero-background"] canvas')!
+        .getBoundingClientRect();
+      return (
+        Math.abs(canvas.top - hero.top) <= 1 &&
+        Math.abs(canvas.height - hero.height) <= 1
+      );
+    });
+    expect(covers).toBe(true);
+
     // Decorative: it carries no meaning and is kept out of the accessibility
     // tree, so the heading above it is what a screen reader encounters.
     await expect(backdrop).toHaveAttribute("aria-hidden", "true");

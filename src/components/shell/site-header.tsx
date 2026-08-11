@@ -86,10 +86,17 @@ export function SiteHeader({
                 key={link.href}
                 href={link.href}
                 aria-current={isCurrent ? "page" : undefined}
+                // Inactive links are `text-wc-soft`, not the `text-wc-muted-2`
+                // the design specifies. The header is translucent and the hero
+                // now runs behind it, so these sit over the generated
+                // background's pale folds, where #777 measures 3.56:1 — and
+                // #777 cannot reach 4.5:1 on any ground. The current page stays
+                // distinguishable by its underline as well as its colour, so
+                // the distinction never rests on colour alone.
                 className={`whitespace-nowrap border-b py-1.5 text-button font-medium tracking-16 uppercase transition-colors duration-300 hover:text-wc-white ${
                   isCurrent
                     ? "border-wc-white text-wc-white"
-                    : "border-transparent text-wc-muted-2"
+                    : "border-transparent text-wc-soft"
                 }`}
               >
                 {link.label}

@@ -139,6 +139,29 @@ test.describe("Homepage", () => {
     ).toHaveAttribute("href", "/contact");
   });
 
+  test("fills the viewport, background and all", async ({ page }) => {
+    await page.goto("/");
+
+    // The hero is the first thing a visitor sees and it owns the whole screen:
+    // it starts at the very top, behind the translucent header, and runs to the
+    // bottom edge with no band of anything else showing.
+    const measurements = await page.evaluate(() => {
+      const hero = document
+        .querySelector('[data-testid="hero"]')!
+        .getBoundingClientRect();
+      return {
+        viewportHeight: window.innerHeight,
+        heroTop: Math.round(hero.top),
+        heroHeight: Math.round(hero.height),
+      };
+    });
+
+    expect(measurements.heroTop).toBe(0);
+    expect(measurements.heroHeight).toBeGreaterThanOrEqual(
+      measurements.viewportHeight,
+    );
+  });
+
   test("reveals a section once it scrolls into view", async ({ page }) => {
     // Worth asserting explicitly: the reveal starts at `opacity: 0`, and
     // Playwright counts a fully transparent element as visible. Without this,

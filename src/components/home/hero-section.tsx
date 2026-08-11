@@ -11,10 +11,12 @@ interface HeroSectionProps {
 /**
  * The hero.
  *
+ * Fills the viewport, edge to edge and behind the fixed header.
+ *
  * Four layers, each one optional except the first:
  *
- * 1. the gradient, halo and letterbox bands — the design's baseline, always
- *    painted, and what a visitor sees when everything above it is absent;
+ * 1. the gradient and halo — the design's baseline, always painted, and what a
+ *    visitor sees when everything above it is absent;
  * 2. the generated WebGL background, for visitors who have not asked for less
  *    motion and whose device can run it;
  * 3. an optional Playback Asset, when Managed Content has one;
@@ -22,7 +24,15 @@ interface HeroSectionProps {
  */
 export function HeroSection({ hero }: HeroSectionProps) {
   return (
-    <section className="relative flex min-h-[92vh] flex-col justify-end overflow-hidden pt-[clamp(28px,6vw,80px)] pb-section-xs">
+    // Fills the viewport edge to edge. The negative margin cancels the padding
+    // `main` uses to clear the fixed header, so the background runs up behind
+    // the header — which is translucent and meant to sit over content — and
+    // `min-h-dvh` follows the *dynamic* viewport, so mobile browser chrome
+    // retracting does not leave a strip of the next section showing.
+    <section
+      data-testid="hero"
+      className="relative -mt-header-offset flex min-h-dvh flex-col justify-end overflow-hidden pt-header-offset pb-section-xs"
+    >
       <div
         aria-hidden="true"
         className="absolute inset-0 bg-[linear-gradient(115deg,#141414_0%,#000_45%,#1A1A1A_100%)]"
@@ -32,14 +42,6 @@ export function HeroSection({ hero }: HeroSectionProps) {
       <div
         aria-hidden="true"
         className="absolute inset-0 bg-[radial-gradient(120%_80%_at_70%_20%,rgba(255,255,255,.10),transparent_60%)]"
-      />
-      <div
-        aria-hidden="true"
-        className="absolute inset-x-0 top-0 h-letterbox bg-wc-pure"
-      />
-      <div
-        aria-hidden="true"
-        className="absolute inset-x-0 bottom-0 h-letterbox bg-wc-pure"
       />
 
       <div className="wc-container relative">

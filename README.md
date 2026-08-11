@@ -189,7 +189,11 @@ Browsers are installed once with `pnpm exec playwright install chromium`.
 
 ## The hero background
 
-The hero is layered, and every layer above the first is optional:
+The hero fills the viewport: it starts at the very top, behind the translucent
+header, and runs to the bottom edge. The design handoff's cinematic letterbox
+bands were removed to get there.
+
+It is layered, and every layer above the first is optional:
 
 1. **The gradient, halo and letterbox bands** — the design's baseline. Always
    painted, and what a visitor sees when everything above is absent.
@@ -212,9 +216,16 @@ worst-case contrast across desktop, tablet and mobile — the tightest margin is
 the subtitle at 5.15:1 against a 4.5:1 requirement. Re-measure if the preset's
 colours, the scrim or the hero's type colours change.
 
-For the same reason the hero's kicker is `text-wc-soft`, not the `text-wc-muted-2`
-the other kickers use: `#777` cannot reach 4.5:1 on *any* background — its
-ceiling against pure black is 4.69:1.
+For the same reason two greys are lifted from `#777` to `#BBB`: the hero's
+kicker, and the header's inactive navigation links, which sit over the same
+background now that the hero runs behind the header. `#777` cannot reach 4.5:1
+on *any* background — its ceiling against pure black is 4.69:1 — so no amount of
+darkening fixes it. The current page stays distinguishable by its underline as
+well as its colour.
+
+Other `#777` micro-labels elsewhere on the page sit on a stable `#0A0A0A` and
+measure 4.22:1. Still short of 4.5:1, but pre-existing and design-level: issue
+#16 owns it.
 
 ## Typography
 

@@ -191,7 +191,6 @@
   --spacing-grid-gap-lg: clamp(14px, 2vw, 26px);
   --spacing-heading-gap: clamp(28px, 4vw, 48px);
   --spacing-heading-gap-lg: clamp(36px, 5vw, 64px);
-  --spacing-letterbox: clamp(28px, 6vh, 64px);
   /* Clears the fixed header. Measured against its tallest state — unscrolled,
    * with the call CTA — so no page can start underneath it. The hero
    * deliberately sits behind the header and sets its own padding. */
