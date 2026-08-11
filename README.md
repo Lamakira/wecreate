@@ -14,6 +14,7 @@ The canonical specification is GitHub issue #1. Domain vocabulary is defined in
 | Framework         | Next.js 16 (App Router, Cache Components)       |
 | UI                | React 19, TypeScript, Tailwind CSS v4           |
 | Managed Content   | Sanity, with the Studio embedded at `/studio`   |
+| Public video      | Mux, uploaded from the Studio                   |
 | Acceptance tests  | Playwright, against the production build        |
 | Package manager   | pnpm                                            |
 
@@ -51,9 +52,11 @@ it belongs to.
    indexed. Only production is crawlable.
 2. **Managed Content provider** — which CMS this process talks to, and the
    Sanity project, dataset and read token when that is Sanity.
-3. **Preview and revalidation secrets** — who may open a preview session and who
+3. **Video platform** — Mux's environment key, for anonymous aggregate playback
+   measurement. Mux's API token is not here: the Studio keeps it in the dataset.
+4. **Preview and revalidation secrets** — who may open a preview session and who
    may drop the content cache.
-4. **Acceptance-test hooks** — set by `playwright.config.ts`, never by hand.
+5. **Acceptance-test hooks** — set by `playwright.config.ts`, never by hand.
 
 Secrets are server-only and live in the deployment platform's secret management.
 Anything named `NEXT_PUBLIC_*` is compiled into the browser bundle, so nothing
@@ -62,9 +65,9 @@ datasets and separate secrets throughout.
 
 ## Managed Content
 
-Everything WeCreate maintains without a developer — homepage sections, global
-contact and social details, navigation labels, SEO defaults, section visibility
-— comes through one interface: `ManagedContentProvider` in
+Everything WeCreate maintains without a developer — homepage sections, Portfolio
+Projects, global contact and social details, navigation labels, SEO defaults,
+section visibility — comes through one interface: `ManagedContentProvider` in
 `src/managed-content/provider.ts`.
 
 ```
@@ -72,6 +75,7 @@ src/managed-content/
 ├── types.ts             the content model the whole application speaks
 ├── provider.ts          the interface, and which implementation is in use
 ├── index.ts             the cached, draft-aware read API pages call
+├── portfolio.ts         when a Portfolio Project may be published, and its poster
 ├── default-content.ts   the canonical starting content
 ├── sanity/              the Sanity implementation
 └── fixture/             the deterministic implementation used by tests and by
@@ -87,8 +91,9 @@ Two rules keep this useful:
 - **Tests never mock internals.** They swap the provider at this boundary and
   drive the real running application, so they stay valid across refactors.
 
-Later integrations — Mux, FedaPay, Resend, Calendly, Supabase Storage — get
-their own boundary of the same shape.
+Later integrations — FedaPay, Resend, Calendly, Supabase Storage — get their own
+boundary of the same shape. Mux already has one; see *Portfolio Projects and
+video* below.
 
 ### Homepage sections, not a page builder
 
@@ -97,13 +102,59 @@ whether each is shown; they cannot add, remove, reorder or nest them. That line
 is what keeps the approved design and its accessibility guarantees intact
 (ADR-0001), and it is enforced by the schema in `src/sanity/schema/`.
 
-Two sections — *Travaux récents* and *La boutique* — display their empty state
-until Portfolio Projects (issue #3) and Digital Products (issue #7) exist as
-content types. No sample entry ships in `src/` for them under any provider:
+*Travaux récents* is not a list of its own: it is the first six published
+Portfolio Projects, so a project is written once and appears in both places.
+*La boutique* displays its empty state until Digital Products (issue #7) exist as
+a content type. No sample entry ships in `src/` for either under any provider:
 WeCreate publishes only real, approved work, and content that could be mistaken
 for a portfolio entry must not be reachable through a misconfigured deployment.
-Tests that need a populated homepage seed their own from
+Tests that need a populated site seed their own from
 `tests/e2e/support/sample-content.ts`.
+
+## Portfolio Projects and video
+
+A Portfolio Project is a client-approved body of work with its editorial
+context, its poster and its Playback Asset. Editors create them in the Studio;
+`/portfolio` lists them, filters them by universe and opens each one as a
+lightbox, and `/portfolio/[slug]` is the same project as a page of its own — the
+one a shared link, a crawler or a visitor without JavaScript arrives at.
+
+**Publication is a decision, not a state.** `publicationRequirements()` in
+`src/managed-content/portfolio.ts` is the rule, and `readPortfolio()` applies it:
+a project missing its client, description, role, deliverables, poster,
+alternative text, video, the client's permission — or, when its speech carries
+meaning, captions or a transcript — is *absent* from what a visitor is served.
+Nothing counts it, links to it, lists it in the sitemap or serves it at its own
+URL. In preview the gate is lifted and each project says what it still needs, so
+an editor reviews their work in the real page. The Studio asks for the same
+fields, so an editor is told while writing; the read-time rule is what stops a
+project that slipped in another way.
+
+**Video goes through its own boundary** (ADR-0007, ADR-0008):
+
+```
+src/video-playback/
+├── provider.ts       the interface, and what an editor's video association is
+├── mux/provider.ts   Mux: renditions, poster and preview loop, capped at 1080p
+├── mux/player.tsx    Mux's player — the only module allowed to import its SDK
+└── video-player.tsx  a Playback Asset, played; and the poster it falls back to
+```
+
+An editor drops a file into the project's *Vidéo* field; Mux ingests, transcodes
+and issues the playback identity, and the adapter derives every URL from it. No
+editor sees or types a playback id. Playback degrades in one direction only:
+still transcoding, unreachable, or failing in the browser all end at the film's
+poster with the project's words underneath. Nothing autoplays, on any device.
+Hover previews exist only where a fine pointer says the visitor is on a desktop
+and motion is not suppressed, and nothing is downloaded for one until the pointer
+is actually over the card.
+
+One consequence worth knowing: a project that does not exist answers **200 with
+`noindex`**, not 404. Under Cache Components every route with a dynamic segment
+streams a static shell before the slug is resolved, so the status is already
+committed by then; a real 404 would mean resolving every slug in a proxy, which
+puts a content read on every request into the portfolio (ADR-0003). See
+`src/app/(site)/not-found.tsx`.
 
 ## Setting up Sanity
 
@@ -117,6 +168,10 @@ Tests that need a populated homepage seed their own from
    allowed, so the embedded Studio can authenticate.
 5. Restart. `/studio` now opens the editor; before step 2 it shows setup
    instructions instead, and the site keeps working on fixture content.
+6. Open the Studio's *Videos* tool and enter a Mux access token with read and
+   write on video and read on data. It is stored in the dataset rather than in
+   the environment, so each environment's dataset carries its own — which is
+   also what keeps staging uploads out of the production Mux environment.
 
 The Studio is served by the application itself, so there is no separate Studio
 deployment to manage.
@@ -144,7 +199,8 @@ Public pages are prerendered and cached, and Supabase is never on the browsing
 path (ADR-0003). A publish therefore has to invalidate that cache:
 
 1. In the Sanity project, add a webhook to `POST {origin}/api/revalidate`, with
-   a secret, firing on create/update/delete of `siteSettings` and `homePage`.
+   a secret, firing on create/update/delete of `siteSettings`, `homePage`,
+   `portfolioPage` and `portfolioProject`.
 2. Set the same value as `SANITY_WEBHOOK_SECRET`. The signature is verified
    against the raw request body.
 3. The endpoint expires the `managed-content` cache tag, so the very next
@@ -169,6 +225,8 @@ credentials.
 ```
 tests/e2e/
 ├── homepage.spec.ts                  the approved design and its content
+├── portfolio.spec.ts                 filters, counts, the project dialog and its
+│                                     keyboard, playback fallback, publication
 ├── site-shell.spec.ts                header, navigation, cart, footer, fonts
 ├── managed-content-publishing.spec.ts draft, preview, publish, revalidate
 ├── resilience.spec.ts                reduced motion, no JS, nothing published

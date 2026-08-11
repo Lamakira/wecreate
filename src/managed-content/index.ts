@@ -3,8 +3,15 @@ import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import { draftMode } from "next/headers";
 
+import { isPublishable } from "./portfolio";
 import { getManagedContentProvider } from "./provider";
-import type { HomePage, SiteContent, SiteSettings } from "./types";
+import type {
+  HomePage,
+  PortfolioContent,
+  PortfolioProject,
+  SiteContent,
+  SiteSettings,
+} from "./types";
 
 export * from "./types";
 export { MANAGED_CONTENT_TAG } from "./tag";
@@ -55,4 +62,30 @@ export async function readSiteSettings(): Promise<SiteSettings> {
 
 export async function readHomePage(): Promise<HomePage> {
   return (await readSiteContent()).homePage;
+}
+
+/**
+ * The portfolio, with the publication gate already applied.
+ *
+ * A Portfolio Project that is missing an editorial or a rights field does not
+ * reach a visitor at all — it is not hidden behind a flag further down, it is
+ * absent from the list, so no page, count, sitemap entry or detail route can
+ * accidentally expose one. Preview is the exception and the point: an editor
+ * sees every project they are working on, including what each still needs.
+ */
+export async function readPortfolio(): Promise<PortfolioContent> {
+  const { isEnabled } = await draftMode();
+  const portfolio = (await readSiteContent()).portfolio;
+
+  return isEnabled
+    ? portfolio
+    : { ...portfolio, projects: portfolio.projects.filter(isPublishable) };
+}
+
+/** One Portfolio Project by slug, or `undefined` if it is not visible here. */
+export async function readPortfolioProject(
+  slug: string,
+): Promise<PortfolioProject | undefined> {
+  const { projects } = await readPortfolio();
+  return projects.find((project) => project.slug === slug);
 }

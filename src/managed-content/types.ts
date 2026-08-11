@@ -85,17 +85,50 @@ export interface SiteSettings {
   seo: SeoDefaults;
 }
 
+/** One rendition of a video, as a `<source>` would describe it. */
+export interface PlaybackSource {
+  src: string;
+  type: string;
+}
+
+/**
+ * A caption or subtitle track, for video whose speech carries meaning.
+ *
+ * `language` is a BCP 47 tag; `label` is what a viewer picks from the track
+ * menu, so it is written in the language it describes.
+ */
+export interface CaptionTrack {
+  src: string;
+  language: string;
+  label: string;
+}
+
 /**
  * A public video prepared for adaptive streaming.
  *
- * Issue #3 replaces `sources` with Mux-issued adaptive renditions. Until then
- * the field is optional everywhere it appears, because the page must stay
- * understandable when playback is unavailable.
+ * This is the resolved form: everything a page needs to show or play the
+ * video, and nothing about who prepared it. The playback provider
+ * (`src/video-playback/`) turns its own asset association into one of these,
+ * so no component knows a vendor exists.
+ *
+ * It is optional everywhere it appears. A project whose video is missing,
+ * still processing, or served by an unconfigured provider has to stay
+ * understandable from its poster and its words alone.
  */
 export interface PlaybackAsset {
+  /**
+   * Public identity of the prepared stream, issued by the playback provider
+   * and used to play it adaptively. Null when the asset is a plain file, which
+   * is what development and the acceptance suite use.
+   */
+  streamId: string | null;
   posterUrl: string;
   alternativeText: string;
-  sources: Array<{ src: string; type: string }>;
+  /** Ordered renditions, best first. */
+  sources: PlaybackSource[];
+  /** A short, silent loop for hover previews. Never the complete video. */
+  preview: PlaybackSource | null;
+  captions: CaptionTrack[];
 }
 
 /** Aspect ratio of a media frame, expressed as a CSS `aspect-ratio` value. */
@@ -151,25 +184,9 @@ export interface UniversesContent extends SectionVisibility {
   universes: UniverseCard[];
 }
 
-/**
- * The homepage's view of a Portfolio Project.
- *
- * Issue #3 owns the Portfolio Project document type; until it lands the Sanity
- * provider returns an empty list here and the section shows its empty state.
- */
-export interface PortfolioProjectCard {
-  id: string;
-  title: string;
-  client: string;
-  category: string;
-  href: string;
-  media: MediaFrameContent;
-}
-
 export interface RecentWorkContent extends SectionVisibility {
   headline: SplitHeadline;
   link: CallToAction;
-  projects: PortfolioProjectCard[];
   emptyStateText: string;
 }
 
@@ -241,8 +258,82 @@ export interface HomePage {
   finalCta: FinalCtaContent;
 }
 
+/**
+ * The three universes WeCreate sells and films in. A Portfolio Project belongs
+ * to exactly one, which is also what the portfolio's filters offer.
+ */
+export type PortfolioUniverse = "Entreprises" | "Immobilier" | "Mariage";
+
+export const PORTFOLIO_UNIVERSES: readonly PortfolioUniverse[] = [
+  "Entreprises",
+  "Immobilier",
+  "Mariage",
+];
+
+/**
+ * How a project's spoken content is made available to someone who cannot hear
+ * it. Declared by the editor, because only a person who has watched the film
+ * knows whether speech carries meaning in it.
+ */
+export type SpokenContentSupport = "none" | "captions" | "transcript";
+
+/**
+ * A client-approved body of WeCreate work, with its editorial context, poster
+ * and adaptive Playback Asset.
+ *
+ * Everything here is either editorial (what the work was and who it was for),
+ * rights (whether the client agreed to it being shown), or presentational
+ * (ratio, poster). What none of it contains is a vendor's playback identifier:
+ * an editor associates a video, and the playback provider issues the rest.
+ */
+export interface PortfolioProject {
+  /** Stable identity. Survives a retitling or a change of slug. */
+  id: string;
+  /** The project's own URL segment under `/portfolio`. */
+  slug: string;
+  title: string;
+  /** Who the work was for. */
+  client: string;
+  /** Null until an editor has chosen one; a project without it cannot publish. */
+  universe: PortfolioUniverse | null;
+  /** The kind of engagement, e.g. `Visite premium`. Shown beside the client. */
+  projectType: string;
+  description: string;
+  /** What WeCreate did on it. */
+  role: string;
+  /** What was handed over. */
+  deliverables: string[];
+  /** The card's visual: its format, its poster and that poster's description. */
+  media: MediaFrameContent;
+  playbackAsset: PlaybackAsset | null;
+  /** Whether the client has agreed to this work being published. */
+  hasPublicationPermission: boolean;
+  spokenContent: SpokenContentSupport;
+  /** Required when `spokenContent` is `transcript`. */
+  transcript: string | null;
+}
+
+/**
+ * The portfolio page and the Portfolio Projects it lists.
+ *
+ * The projects are a collection an editor grows, unlike every other content
+ * type here — which is why they sit beside the homepage rather than inside it.
+ * The homepage's *Travaux récents* reel is the first few of this same list, so
+ * a project is written once and appears in both places.
+ */
+export interface PortfolioContent {
+  seo: PageSeo;
+  kicker: string;
+  headline: SplitHeadline;
+  /** Label of the filter that clears the others, e.g. `Tous`. */
+  allUniversesLabel: string;
+  emptyStateText: string;
+  projects: PortfolioProject[];
+}
+
 /** Everything the public site needs from Managed Content in one place. */
 export interface SiteContent {
   settings: SiteSettings;
   homePage: HomePage;
+  portfolio: PortfolioContent;
 }

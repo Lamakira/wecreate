@@ -1,7 +1,9 @@
 "use client";
 
 import { XMarkIcon } from "@heroicons/react/24/outline";
-import { useEffect, useRef, type ReactNode } from "react";
+import type { ReactNode } from "react";
+
+import { useModalDialog } from "@/lib/use-modal-dialog";
 
 interface SideDrawerProps {
   isOpen: boolean;
@@ -21,18 +23,12 @@ interface SideDrawerProps {
   footer?: ReactNode;
 }
 
-const FOCUSABLE =
-  'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])';
-
 /**
- * A panel that slides in from the right, with the behaviour a modal dialog owes
- * a keyboard or screen-reader user: focus moved in on open, kept inside while
- * open, returned to the opening control on close, Escape to dismiss, and the
- * page behind held still.
+ * A panel that slides in from the right.
  *
- * Both the Digital Cart and the mobile navigation are this. Extracted so that
- * behaviour is written and tested once — a second hand-rolled copy is how one of
- * them ends up missing a focus trap.
+ * Both the Digital Cart and the mobile navigation are this. What it owes a
+ * keyboard or screen-reader user is `useModalDialog`'s, and shared with the
+ * portfolio's lightbox; what is here is the shape it takes on screen.
  */
 export function SideDrawer({
   isOpen,
@@ -44,69 +40,7 @@ export function SideDrawer({
   children,
   footer,
 }: SideDrawerProps) {
-  const panelRef = useRef<HTMLDivElement | null>(null);
-  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
-
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    // Remember where focus came from, so closing returns the visitor to the
-    // control they opened the panel with rather than the top of the document.
-    const previouslyFocused = document.activeElement as HTMLElement | null;
-    closeButtonRef.current?.focus();
-
-    // Hold the page behind still. The scrollbar's width is handed back as
-    // padding so the layout underneath does not jump as it disappears.
-    const { body, documentElement } = document;
-    const scrollbarWidth = window.innerWidth - documentElement.clientWidth;
-    const restore = { overflow: body.style.overflow, paddingRight: body.style.paddingRight };
-    body.style.overflow = "hidden";
-    if (scrollbarWidth > 0) {
-      body.style.paddingRight = `${scrollbarWidth}px`;
-    }
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-        return;
-      }
-
-      if (event.key !== "Tab" || !panelRef.current) {
-        return;
-      }
-
-      // Keep Tab inside the dialog: a modal that lets focus wander onto the
-      // page behind it is not modal to a keyboard or screen-reader user.
-      const focusable = Array.from(
-        panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE),
-      );
-      if (focusable.length === 0) {
-        return;
-      }
-
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      const active = document.activeElement;
-
-      if (event.shiftKey && (active === first || !panelRef.current.contains(active))) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && active === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("keydown", onKeyDown);
-      body.style.overflow = restore.overflow;
-      body.style.paddingRight = restore.paddingRight;
-      previouslyFocused?.focus();
-    };
-  }, [isOpen, onClose]);
+  const { panelRef, closeButtonRef } = useModalDialog(isOpen, onClose);
 
   if (!isOpen) {
     return null;

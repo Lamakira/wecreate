@@ -8,7 +8,7 @@ import { ProofSection } from "@/components/home/proof-section";
 import { RecentWorkSection } from "@/components/home/recent-work-section";
 import { ShopPreviewSection } from "@/components/home/shop-preview-section";
 import { UniversesSection } from "@/components/home/universes-section";
-import { readHomePage } from "@/managed-content";
+import { readHomePage, readPortfolio } from "@/managed-content";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { seo } = await readHomePage();
@@ -34,6 +34,9 @@ export async function generateMetadata(): Promise<Metadata> {
  */
 export default async function HomePageRoute() {
   const homePage = await readHomePage();
+  // The reel is the portfolio's own list, gated the same way, so the homepage
+  // cannot show work the portfolio would refuse to publish.
+  const { projects } = await readPortfolio();
 
   return (
     <>
@@ -45,7 +48,7 @@ export default async function HomePageRoute() {
         <UniversesSection section={homePage.universes} />
       ) : null}
       {homePage.recentWork.isVisible ? (
-        <RecentWorkSection section={homePage.recentWork} />
+        <RecentWorkSection section={homePage.recentWork} projects={projects} />
       ) : null}
       {homePage.proof.isVisible ? <ProofSection section={homePage.proof} /> : null}
       {homePage.shopPreview.isVisible ? (

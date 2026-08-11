@@ -124,8 +124,8 @@ test.describe("Text contrast", () => {
     content = new ManagedContent(request);
     await content.reset();
     await content.editDraft({
+      portfolio: { projects: SAMPLE_PORTFOLIO_PROJECTS },
       homePage: {
-        recentWork: { projects: SAMPLE_PORTFOLIO_PROJECTS },
         shopPreview: { products: SAMPLE_DIGITAL_PRODUCTS },
       },
     });
@@ -142,6 +142,39 @@ test.describe("Text contrast", () => {
 
     const texts = (await collectText(page)).filter((text) => !text.inHero);
     expect(texts.length).toBeGreaterThan(20);
+
+    const failures: string[] = [];
+    for (const text of texts) {
+      if (!text.background) {
+        failures.push(`${text.label} — sits on no opaque surface`);
+        continue;
+      }
+
+      const ratio = contrastRatio(
+        relativeLuminance(...text.color),
+        relativeLuminance(...text.background),
+      );
+      const needs = text.isLarge ? AA_LARGE : AA_NORMAL;
+      if (ratio < needs) {
+        failures.push(`${text.label} — ${ratio.toFixed(2)}:1, needs ${needs}:1`);
+      }
+    }
+
+    expect(failures, `\n${failures.join("\n")}\n`).toEqual([]);
+  });
+
+  test("the portfolio and its project dialog meet WCAG AA", async ({ page }) => {
+    await page.goto("/portfolio");
+    await page.getByRole("link", { name: /Résidence Aurora/ }).click();
+    await expect(
+      page.getByRole("dialog", { name: "Résidence Aurora" }),
+    ).toBeVisible();
+    await page.waitForTimeout(800);
+
+    // The dialog's own ground is `rgba(0,0,0,.94)` over the page, so its text is
+    // measured with the dialog open rather than as a separate page.
+    const texts = await collectText(page);
+    expect(texts.length).toBeGreaterThan(10);
 
     const failures: string[] = [];
     for (const text of texts) {

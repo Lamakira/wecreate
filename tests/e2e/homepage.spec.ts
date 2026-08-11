@@ -14,9 +14,12 @@ test.beforeEach(async ({ request }) => {
   // No Portfolio Project or Digital Product ships in application source, so a
   // populated homepage is something a test publishes, exactly as an editor
   // would. `resilience.spec.ts` covers the unpopulated state.
+  //
+  // The reel is not its own list: *Travaux récents* is the first few Portfolio
+  // Projects, so publishing the portfolio is what fills it.
   await content.editDraft({
+    portfolio: { projects: SAMPLE_PORTFOLIO_PROJECTS },
     homePage: {
-      recentWork: { projects: SAMPLE_PORTFOLIO_PROJECTS },
       shopPreview: { products: SAMPLE_DIGITAL_PRODUCTS },
     },
   });
@@ -72,7 +75,7 @@ test.describe("Homepage", () => {
     ).toHaveAttribute("href", "/services");
   });
 
-  test("shows recent Portfolio Projects with their client and universe", async ({
+  test("shows recent Portfolio Projects with their client and engagement", async ({
     page,
   }) => {
     await page.goto("/");
@@ -80,7 +83,10 @@ test.describe("Homepage", () => {
     const section = page.getByRole("region", { name: /Travaux récents/ });
     await expect(section.getByRole("listitem")).toHaveCount(6);
     await expect(section.getByText("Résidence Aurora")).toBeVisible();
-    await expect(section.getByText("Aurora Stays · Immobilier")).toBeVisible();
+    await expect(section.getByText("Aurora Stays · Visite premium")).toBeVisible();
+    await expect(
+      section.getByRole("link", { name: /Résidence Aurora/ }),
+    ).toHaveAttribute("href", "/portfolio/residence-aurora");
     await expect(
       section.getByRole("link", { name: "Tout le portfolio" }),
     ).toHaveAttribute("href", "/portfolio");
