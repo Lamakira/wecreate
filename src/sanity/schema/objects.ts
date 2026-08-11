@@ -1,0 +1,206 @@
+import { defineField, defineType } from "sanity";
+
+/**
+ * Reusable field objects.
+ *
+ * Every one of these is a closed shape with named fields. There is deliberately
+ * no rich-text or free-form block type anywhere in this schema: editors change
+ * WeCreate's words, never its layout or markup.
+ */
+
+export const callToAction = defineType({
+  name: "callToAction",
+  title: "Bouton",
+  type: "object",
+  fields: [
+    defineField({
+      name: "label",
+      title: "Libellé",
+      type: "string",
+      validation: (rule) => rule.required(),
+    }),
+    defineField({
+      name: "href",
+      title: "Destination",
+      type: "string",
+      description:
+        "Chemin interne (ex. /portfolio) ou adresse complète (ex. https://wa.me/…).",
+      validation: (rule) => rule.required(),
+    }),
+  ],
+  preview: {
+    select: { title: "label", subtitle: "href" },
+  },
+});
+
+export const splitHeadline = defineType({
+  name: "splitHeadline",
+  title: "Titre",
+  type: "object",
+  description:
+    "Le mot en accent est affiché en italique, la signature typographique de la marque.",
+  fields: [
+    defineField({ name: "lead", title: "Avant l'accent", type: "string" }),
+    defineField({
+      name: "emphasis",
+      title: "Mot en accent",
+      type: "string",
+      validation: (rule) => rule.required(),
+    }),
+    defineField({ name: "trail", title: "Après l'accent", type: "string" }),
+  ],
+  preview: {
+    select: { lead: "lead", emphasis: "emphasis", trail: "trail" },
+    prepare: ({ lead, emphasis, trail }) => ({
+      title: `${lead ?? ""}${emphasis ?? ""}${trail ?? ""}`.trim(),
+    }),
+  },
+});
+
+export const mediaFrame = defineType({
+  name: "mediaFrame",
+  title: "Visuel",
+  type: "object",
+  description:
+    "Tant que le visuel définitif n'est pas fourni, le cadre affiche un repère gris au bon format.",
+  fields: [
+    defineField({
+      name: "ratio",
+      title: "Format",
+      type: "string",
+      initialValue: "16 / 9",
+      options: {
+        list: [
+          { title: "Vertical 9:16", value: "9 / 16" },
+          { title: "Horizontal 16:9", value: "16 / 9" },
+          { title: "Portrait 4:5", value: "4 / 5" },
+          { title: "Paysage 4:3", value: "4 / 3" },
+        ],
+        layout: "radio",
+      },
+      validation: (rule) => rule.required(),
+    }),
+    defineField({
+      name: "placeholderLabel",
+      title: "Libellé du repère",
+      type: "string",
+      description: "Texte affiché dans le cadre en attendant le visuel réel.",
+    }),
+    defineField({ name: "image", title: "Image", type: "image" }),
+    defineField({
+      name: "alternativeText",
+      title: "Texte alternatif",
+      type: "string",
+      description:
+        "Décrit l'image pour les personnes qui ne la voient pas. Obligatoire dès qu'une image est ajoutée.",
+      validation: (rule) =>
+        rule.custom((value, context) => {
+          const parent = context.parent as { image?: unknown } | undefined;
+          if (parent?.image && !value) {
+            return "Une image publiée doit avoir un texte alternatif.";
+          }
+          return true;
+        }),
+    }),
+  ],
+});
+
+export const navigationLink = defineType({
+  name: "navigationLink",
+  title: "Lien de navigation",
+  type: "object",
+  fields: [
+    defineField({
+      name: "label",
+      title: "Libellé",
+      type: "string",
+      validation: (rule) => rule.required(),
+    }),
+    defineField({
+      name: "href",
+      title: "Chemin",
+      type: "string",
+      validation: (rule) => rule.required(),
+    }),
+  ],
+  preview: { select: { title: "label", subtitle: "href" } },
+});
+
+export const socialAccount = defineType({
+  name: "socialAccount",
+  title: "Compte social",
+  type: "object",
+  fields: [
+    defineField({
+      name: "label",
+      title: "Libellé",
+      type: "string",
+      validation: (rule) => rule.required(),
+    }),
+    defineField({
+      name: "url",
+      title: "Adresse",
+      type: "url",
+      validation: (rule) => rule.required(),
+    }),
+  ],
+  preview: { select: { title: "label", subtitle: "url" } },
+});
+
+export const universeCard = defineType({
+  name: "universeCard",
+  title: "Univers",
+  type: "object",
+  fields: [
+    defineField({
+      name: "key",
+      title: "Identifiant",
+      type: "slug",
+      options: { source: "title" },
+      validation: (rule) => rule.required(),
+    }),
+    defineField({ name: "kicker", title: "Sur-titre", type: "string" }),
+    defineField({
+      name: "title",
+      title: "Titre",
+      type: "string",
+      validation: (rule) => rule.required(),
+    }),
+    defineField({ name: "description", title: "Description", type: "text", rows: 3 }),
+    defineField({ name: "linkLabel", title: "Libellé du lien", type: "string" }),
+    defineField({
+      name: "href",
+      title: "Destination",
+      type: "string",
+      validation: (rule) => rule.required(),
+    }),
+    defineField({ name: "media", title: "Visuel", type: "mediaFrame" }),
+  ],
+  preview: { select: { title: "title", subtitle: "kicker" } },
+});
+
+export const proofPoint = defineType({
+  name: "proofPoint",
+  title: "Preuve",
+  type: "object",
+  fields: [
+    defineField({
+      name: "figure",
+      title: "Chiffre ou formule",
+      type: "string",
+      validation: (rule) => rule.required(),
+    }),
+    defineField({ name: "description", title: "Description", type: "text", rows: 2 }),
+  ],
+  preview: { select: { title: "figure", subtitle: "description" } },
+});
+
+export const objectTypes = [
+  callToAction,
+  splitHeadline,
+  mediaFrame,
+  navigationLink,
+  socialAccount,
+  universeCard,
+  proofPoint,
+];
