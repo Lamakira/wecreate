@@ -1,0 +1,3 @@
+# Use a CMS from version one
+
+WeCreate will manage portfolio projects, media, products, prices, service offers, availability, featured content, and editorial copy through a CMS from the first release. This adds initial integration and publishing-workflow complexity compared with versioned data files, but gives the client the required autonomy to maintain the site without developer intervention. Content uses structured schemas and controlled section visibility rather than a general page builder; payment configuration, security settings, order state, stable product identifiers, and private deliverables remain outside editorial control.

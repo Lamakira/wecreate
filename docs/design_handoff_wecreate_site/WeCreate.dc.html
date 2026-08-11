@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..800;1,400..800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:#0A0A0A;color:#fff;font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  a{color:inherit;text-decoration:none}
+  a:hover{color:#BBB}
+  button{font-family:inherit}
+  :focus-visible{outline:2px solid #fff;outline-offset:3px}
+  ::selection{background:#fff;color:#000}
+  @keyframes wc-marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+  @keyframes wc-fade{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+  @media (max-width:1120px){[data-cta="wa"]{display:none !important}}
+  @media (max-width:900px){[data-nav]{overflow-x:auto;justify-content:flex-start !important;scrollbar-width:none;-webkit-overflow-scrolling:touch}[data-nav]::-webkit-scrollbar{display:none}[data-logo-full]{display:none !important}[data-logo-icon]{display:block !important}}
+</style>
+</helmet>
+
+<div style="position:fixed;inset:0;z-index:9998;pointer-events:none;opacity:{{ grain }};background-image:repeating-linear-gradient(0deg,#fff 0 1px,transparent 1px 3px)"></div>
+
+<header style="position:fixed;top:0;left:0;right:0;z-index:900;background:rgba(10,10,10,.82);backdrop-filter:blur(14px);border-bottom:1px solid #1A1A1A">
+  <div style="max-width:1560px;margin:0 auto;padding-block:{{ headerPad }};padding-inline:clamp(16px,4vw,56px);display:flex;align-items:center;gap:clamp(10px,2vw,36px);flex-wrap:nowrap;transition:padding-block .35s cubic-bezier(.16,1,.3,1)">
+    <a href="#" onClick="{{ goHome }}" aria-label="WeCreate — accueil" style="display:flex;align-items:center;flex:0 0 auto">
+      <img data-logo-full src="assets/logo-blanc.svg" alt="WeCreate" style="height:22px;width:auto;display:block" />
+      <img data-logo-icon src="assets/icone-blanc.svg" alt="WeCreate" style="height:24px;width:auto;display:none" />
+    </a>
+    <nav data-nav style="display:flex;align-items:center;gap:clamp(10px,1.6vw,26px);margin-left:auto;flex:1 1 auto;flex-wrap:nowrap;justify-content:flex-end">
+      <sc-for list="{{ nav }}" as="item" hint-placeholder-count="6">
+        <a href="#" onClick="{{ item.onClick }}" style="font-size:11px;font-weight:500;letter-spacing:.16em;text-transform:uppercase;white-space:nowrap;color:{{ item.color }};padding:6px 0;border-bottom:1px solid {{ item.line }};transition:color .3s,border-color .3s" style-hover="color:#fff">{{ item.label }}</a>
+      </sc-for>
+    </nav>
+    <div style="display:flex;align-items:center;gap:12px;flex:0 0 auto">
+      <button type="button" onClick="{{ toggleCart }}" aria-label="Panier" style="position:relative;background:none;border:1px solid #333;color:#fff;width:40px;height:40px;border-radius:0;cursor:pointer;display:grid;place-items:center;transition:border-color .3s,background .3s" style-hover="border-color:#fff;background:#111">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 3h2l1.6 8h7L15 5H5" stroke="#fff" stroke-width="1.2"></path><circle cx="6.5" cy="13.5" r="1.1" fill="#fff"></circle><circle cx="12" cy="13.5" r="1.1" fill="#fff"></circle></svg>
+        <span style="position:absolute;top:-7px;right:-7px;min-width:18px;height:18px;background:#fff;color:#000;font-size:10px;font-weight:700;display:grid;place-items:center;border-radius:9px;padding:0 4px">{{ cartCount }}</span>
+      </button>
+      <a href="{{ waLink }}" target="_blank" rel="noopener" style="display:inline-block;white-space:nowrap;background:#fff;color:#000;font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;padding:13px 20px;transition:opacity .3s" style-hover="opacity:.75;color:#000" data-cta="wa">Réserver un appel</a>
+    </div>
+  </div>
+</header>
+
+<!-- ============ PAGE 1 — ACCUEIL ============ -->
+<sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+<main style="padding-top:74px">
+  <section style="position:relative;min-height:92vh;display:flex;flex-direction:column;justify-content:flex-end;padding:clamp(28px,6vw,80px) clamp(20px,5vw,64px) clamp(48px,7vw,96px);overflow:hidden">
+    <div style="position:absolute;inset:0;background:linear-gradient(115deg,#141414 0%,#000 45%,#1A1A1A 100%)"></div>
+    <div style="position:absolute;inset:0;background:radial-gradient(120% 80% at 70% 20%,rgba(255,255,255,.10),transparent 60%)"></div>
+    <div style="position:absolute;left:0;right:0;top:0;height:clamp(28px,6vh,64px);background:#000"></div>
+    <div style="position:absolute;left:0;right:0;bottom:0;height:clamp(28px,6vh,64px);background:#000"></div>
+    <div style="position:relative;max-width:1280px;animation:wc-fade 1.1s cubic-bezier(.16,1,.3,1) both">
+      <p style="font-size:10px;letter-spacing:.34em;text-transform:uppercase;color:#777;margin:0 0 clamp(20px,4vw,34px)">Production vidéo cinématographique · Calavi Tankpè, Bénin</p>
+      <h1 style="font-family:'Playfair Display',serif;font-weight:500;font-size:clamp(40px,8.4vw,124px);line-height:.98;letter-spacing:-.02em;margin:0;text-wrap:balance">Nous fabriquons des <em style="font-style:italic">œuvres</em> qui font vendre.</h1>
+      <p style="max-width:52ch;font-size:clamp(14px,1.5vw,18px);font-weight:300;line-height:1.7;color:#BBB;margin:clamp(22px,3vw,34px) 0 0">On ne capture pas des images. Écriture, mise en scène, plein format, étalonnage signature — chaque vidéo est traitée comme une œuvre.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:clamp(28px,4vw,44px)">
+        <a href="#" onClick="{{ goPortfolio }}" style="background:#fff;color:#000;font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;padding:17px 28px;transition:opacity .3s" style-hover="opacity:.75;color:#000">Voir le portfolio</a>
+        <a href="#" onClick="{{ goShop }}" style="border:1px solid #333;color:#fff;font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;padding:17px 28px;transition:border-color .3s,background .3s" style-hover="border-color:#fff;background:#111;color:#fff">Découvrir la boutique</a>
+      </div>
+    </div>
+  </section>
+
+  <div style="border-top:1px solid #1A1A1A;border-bottom:1px solid #1A1A1A;overflow:hidden;padding:18px 0;background:#000">
+    <div style="display:flex;width:max-content;animation:wc-marquee 26s linear infinite">
+      <span style="font-size:11px;letter-spacing:.42em;text-transform:uppercase;color:#777;padding-right:44px">Premium · Cinématographique · Différent&nbsp;&nbsp;—&nbsp;&nbsp;Premium · Cinématographique · Différent&nbsp;&nbsp;—&nbsp;&nbsp;Premium · Cinématographique · Différent&nbsp;&nbsp;—&nbsp;&nbsp;</span>
+      <span style="font-size:11px;letter-spacing:.42em;text-transform:uppercase;color:#777;padding-right:44px">Premium · Cinématographique · Différent&nbsp;&nbsp;—&nbsp;&nbsp;Premium · Cinématographique · Différent&nbsp;&nbsp;—&nbsp;&nbsp;Premium · Cinématographique · Différent&nbsp;&nbsp;—&nbsp;&nbsp;</span>
+    </div>
+  </div>
+
+  <!-- 3 univers -->
+  <section style="padding:clamp(72px,10vw,140px) clamp(20px,5vw,64px);max-width:1560px;margin:0 auto">
+    <div data-reveal style="display:flex;align-items:baseline;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:clamp(36px,5vw,64px)">
+      <h2 style="font-family:'Playfair Display',serif;font-weight:500;font-size:clamp(30px,4.6vw,64px);line-height:1.05;margin:0">Ce qu'on fait</h2>
+      <p style="font-size:10px;letter-spacing:.28em;text-transform:uppercase;color:#777;margin:0">Trois univers · une seule exigence</p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:clamp(14px,2vw,26px)">
+      <sc-for list="{{ univers }}" as="u" hint-placeholder-count="3">
+        <a href="#" onClick="{{ u.onClick }}" data-reveal style="display:block;background:#0F0F0F;border:1px solid #1A1A1A;padding:0;transition:border-color .4s,transform .5s cubic-bezier(.16,1,.3,1)" style-hover="border-color:#555;transform:translateY(-6px);color:#fff">
+          <div style="position:relative;aspect-ratio:4 / 5;background:linear-gradient(150deg,#1A1A1A,#333 55%,#111);display:grid;place-items:center;overflow:hidden">
+            <span style="font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.2em;color:#777;text-transform:uppercase">{{ u.slot }}</span>
+            <span style="position:absolute;bottom:14px;left:16px;font-size:9px;letter-spacing:.2em;color:#BBB;text-transform:uppercase">4:5 · loop</span>
+          </div>
+          <div style="padding:26px 24px 30px">
+            <p style="font-size:10px;letter-spacing:.26em;text-transform:uppercase;color:#777;margin:0 0 12px">{{ u.kicker }}</p>
+            <h3 style="font-family:'Playfair Display',serif;font-weight:500;font-size:30px;margin:0 0 12px">{{ u.title }}</h3>
+            <p style="font-size:14px;font-weight:300;line-height:1.7;color:#BBB;margin:0 0 18px">{{ u.desc }}</p>
+            <span style="font-size:10px;letter-spacing:.2em;text-transform:uppercase;border-bottom:1px solid #555;padding-bottom:4px">Voir les packs</span>
+          </div>
+        </a>
+      </sc-for>
+    </div>
+  </section>
+
+  <!-- extrait portfolio -->
+  <section style="padding:clamp(48px,7vw,96px) clamp(20px,5vw,64px);max-width:1560px;margin:0 auto">
+    <div data-reveal style="display:flex;align-items:baseline;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:clamp(28px,4vw,48px)">
+      <h2 style="font-family:'Playfair Display',serif;font-weight:500;font-size:clamp(30px,4.6vw,64px);margin:0">Travaux <em style="font-style:italic">récents</em></h2>
+      <a href="#" onClick="{{ goPortfolio }}" style="font-size:10px;letter-spacing:.24em;text-transform:uppercase;border-bottom:1px solid #555;padding-bottom:5px">Tout le portfolio</a>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:clamp(12px,1.6vw,20px)">
+      <sc-for list="{{ homeReel }}" as="p" hint-placeholder-count="6">
+        <button type="button" onClick="{{ p.onOpen }}" style="all:unset;cursor:pointer;display:block;position:relative;overflow:hidden;background:#111;border:1px solid #1A1A1A" data-reveal>
+          <div style="aspect-ratio:{{ p.ratio }};background:linear-gradient(140deg,#1A1A1A,#3A3A3A 50%,#0F0F0F);display:grid;place-items:center;transition:transform .7s cubic-bezier(.16,1,.3,1)" style-hover="transform:scale(1.05)">
+            <span style="font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.18em;color:#777">{{ p.ratioLabel }}</span>
+          </div>
+          <div style="padding:14px 16px 18px">
+            <p style="font-size:13px;font-weight:500;margin:0 0 5px">{{ p.title }}</p>
+            <p style="font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#777;margin:0">{{ p.meta }}</p>
+          </div>
+        </button>
+      </sc-for>
+    </div>
+  </section>
+
+  <!-- preuve -->
+  <section style="background:#fff;color:#000;padding:clamp(64px,9vw,128px) clamp(20px,5vw,64px)">
+    <div style="max-width:1560px;margin:0 auto">
+      <p data-reveal style="font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:#777;margin:0 0 clamp(32px,5vw,56px)">La différence WeCreate</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:clamp(24px,4vw,56px)">
+        <sc-for list="{{ preuves }}" as="f" hint-placeholder-count="4">
+          <div data-reveal style="border-top:1px solid #EEE;padding-top:22px">
+            <p style="font-family:'Playfair Display',serif;font-size:clamp(28px,3.4vw,44px);font-weight:500;margin:0 0 10px;line-height:1.1">{{ f.big }}</p>
+            <p style="font-size:13px;font-weight:300;line-height:1.7;color:#333;margin:0">{{ f.sub }}</p>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <!-- aperçu boutique -->
+  <section style="padding:clamp(72px,10vw,140px) clamp(20px,5vw,64px);max-width:1560px;margin:0 auto">
+    <div data-reveal style="display:flex;align-items:baseline;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:clamp(28px,4vw,48px)">
+      <h2 style="font-family:'Playfair Display',serif;font-weight:500;font-size:clamp(30px,4.6vw,64px);margin:0">La boutique</h2>
+      <a href="#" onClick="{{ goShop }}" style="font-size:10px;letter-spacing:.24em;text-transform:uppercase;border-bottom:1px solid #555;padding-bottom:5px">Tout voir</a>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:clamp(14px,2vw,24px)">
+      <sc-for list="{{ featured }}" as="pr" hint-placeholder-count="3">
+        <div data-reveal style="border:1px solid #1A1A1A;background:#0F0F0F;display:flex;flex-direction:column;transition:border-color .4s" style-hover="border-color:#555">
+          <button type="button" onClick="{{ pr.onOpen }}" style="all:unset;cursor:pointer;display:block">
+            <div style="aspect-ratio:4 / 3;background:linear-gradient(135deg,#222,#3A3A3A 55%,#111);display:grid;place-items:center">
+              <span style="font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.18em;color:#777">{{ pr.slot }}</span>
+            </div>
+          </button>
+          <div style="padding:22px;display:flex;flex-direction:column;gap:12px;flex:1">
+            <span style="font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:#000;background:#fff;padding:4px 8px;align-self:flex-start">{{ pr.badge }}</span>
+            <h3 style="font-family:'Playfair Display',serif;font-weight:500;font-size:22px;margin:0">{{ pr.title }}</h3>
+            <p style="font-size:13px;font-weight:300;line-height:1.65;color:#BBB;margin:0;flex:1">{{ pr.desc }}</p>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid #1A1A1A;padding-top:14px">
+              <span style="font-size:14px;font-weight:600">{{ pr.priceLabel }}</span>
+              <button type="button" onClick="{{ pr.onAdd }}" style="background:none;border:1px solid #333;color:#fff;font-size:10px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;padding:11px 16px;cursor:pointer;transition:background .3s,border-color .3s" style-hover="background:#fff;border-color:#fff;color:#000">Ajouter</button>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <!-- citation -->
+  <section style="border-top:1px solid #1A1A1A;border-bottom:1px solid #1A1A1A;padding:clamp(72px,10vw,150px) clamp(20px,5vw,64px);text-align:center">
+    <blockquote data-reveal style="max-width:20ch;margin:0 auto;font-family:'Playfair Display',serif;font-style:italic;font-weight:400;font-size:clamp(26px,4.6vw,60px);line-height:1.18">« Ils n'ont pas filmé nos appartements. Ils les ont rendus désirables. »</blockquote>
+    <p data-reveal style="font-size:10px;letter-spacing:.26em;text-transform:uppercase;color:#777;margin:clamp(24px,4vw,40px) 0 0">Gestionnaire de résidences · Cotonou</p>
+  </section>
+
+  <!-- CTA final -->
+  <section style="padding:clamp(72px,10vw,150px) clamp(20px,5vw,64px);max-width:1100px;margin:0 auto;text-align:center">
+    <h2 data-reveal style="font-family:'Playfair Display',serif;font-weight:500;font-size:clamp(34px,6vw,86px);line-height:1.02;margin:0">Parlons de votre <em style="font-style:italic">projet</em>.</h2>
+    <p data-reveal style="font-size:15px;font-weight:300;color:#BBB;margin:24px 0 34px">Devis sous 24-48h. Livraison en 5 jours ouvrés.</p>
+    <div data-reveal style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+      <a href="{{ waLink }}" target="_blank" rel="noopener" style="background:#fff;color:#000;font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;padding:18px 30px;transition:opacity .3s" style-hover="opacity:.75;color:#000">WhatsApp +229 01 67 36 67 26</a>
+      <a href="#" onClick="{{ goContact }}" style="border:1px solid #333;font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;padding:18px 30px;transition:border-color .3s" style-hover="border-color:#fff;color:#fff">Formulaire de contact</a>
+    </div>
+  </section>
+</main>
+</sc-if>
+
+<!-- ============ PAGE 2 — PORTFOLIO ============ -->
+<sc-if value="{{ isPortfolio }}" hint-placeholder-val="{{ false }}">
+<main style="padding-top:120px">
+  <section style="padding:clamp(28px,5vw,64px) clamp(20px,5vw,64px) clamp(24px,4vw,48px);max-width:1560px;margin:0 auto">
+    <p style="font-size:10px;letter-spacing:.32em;text-transform:uppercase;color:#777;margin:0 0 22px">Portfolio · {{ projectCount }}</p>
+    <h1 style="font-family:'Playfair Display',serif;font-weight:500;font-size:clamp(38px,7.6vw,110px);line-height:1;letter-spacing:-.02em;margin:0;max-width:22ch">Chaque projet, une <em style="font-style:italic">œuvre</em>.</h1>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:clamp(30px,4vw,48px);border-top:1px solid #1A1A1A;padding-top:26px">
+      <sc-for list="{{ filters }}" as="f" hint-placeholder-count="4">
+        <button type="button" onClick="{{ f.onClick }}" style="background:{{ f.bg }};color:{{ f.fg }};border:1px solid {{ f.bd }};font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;padding:12px 20px;cursor:pointer;transition:all .3s" style-hover="border-color:#fff">{{ f.label }}</button>
+      </sc-for>
+    </div>
+  </section>
+  <section style="padding:0 clamp(20px,5vw,64px) clamp(72px,10vw,140px);max-width:1560px;margin:0 auto">
+    <div style="columns:3 300px;column-gap:clamp(12px,1.6vw,20px)">
+      <sc-for list="{{ projects }}" as="p" hint-placeholder-count="8">
+        <button type="button" onClick="{{ p.onOpen }}" data-reveal style="all:unset;cursor:pointer;display:block;break-inside:avoid;margin-bottom:clamp(12px,1.6vw,20px);background:#0F0F0F;border:1px solid #1A1A1A;width:100%;transition:border-color .4s" style-hover="border-color:#555">
+          <div style="position:relative;aspect-ratio:{{ p.ratio }};background:linear-gradient(140deg,#1A1A1A,#3A3A3A 50%,#0F0F0F);display:grid;place-items:center;overflow:hidden">
+            <span style="font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.18em;color:#777">{{ p.ratioLabel }}</span>
+            <span style="position:absolute;bottom:12px;right:14px;font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:#BBB">▶ aperçu</span>
+          </div>
+          <div style="padding:18px 18px 22px">
+            <h3 style="font-family:'Playfair Display',serif;font-weight:500;font-size:21px;margin:0 0 7px">{{ p.title }}</h3>
+            <p style="font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#777;margin:0">{{ p.meta }}</p>
+          </div>
+        </button>
+      </sc-for>
+    </div>
+  </section>
+</main>
+</sc-if>
+
+<!-- ============ PAGE 3 — SERVICES ============ -->
+<sc-if value="{{ isServices }}" hint-placeholder-val="{{ false }}">
+<main style="padding-top:120px">
+  <section style="padding:clamp(28px,5vw,64px) clamp(20px,5vw,64px) clamp(56px,8vw,110px);max-width:1560px;margin:0 auto">
+    <p style="font-size:10px;letter-spacing:.32em;text-transform:uppercase;color:#777;margin:0 0 22px">Services · Trois univers</p>
+    <h1 style="font-family:'Playfair Display',serif;font-weight:500;font-size:clamp(38px,7.2vw,104px);line-height:1;letter-spacing:-.02em;margin:0;max-width:24ch">La méthode <em style="font-style:italic">WeCreate</em>.</h1>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:clamp(20px,3vw,44px);margin-top:clamp(36px,5vw,64px);border-top:1px solid #1A1A1A;padding-top:34px">
+      <p style="font-size:15px;font-weight:300;line-height:1.75;color:#BBB;margin:0">On commence par comprendre ce que vous vendez et à qui. Ensuite on écrit. Puis on tourne — plein format, lumière travaillée, son propre.</p>
+      <p style="font-size:15px;font-weight:300;line-height:1.75;color:#BBB;margin:0">L'étalonnage signature vient à la fin : c'est là que l'image devient reconnaissable. Rien n'est laissé au hasard, jamais de gabarit.</p>
+      <p style="font-size:15px;font-weight:300;line-height:1.75;color:#BBB;margin:0">Livraison en 5 jours ouvrés, formats prêts à publier. Devis sous 24-48h, tarifs en FCFA, tout est écrit.</p>
+    </div>
+  </section>
+
+  <sc-for list="{{ groups }}" as="g" hint-placeholder-count="3">
+    <section style="border-top:1px solid #1A1A1A;padding:clamp(56px,8vw,110px) clamp(20px,5vw,64px)">
+      <div style="max-width:1560px;margin:0 auto">
+        <div data-reveal style="display:flex;align-items:baseline;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:clamp(30px,4vw,52px)">
+          <div>
+            <p style="font-size:10px;letter-spacing:.28em;text-transform:uppercase;color:#777;margin:0 0 12px">{{ g.kicker }}</p>
+            <h2 style="font-family:'Playfair Display',serif;font-weight:500;font-size:clamp(30px,4.6vw,62px);margin:0">{{ g.key }}</h2>
+          </div>
+          <p style="font-size:14px;font-weight:300;line-height:1.7;color:#BBB;margin:0;max-width:44ch">{{ g.intro }}</p>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:clamp(14px,1.8vw,22px)">
+          <sc-for list="{{ g.packs }}" as="p" hint-placeholder-count="3">
+            <article data-reveal style="border:1px solid #1A1A1A;background:#0F0F0F;padding:30px 26px 26px;display:flex;flex-direction:column;gap:16px;transition:border-color .4s,transform .5s cubic-bezier(.16,1,.3,1)" style-hover="border-color:#555;transform:translateY(-5px)">
+              <h3 style="font-family:'Playfair Display',serif;font-weight:500;font-size:26px;margin:0">{{ p.name }}</h3>
+              <div style="display:flex;align-items:baseline;gap:8px;border-bottom:1px solid #1A1A1A;padding-bottom:16px">
+                <span style="font-size:clamp(22px,2.4vw,30px);font-weight:600;letter-spacing:-.01em">{{ p.priceLabel }}</span>
+                <span style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#777">{{ p.unit }}</span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:9px;flex:1">
+                <sc-for list="{{ p.inclus }}" as="line" hint-placeholder-count="4">
+                  <p style="display:flex;gap:10px;font-size:13px;font-weight:300;line-height:1.5;color:#BBB;margin:0"><span style="color:#fff">—</span>{{ line }}</p>
+                </sc-for>
+              </div>
+              <div style="border-top:1px solid #1A1A1A;padding-top:14px;display:flex;flex-direction:column;gap:6px">
+                <p style="font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#555;margin:0">Cible · {{ p.cible }}</p>
+                <p style="font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#555;margin:0">Engagement · {{ p.engagement }}</p>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <a href="{{ p.waLink }}" target="_blank" rel="noopener" style="text-align:center;background:#fff;color:#000;font-size:10px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;padding:15px;transition:opacity .3s" style-hover="opacity:.75;color:#000">Demander un devis</a>
+                <sc-if value="{{ p.buyable }}" hint-placeholder-val="{{ false }}">
+                  <button type="button" onClick="{{ p.onAdd }}" style="background:none;border:1px solid #333;color:#fff;font-size:10px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;padding:15px;cursor:pointer;transition:border-color .3s,background .3s" style-hover="border-color:#fff;background:#111">Ajouter au panier</button>
+                </sc-if>
+              </div>
+            </article>
+          </sc-for>
+        </div>
+      </div>
+    </section>
+  </sc-for>
+
+  <!-- tableau comparatif Entreprises -->
+  <section style="background:#fff;color:#000;padding:clamp(56px,8vw,110px) clamp(20px,5vw,64px)">
+    <div style="max-width:1560px;margin:0 auto">
+      <p style="font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:#777;margin:0 0 14px">Comparatif · Abonnements Entreprises</p>
+      <h2 style="font-family:'Playfair Display',serif;font-weight:500;font-size:clamp(28px,4vw,54px);margin:0 0 clamp(28px,4vw,48px)">Choisir son rythme</h2>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;min-width:620px;font-size:13px">
+          <thead>
+            <tr>
+              <th style="text-align:left;padding:14px 12px;border-bottom:1px solid #000;font-size:10px;letter-spacing:.2em;text-transform:uppercase;font-weight:600">&nbsp;</th>
+              <th style="text-align:left;padding:14px 12px;border-bottom:1px solid #000;font-size:10px;letter-spacing:.2em;text-transform:uppercase;font-weight:600">Présence</th>
+              <th style="text-align:left;padding:14px 12px;border-bottom:1px solid #000;font-size:10px;letter-spacing:.2em;text-transform:uppercase;font-weight:600">Croissance</th>
+              <th style="text-align:left;padding:14px 12px;border-bottom:1px solid #000;font-size:10px;letter-spacing:.2em;text-transform:uppercase;font-weight:600">Domination</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td style="padding:14px 12px;border-bottom:1px solid #EEE;color:#777">Prix mensuel</td><td style="padding:14px 12px;border-bottom:1px solid #EEE;font-weight:600">350 000 F</td><td style="padding:14px 12px;border-bottom:1px solid #EEE;font-weight:600">650 000 F</td><td style="padding:14px 12px;border-bottom:1px solid #EEE;font-weight:600">1 200 000 F</td></tr>
+            <tr><td style="padding:14px 12px;border-bottom:1px solid #EEE;color:#777">Vidéos / mois</td><td style="padding:14px 12px;border-bottom:1px solid #EEE">4</td><td style="padding:14px 12px;border-bottom:1px solid #EEE">8</td><td style="padding:14px 12px;border-bottom:1px solid #EEE">16</td></tr>
+            <tr><td style="padding:14px 12px;border-bottom:1px solid #EEE;color:#777">Jours de tournage</td><td style="padding:14px 12px;border-bottom:1px solid #EEE">1</td><td style="padding:14px 12px;border-bottom:1px solid #EEE">2</td><td style="padding:14px 12px;border-bottom:1px solid #EEE">4</td></tr>
+            <tr><td style="padding:14px 12px;border-bottom:1px solid #EEE;color:#777">Film de marque</td><td style="padding:14px 12px;border-bottom:1px solid #EEE;color:#BBB">—</td><td style="padding:14px 12px;border-bottom:1px solid #EEE">1 / trimestre</td><td style="padding:14px 12px;border-bottom:1px solid #EEE">2 / trimestre</td></tr>
+            <tr><td style="padding:14px 12px;border-bottom:1px solid #EEE;color:#777">Drone</td><td style="padding:14px 12px;border-bottom:1px solid #EEE;color:#BBB">—</td><td style="padding:14px 12px;border-bottom:1px solid #EEE;color:#BBB">option</td><td style="padding:14px 12px;border-bottom:1px solid #EEE">inclus</td></tr>
+            <tr><td style="padding:14px 12px;border-bottom:1px solid #EEE;color:#777">Engagement minimum</td><td style="padding:14px 12px;border-bottom:1px solid #EEE">3 mois</td><td style="padding:14px 12px;border-bottom:1px solid #EEE">3 mois</td><td style="padding:14px 12px;border-bottom:1px solid #EEE">6 mois</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- add-ons -->
+  <section style="padding:clamp(56px,8vw,110px) clamp(20px,5vw,64px);max-width:1560px;margin:0 auto">
+    <p data-reveal style="font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:#777;margin:0 0 14px">Add-ons</p>
+    <h2 data-reveal style="font-family:'Playfair Display',serif;font-weight:500;font-size:clamp(28px,4.2vw,58px);margin:0 0 clamp(28px,4vw,48px)">À ajouter à n'importe quel pack</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:clamp(16px,2vw,28px)">
+      <sc-for list="{{ addons }}" as="a" hint-placeholder-count="6">
+        <div data-reveal style="border-top:1px solid #1A1A1A;padding-top:20px">
+          <div style="display:flex;justify-content:space-between;gap:12px;align-items:baseline;margin-bottom:8px">
+            <h3 style="font-size:15px;font-weight:500;margin:0">{{ a.t }}</h3>
+            <span style="font-size:12px;font-weight:600;color:#fff;white-space:nowrap">{{ a.p }}</span>
+          </div>
+          <p style="font-size:13px;font-weight:300;line-height:1.65;color:#777;margin:0">{{ a.d }}</p>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+</main>
+</sc-if>
+
+<!-- ============ PAGE 4 — BOUTIQUE ============ -->
+<sc-if value="{{ isShop }}" hint-placeholder-val="{{ false }}">
+<main style="padding-top:74px;background:#fff;color:#000">
+  <section style="padding:clamp(48px,7vw,96px) clamp(20px,5vw,64px) clamp(24px,4vw,44px);max-width:1560px;margin:0 auto">
+    <p style="font-size:10px;letter-spacing:.32em;text-transform:uppercase;color:#777;margin:0 0 22px">Boutique · Paiement en FCFA</p>
+    <h1 style="font-family:'Playfair Display',serif;font-weight:500;font-size:clamp(38px,7.2vw,104px);line-height:1;letter-spacing:-.02em;margin:0;max-width:22ch">Nos <em style="font-style:italic">outils</em>, entre vos mains.</h1>
+    <p style="font-size:15px;font-weight:300;line-height:1.75;color:#333;margin:26px 0 0;max-width:52ch">Ebooks, LUTs signature et packs services. Ce qu'on utilise pour fabriquer nos images, disponible immédiatement.</p>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:clamp(30px,4vw,48px);border-top:1px solid #EEE;padding-top:26px">
+      <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3">
+        <button type="button" onClick="{{ t.onClick }}" style="background:{{ t.bg }};color:{{ t.fg }};border:1px solid {{ t.bd }};font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;padding:13px 22px;cursor:pointer;transition:all .3s" style-hover="border-color:#000">{{ t.label }}</button>
+      </sc-for>
+    </div>
+  </section>
+  <section style="padding:0 clamp(20px,5vw,64px) clamp(72px,10vw,140px);max-width:1560px;margin:0 auto">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:clamp(16px,2vw,28px)">
+      <sc-for list="{{ products }}" as="p" hint-placeholder-count="3">
+        <article data-reveal style="border:1px solid #EEE;background:#fff;display:flex;flex-direction:column;transition:border-color .4s,transform .5s cubic-bezier(.16,1,.3,1)" style-hover="border-color:#000;transform:translateY(-5px)">
+          <button type="button" onClick="{{ p.onOpen }}" style="all:unset;cursor:pointer;display:block">
+            <div style="position:relative;aspect-ratio:4 / 3;background:linear-gradient(135deg,#EEE,#BBB 55%,#DDD);display:grid;place-items:center;overflow:hidden">
+              <span style="font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.18em;color:#333">{{ p.slot }}</span>
+              <span style="position:absolute;top:12px;left:12px;font-size:9px;letter-spacing:.2em;text-transform:uppercase;background:#000;color:#fff;padding:5px 9px">{{ p.badge }}</span>
+            </div>
+          </button>
+          <div style="padding:24px 22px 22px;display:flex;flex-direction:column;gap:12px;flex:1">
+            <h3 style="font-family:'Playfair Display',serif;font-weight:500;font-size:23px;margin:0">{{ p.title }}</h3>
+            <p style="font-size:13px;font-weight:300;line-height:1.65;color:#333;margin:0;flex:1">{{ p.desc }}</p>
+            <button type="button" onClick="{{ p.onOpen }}" style="align-self:flex-start;background:none;border:none;padding:0;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#777;border-bottom:1px solid #BBB;cursor:pointer" style-hover="color:#000">Voir le détail</button>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid #EEE;padding-top:16px">
+              <span style="font-size:15px;font-weight:600">{{ p.priceLabel }}</span>
+              <button type="button" onClick="{{ p.onAdd }}" style="background:#000;color:#fff;border:1px solid #000;font-size:10px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;padding:12px 18px;cursor:pointer;transition:opacity .3s" style-hover="opacity:.72">{{ p.cta }}</button>
+            </div>
+          </div>
+        </article>
+      </sc-for>
+    </div>
+  </section>
+</main>
+</sc-if>
+
+<!-- ============ PAGE PRODUIT ============ -->
+<sc-if value="{{ isProduct }}" hint-placeholder-val="{{ false }}">
+<main style="padding-top:74px;background:#fff;color:#000">
+  <section style="padding:clamp(36px,6vw,80px) clamp(20px,5vw,64px) clamp(72px,10vw,130px);max-width:1560px;margin:0 auto">
+    <button type="button" onClick="{{ goShop }}" style="background:none;border:none;padding:0;margin:0 0 clamp(28px,4vw,48px);font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:#777;cursor:pointer;border-bottom:1px solid #BBB" style-hover="color:#000">← Retour à la boutique</button>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:clamp(28px,4vw,72px);align-items:start">
+      <div style="position:relative;aspect-ratio:4 / 5;background:linear-gradient(140deg,#EEE,#BBB 55%,#DDD);display:grid;place-items:center">
+        <span style="font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.2em;color:#333">{{ product.slot }}</span>
+        <span style="position:absolute;top:16px;left:16px;font-size:9px;letter-spacing:.2em;text-transform:uppercase;background:#000;color:#fff;padding:6px 10px">{{ product.badge }}</span>
+      </div>
+      <div>
+        <p style="font-size:10px;letter-spacing:.28em;text-transform:uppercase;color:#777;margin:0 0 16px">{{ product.fam }}</p>
+        <h1 style="font-family:'Playfair Display',serif;font-weight:500;font-size:clamp(32px,4.6vw,62px);line-height:1.04;margin:0 0 20px">{{ product.title }}</h1>
+        <p style="font-size:16px;font-weight:300;line-height:1.8;color:#333;margin:0 0 28px">{{ product.long }}</p>
+        <p style="font-size:10px;letter-spacing:.26em;text-transform:uppercase;color:#777;margin:0 0 14px;border-top:1px solid #EEE;padding-top:24px">Ce qui est inclus</p>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:32px">
+          <sc-for list="{{ product.inclus }}" as="line" hint-placeholder-count="4">
+            <p style="display:flex;gap:12px;font-size:14px;font-weight:300;line-height:1.6;margin:0;color:#333"><span style="color:#000">—</span>{{ line }}</p>
+          </sc-for>
+        </div>
+        <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;border-top:1px solid #EEE;padding-top:24px">
+          <span style="font-family:'Playfair Display',serif;font-size:34px">{{ product.priceLabel }}</span>
+          <button type="button" onClick="{{ product.onAdd }}" style="background:#000;color:#fff;border:none;font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;padding:18px 30px;cursor:pointer;transition:opacity .3s" style-hover="opacity:.72">{{ product.cta }}</button>
+          <a href="{{ waLink }}" target="_blank" rel="noopener" style="font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#777;border-bottom:1px solid #BBB;padding-bottom:4px" style-hover="color:#000">Une question ? WhatsApp</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+</sc-if>
+
+<!-- ============ PAGE 5 — À PROPOS ============ -->
+<sc-if value="{{ isAbout }}" hint-placeholder-val="{{ false }}">
+<main style="padding-top:120px">
+  <section style="padding:clamp(28px,5vw,64px) clamp(20px,5vw,64px) clamp(56px,8vw,110px);max-width:1560px;margin:0 auto">
+    <p style="font-size:10px;letter-spacing:.32em;text-transform:uppercase;color:#777;margin:0 0 22px">À propos · Studio à Calavi Tankpè</p>
+    <h1 style="font-family:'Playfair Display',serif;font-weight:500;font-size:clamp(36px,6.6vw,96px);line-height:1.02;letter-spacing:-.02em;margin:0;max-width:26ch">Des <em style="font-style:italic">œuvres</em>, pas du contenu.</h1>
+  </section>
+  <section style="padding:0 clamp(20px,5vw,64px) clamp(56px,8vw,110px);max-width:1560px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:clamp(28px,4vw,72px);align-items:start">
+    <div style="aspect-ratio:4 / 5;background:linear-gradient(150deg,#1A1A1A,#3A3A3A 55%,#0F0F0F);display:grid;place-items:center" data-reveal>
+      <span style="font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.2em;color:#777">portrait studio · 4:5</span>
+    </div>
+    <div data-reveal>
+      <p style="font-size:16px;font-weight:300;line-height:1.85;color:#BBB;margin:0 0 22px">WeCreate est né d'un refus : celui de la vidéo tiède. Au Bénin, presque tout le monde « fait du contenu ». Nous fabriquons des images qui marquent — parce qu'une image qui marque est une image qui vend.</p>
+      <p style="font-size:16px;font-weight:300;line-height:1.85;color:#BBB;margin:0 0 22px">Le studio est basé à Calavi Tankpè. Nous intervenons partout au Bénin : Cotonou, Porto-Novo, Ouidah, Parakou, et à l'international sur devis.</p>
+      <p style="font-family:'Playfair Display',serif;font-style:italic;font-size:clamp(22px,2.6vw,34px);line-height:1.35;margin:34px 0 0">« Le budget d'une vidéo n'est pas une dépense. C'est le prix du désir que vous créez. »</p>
+    </div>
+  </section>
+  <section style="background:#fff;color:#000;padding:clamp(56px,8vw,110px) clamp(20px,5vw,64px)">
+    <div style="max-width:1560px;margin:0 auto">
+      <p style="font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:#777;margin:0 0 14px">La méthode</p>
+      <h2 style="font-family:'Playfair Display',serif;font-weight:500;font-size:clamp(28px,4.2vw,58px);margin:0 0 clamp(30px,4vw,52px)">Brief → tournage → étalonnage → livraison</h2>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:clamp(20px,3vw,44px)">
+        <div style="border-top:1px solid #000;padding-top:20px"><p style="font-size:10px;letter-spacing:.24em;color:#777;margin:0 0 12px">01</p><h3 style="font-family:'Playfair Display',serif;font-weight:500;font-size:24px;margin:0 0 10px">Brief</h3><p style="font-size:13px;font-weight:300;line-height:1.7;color:#333;margin:0">Ce que vous vendez, à qui, et ce que la vidéo doit déclencher. Puis on écrit.</p></div>
+        <div style="border-top:1px solid #000;padding-top:20px"><p style="font-size:10px;letter-spacing:.24em;color:#777;margin:0 0 12px">02</p><h3 style="font-family:'Playfair Display',serif;font-weight:500;font-size:24px;margin:0 0 10px">Tournage</h3><p style="font-size:13px;font-weight:300;line-height:1.7;color:#333;margin:0">Plein format, optiques lumineuses, son dédié, mise en scène assumée.</p></div>
+        <div style="border-top:1px solid #000;padding-top:20px"><p style="font-size:10px;letter-spacing:.24em;color:#777;margin:0 0 12px">03</p><h3 style="font-family:'Playfair Display',serif;font-weight:500;font-size:24px;margin:0 0 10px">Étalonnage signature</h3><p style="font-size:13px;font-weight:300;line-height:1.7;color:#333;margin:0">La couleur WeCreate, construite plan par plan. Notre empreinte.</p></div>
+        <div style="border-top:1px solid #000;padding-top:20px"><p style="font-size:10px;letter-spacing:.24em;color:#777;margin:0 0 12px">04</p><h3 style="font-family:'Playfair Display',serif;font-weight:500;font-size:24px;margin:0 0 10px">Livraison</h3><p style="font-size:13px;font-weight:300;line-height:1.7;color:#333;margin:0">5 jours ouvrés. Tous les formats, prêts à publier.</p></div>
+      </div>
+    </div>
+  </section>
+  <section style="padding:clamp(56px,8vw,110px) clamp(20px,5vw,64px);max-width:1560px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:clamp(28px,4vw,64px)">
+    <div data-reveal>
+      <p style="font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:#777;margin:0 0 20px">L'équipe</p>
+      <div style="display:flex;flex-direction:column;gap:18px">
+        <div style="border-top:1px solid #1A1A1A;padding-top:16px"><h3 style="font-size:15px;font-weight:500;margin:0 0 6px">Direction artistique & réalisation</h3><p style="font-size:13px;font-weight:300;color:#777;margin:0">Écriture, découpage, direction de personnes.</p></div>
+        <div style="border-top:1px solid #1A1A1A;padding-top:16px"><h3 style="font-size:15px;font-weight:500;margin:0 0 6px">Image & lumière</h3><p style="font-size:13px;font-weight:300;color:#777;margin:0">Cadre, exposition, gestion de la lumière disponible.</p></div>
+        <div style="border-top:1px solid #1A1A1A;padding-top:16px"><h3 style="font-size:15px;font-weight:500;margin:0 0 6px">Post-production & étalonnage</h3><p style="font-size:13px;font-weight:300;color:#777;margin:0">Montage, son, couleur signature, LUTs maison.</p></div>
+      </div>
+    </div>
+    <div data-reveal>
+      <p style="font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:#777;margin:0 0 20px">L'équipement</p>
+      <div style="display:flex;flex-direction:column;gap:18px">
+        <div style="border-top:1px solid #1A1A1A;padding-top:16px"><h3 style="font-size:15px;font-weight:500;margin:0 0 6px">Sony ZV-E1 — plein format</h3><p style="font-size:13px;font-weight:300;color:#777;margin:0">Basses lumières, S-Log3, stabilisation active.</p></div>
+        <div style="border-top:1px solid #1A1A1A;padding-top:16px"><h3 style="font-size:15px;font-weight:500;margin:0 0 6px">Optiques lumineuses & stabilisation</h3><p style="font-size:13px;font-weight:300;color:#777;margin:0">Focales fixes, gimbal, slider.</p></div>
+        <div style="border-top:1px solid #1A1A1A;padding-top:16px"><h3 style="font-size:15px;font-weight:500;margin:0 0 6px">Son & lumière</h3><p style="font-size:13px;font-weight:300;color:#777;margin:0">Micros HF, enregistreur, panneaux LED bi-color.</p></div>
+      </div>
+    </div>
+    <div data-reveal>
+      <p style="font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:#777;margin:0 0 20px">Zone d'intervention</p>
+      <p style="font-size:15px;font-weight:300;line-height:1.8;color:#BBB;margin:0 0 20px">Calavi Tankpè · Cotonou · Porto-Novo · Ouidah · Parakou. Tout le Bénin, et au-delà sur devis.</p>
+      <a href="#" onClick="{{ goContact }}" style="font-size:10px;letter-spacing:.2em;text-transform:uppercase;border-bottom:1px solid #555;padding-bottom:5px">Nous écrire</a>
+    </div>
+  </section>
+</main>
+</sc-if>
+
+<!-- ============ PAGE 6 — CONTACT ============ -->
+<sc-if value="{{ isContact }}" hint-placeholder-val="{{ false }}">
+<main style="padding-top:120px">
+  <section style="padding:clamp(28px,5vw,64px) clamp(20px,5vw,64px) clamp(40px,6vw,80px);max-width:1560px;margin:0 auto">
+    <p style="font-size:10px;letter-spacing:.32em;text-transform:uppercase;color:#777;margin:0 0 22px">Contact · Devis sous 24-48h</p>
+    <h1 style="font-family:'Playfair Display',serif;font-weight:500;font-size:clamp(38px,7.2vw,104px);line-height:1;letter-spacing:-.02em;margin:0;max-width:22ch">Dites-nous ce que vous voulez <em style="font-style:italic">vendre</em>.</h1>
+  </section>
+  <section style="padding:0 clamp(20px,5vw,64px) clamp(56px,8vw,110px);max-width:1560px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:clamp(28px,4vw,72px);align-items:start">
+    <form onSubmit="{{ onSubmit }}" style="display:flex;flex-direction:column;gap:20px">
+      <label style="display:flex;flex-direction:column;gap:8px"><span style="font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:#777">Nom complet</span><input type="text" name="nom" required style="background:#0F0F0F;border:1px solid #333;color:#fff;font-family:Inter;font-size:15px;padding:14px 16px" /></label>
+      <label style="display:flex;flex-direction:column;gap:8px"><span style="font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:#777">Email</span><input type="email" name="email" required style="background:#0F0F0F;border:1px solid #333;color:#fff;font-family:Inter;font-size:15px;padding:14px 16px" /></label>
+      <label style="display:flex;flex-direction:column;gap:8px"><span style="font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:#777">Téléphone / WhatsApp</span><input type="tel" name="tel" style="background:#0F0F0F;border:1px solid #333;color:#fff;font-family:Inter;font-size:15px;padding:14px 16px" /></label>
+      <label style="display:flex;flex-direction:column;gap:8px"><span style="font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:#777">Type de projet</span>
+        <select name="type" style="background:#0F0F0F;border:1px solid #333;color:#fff;font-family:Inter;font-size:15px;padding:14px 16px">
+          <option>Entreprise — abonnement mensuel</option>
+          <option>Immobilier — location courte durée</option>
+          <option>Mariage — film premium</option>
+          <option>Produit boutique (ebook / LUTs)</option>
+          <option>Autre</option>
+        </select>
+      </label>
+      <label style="display:flex;flex-direction:column;gap:8px"><span style="font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:#777">Votre projet en quelques lignes</span><textarea name="message" rows="5" style="background:#0F0F0F;border:1px solid #333;color:#fff;font-family:Inter;font-size:15px;padding:14px 16px;resize:vertical"></textarea></label>
+      <button type="submit" style="background:#fff;color:#000;border:none;font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;padding:18px;cursor:pointer;transition:opacity .3s" style-hover="opacity:.75">Envoyer la demande</button>
+      <sc-if value="{{ sent }}" hint-placeholder-val="{{ false }}">
+        <p style="font-size:13px;font-weight:300;color:#fff;border:1px solid #333;padding:16px;margin:0">Demande enregistrée. Réponse sous 24-48h — pour aller plus vite, écrivez-nous sur WhatsApp.</p>
+      </sc-if>
+    </form>
+    <div>
+      <p style="font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:#777;margin:0 0 20px">Coordonnées</p>
+      <div style="display:flex;flex-direction:column;gap:16px;margin-bottom:44px">
+        <a href="{{ waLink }}" target="_blank" rel="noopener" style="font-family:'Playfair Display',serif;font-size:clamp(22px,2.4vw,30px);border-bottom:1px solid #333;padding-bottom:12px" style-hover="color:#BBB">WhatsApp +229 01 67 36 67 26</a>
+        <a href="mailto:wecreate08@gmail.com" style="font-family:'Playfair Display',serif;font-size:clamp(20px,2.2vw,26px);border-bottom:1px solid #333;padding-bottom:12px" style-hover="color:#BBB">wecreate08@gmail.com</a>
+        <div style="display:flex;gap:20px;flex-wrap:wrap;padding-top:6px">
+          <a href="https://instagram.com/wecreate.bj" target="_blank" rel="noopener" style="font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:#BBB" style-hover="color:#fff">Instagram @wecreate.bj</a>
+          <a href="https://tiktok.com/@wecreate.bj" target="_blank" rel="noopener" style="font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:#BBB" style-hover="color:#fff">TikTok @wecreate.bj</a>
+        </div>
+        <p style="font-size:13px;font-weight:300;color:#777;margin:6px 0 0">Studio à Calavi Tankpè, Bénin — sur rendez-vous.</p>
+      </div>
+      <p style="font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:#777;margin:0 0 20px">Comment démarrer</p>
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <sc-for list="{{ etapes }}" as="e" hint-placeholder-count="4">
+          <div style="display:flex;gap:18px;border-top:1px solid #1A1A1A;padding-top:16px">
+            <span style="font-size:10px;letter-spacing:.2em;color:#555;padding-top:3px">{{ e.n }}</span>
+            <div><h3 style="font-size:15px;font-weight:500;margin:0 0 6px">{{ e.t }}</h3><p style="font-size:13px;font-weight:300;line-height:1.65;color:#777;margin:0">{{ e.d }}</p></div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+</main>
+</sc-if>
+
+<!-- ============ FOOTER COMMUN ============ -->
+<footer style="border-top:1px solid #1A1A1A;background:#000;padding:clamp(48px,7vw,88px) clamp(20px,5vw,64px) 34px">
+  <div style="max-width:1560px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:clamp(28px,4vw,56px)">
+    <div>
+      <img src="assets/logo-blanc.svg" alt="WeCreate" style="height:26px;width:auto;display:block;margin-bottom:18px" />
+      <p style="font-family:'Playfair Display',serif;font-style:italic;font-size:18px;line-height:1.5;color:#BBB;margin:0;max-width:26ch">On ne capture pas des images. On fabrique des œuvres qui font vendre.</p>
+    </div>
+    <div>
+      <p style="font-size:10px;letter-spacing:.26em;text-transform:uppercase;color:#777;margin:0 0 16px">Navigation</p>
+      <div style="display:flex;flex-direction:column;gap:10px;align-items:flex-start">
+        <sc-for list="{{ nav }}" as="item" hint-placeholder-count="6">
+          <a href="#" onClick="{{ item.onClick }}" style="font-size:13px;font-weight:300;color:#BBB;transition:color .3s" style-hover="color:#fff">{{ item.label }}</a>
+        </sc-for>
+      </div>
+    </div>
+    <div>
+      <p style="font-size:10px;letter-spacing:.26em;text-transform:uppercase;color:#777;margin:0 0 16px">Contact</p>
+      <div style="display:flex;flex-direction:column;gap:10px;align-items:flex-start;font-size:13px;font-weight:300;color:#BBB">
+        <a href="{{ waLink }}" target="_blank" rel="noopener" style-hover="color:#fff">WhatsApp +229 01 67 36 67 26</a>
+        <a href="mailto:wecreate08@gmail.com" style-hover="color:#fff">wecreate08@gmail.com</a>
+        <span>Calavi Tankpè, Bénin</span>
+      </div>
+    </div>
+    <div>
+      <p style="font-size:10px;letter-spacing:.26em;text-transform:uppercase;color:#777;margin:0 0 16px">Réseaux</p>
+      <div style="display:flex;flex-direction:column;gap:10px;align-items:flex-start;font-size:13px;font-weight:300;color:#BBB">
+        <a href="https://instagram.com/wecreate.bj" target="_blank" rel="noopener" style-hover="color:#fff">Instagram @wecreate.bj</a>
+        <a href="https://tiktok.com/@wecreate.bj" target="_blank" rel="noopener" style-hover="color:#fff">TikTok @wecreate.bj</a>
+      </div>
+    </div>
+  </div>
+  <div style="max-width:1560px;margin:clamp(36px,5vw,64px) auto 0;border-top:1px solid #1A1A1A;padding-top:22px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap">
+    <p style="font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#555;margin:0">WeCreate — Calavi Tankpè, Bénin</p>
+    <p style="font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#555;margin:0">Premium · Cinématographique · Différent</p>
+  </div>
+</footer>
+
+<!-- ============ PANIER LATÉRAL ============ -->
+<sc-if value="{{ cartOpen }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;inset:0;z-index:1000;display:flex;justify-content:flex-end">
+    <button type="button" onClick="{{ toggleCart }}" aria-label="Fermer le panier" style="all:unset;cursor:pointer;position:absolute;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(3px)"></button>
+    <aside style="position:relative;width:min(430px,100%);height:100%;background:#0A0A0A;border-left:1px solid #1A1A1A;display:flex;flex-direction:column;animation:wc-fade .45s cubic-bezier(.16,1,.3,1) both">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:26px 26px 20px;border-bottom:1px solid #1A1A1A">
+        <p style="font-size:10px;letter-spacing:.28em;text-transform:uppercase;color:#777;margin:0">Panier · {{ cartCount }}</p>
+        <button type="button" onClick="{{ toggleCart }}" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;line-height:1">×</button>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:8px 26px">
+        <sc-if value="{{ cartEmpty }}" hint-placeholder-val="{{ false }}">
+          <p style="font-size:14px;font-weight:300;color:#777;padding:32px 0">Votre panier est vide.</p>
+        </sc-if>
+        <sc-for list="{{ cartItems }}" as="it" hint-placeholder-count="0">
+          <div style="display:flex;gap:14px;padding:20px 0;border-bottom:1px solid #141414">
+            <div style="width:64px;height:64px;flex:0 0 auto;background:linear-gradient(135deg,#222,#3A3A3A)"></div>
+            <div style="flex:1">
+              <p style="font-size:14px;font-weight:500;margin:0 0 5px">{{ it.title }}</p>
+              <p style="font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#777;margin:0 0 8px">{{ it.qtyLabel }}</p>
+              <button type="button" onClick="{{ it.onRemove }}" style="background:none;border:none;padding:0;color:#777;font-size:10px;letter-spacing:.18em;text-transform:uppercase;cursor:pointer;border-bottom:1px solid #333" style-hover="color:#fff">Retirer</button>
+            </div>
+            <span style="font-size:14px;font-weight:600">{{ it.priceLabel }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="border-top:1px solid #1A1A1A;padding:24px 26px 30px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:18px">
+          <span style="font-size:10px;letter-spacing:.26em;text-transform:uppercase;color:#777">Total</span>
+          <span style="font-family:'Playfair Display',serif;font-size:26px">{{ cartTotal }}</span>
+        </div>
+        <a href="{{ waCartLink }}" target="_blank" rel="noopener" style="display:block;text-align:center;background:#fff;color:#000;font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;padding:17px;transition:opacity .3s" style-hover="opacity:.75;color:#000">Finaliser sur WhatsApp</a>
+      </div>
+    </aside>
+  </div>
+</sc-if>
+
+<!-- ============ LIGHTBOX PROJET ============ -->
+<sc-if value="{{ lightbox }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;inset:0;z-index:1001;background:rgba(0,0,0,.94);display:flex;align-items:center;justify-content:center;padding:clamp(16px,4vw,56px);overflow-y:auto">
+    <button type="button" onClick="{{ closeLightbox }}" aria-label="Fermer" style="all:unset;cursor:pointer;position:absolute;inset:0"></button>
+    <div style="position:relative;width:min(1080px,100%);animation:wc-fade .5s cubic-bezier(.16,1,.3,1) both">
+      <button type="button" onClick="{{ closeLightbox }}" style="position:absolute;top:-34px;right:0;background:none;border:none;color:#777;font-size:11px;letter-spacing:.2em;text-transform:uppercase;cursor:pointer" style-hover="color:#fff">Fermer ×</button>
+      <div style="aspect-ratio:16 / 9;background:linear-gradient(140deg,#1A1A1A,#3A3A3A 50%,#0F0F0F);display:grid;place-items:center;border:1px solid #1A1A1A">
+        <span style="font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.2em;color:#BBB">▶ lecteur vidéo · 16:9</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:clamp(20px,3vw,44px);padding:28px 0 0">
+        <div>
+          <h3 style="font-family:'Playfair Display',serif;font-weight:500;font-size:clamp(24px,3vw,38px);margin:0 0 10px">{{ lightbox.title }}</h3>
+          <p style="font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#777;margin:0 0 16px">{{ lightbox.meta }}</p>
+          <p style="font-size:14px;font-weight:300;line-height:1.75;color:#BBB;margin:0">{{ lightbox.desc }}</p>
+        </div>
+        <div>
+          <p style="font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:#777;margin:0 0 12px">Rôle de WeCreate</p>
+          <p style="font-size:14px;font-weight:300;line-height:1.75;color:#BBB;margin:0 0 24px">{{ lightbox.role }}</p>
+          <p style="font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:#777;margin:0 0 12px">Livrables</p>
+          <p style="font-size:14px;font-weight:300;line-height:1.75;color:#BBB;margin:0">{{ lightbox.livrables }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;grain&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:0.05,&quot;min&quot;:0,&quot;max&quot;:0.16,&quot;step&quot;:0.01,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Ambiance&quot;,&quot;unit&quot;:&quot;&quot;}}">
+const WA = 'https://wa.me/2290167366726';
+const money = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' F';
+
+/* ---------- DONNÉES : projets ---------- */
+const PROJETS = [
+  { id:'p1', title:'Résidence Aurora', client:'Aurora Stays', cat:'Immobilier', type:'Visite premium', ratio:'9 / 16', desc:"Trois appartements meublés filmés comme des décors de film. Objectif : remplir le calendrier de réservations en basse saison.", role:'Écriture, tournage plein format, étalonnage signature, montage vertical.', livrables:'1 film 60s · 3 verticales 9:16 · 12 photos extraites.' },
+  { id:'p2', title:'Maison Kékéré', client:'Kékéré Design', cat:'Entreprises', type:'Film de marque', ratio:'16 / 9', desc:"Portrait d'atelier : la matière, la main, le geste. Un film de marque qui installe le prix.", role:'Direction artistique, réalisation, son, étalonnage.', livrables:'1 film 90s · 4 coupes réseaux · pack photos.' },
+  { id:'p3', title:'Ayo & Sika', client:'Mariage privé', cat:'Mariage', type:'Wedding Film Signature', ratio:'16 / 9', desc:'Un film de mariage traité comme un long-métrage court : lumière naturelle, voix off, montage émotionnel.', role:'Deux caméras, captation son, teaser, film long.', livrables:'Film 8 min · teaser 60s · reel vertical.' },
+  { id:'p4', title:'Tankpè Coffee', client:'Tankpè Coffee', cat:'Entreprises', type:'Abonnement mensuel', ratio:'9 / 16', desc:'Huit verticales par mois, un seul jour de tournage. Constance et qualité cinéma.', role:'Planning éditorial, tournage, étalonnage, livraison hebdo.', livrables:'8 verticales 9:16 / mois.' },
+  { id:'p5', title:'Villa Océane', client:'Océane Rentals', cat:'Immobilier', type:'Gestionnaire Pro', ratio:'16 / 9', desc:'Une villa en location courte durée, filmée à l’heure dorée. Le taux d’occupation a suivi.', role:'Repérage, tournage drone, étalonnage.', livrables:'1 film 45s · 2 verticales · plans drone.' },
+  { id:'p6', title:'Fashion Robe', client:'Séance mariage', cat:'Mariage', type:'Add-on Fashion Robe', ratio:'9 / 16', desc:'La robe comme sujet principal. Mouvement, tissu, silence.', role:'Mise en scène, tournage, étalonnage.', livrables:'1 reel 30s · 8 photos.' },
+  { id:'p7', title:'Groupe Adjovi', client:'Adjovi Holding', cat:'Entreprises', type:'Pack Domination', ratio:'16 / 9', desc:'Film corporate, interviews dirigeants, habillage sobre. Positionner un groupe, pas vendre un produit.', role:'Écriture, interviews, réalisation, motion sobre.', livrables:'1 film 3 min · 6 extraits · sous-titres.' },
+  { id:'p8', title:'Studio Calavi', client:'Projet interne', cat:'Entreprises', type:'Test étalonnage', ratio:'9 / 16', desc:'Banc d’essai de notre étalonnage signature sur Sony ZV-E1, plein format.', role:'Test technique, LUTs maison.', livrables:'Fichiers de référence + LUT.' }
+];
+
+/* ---------- DONNÉES : boutique ---------- */
+const PRODUITS = [
+  { id:'e1', fam:'Ebooks & Guides', title:'Color Grading Signature', badge:'PDF', price:15000, slot:'couverture ebook', desc:"L'étalonnage cinéma de WeCreate, décomposé étape par étape.", long:"Notre méthode d'étalonnage, du log brut à l'image finale : exposition, balance, séparation des tons, peau, contraste filmique. Captures avant/après sur des projets réels.", inclus:['92 pages PDF','14 études avant / après','Arbre de nodes réutilisable','1 LUT offerte'] },
+  { id:'e2', fam:'Ebooks & Guides', title:'Signature Cinéma', badge:'PDF', price:20000, slot:'couverture ebook', desc:'Le guide de la vidéo cinématographique : écriture, lumière, mise en scène.', long:'Comment penser une vidéo comme une œuvre : intention, découpage, direction de personnes, lumière disponible, son. Le socle de tous nos films.', inclus:['120 pages PDF','Modèles de découpage','Checklists de tournage','Analyses de plans'] },
+  { id:'e3', fam:'Ebooks & Guides', title:'Le Manuel du Créateur Mobile', badge:'PDF', price:10000, slot:'couverture ebook', desc:'Tourner en qualité pro avec un smartphone.', long:'Réglages, stabilisation, lumière, son et étalonnage mobile. Pour créer des images qui ne ressemblent pas à du téléphone.', inclus:['74 pages PDF','Réglages iPhone & Android','3 presets mobiles','Setup à petit budget'] },
+  { id:'l1', fam:'LUTs & Presets', title:'LUT Pack Signature', badge:'Téléchargement', price:25000, slot:'aperçu LUT 16:9', desc:'Notre étalonnage maison, en 10 LUTs .cube.', long:'Les LUTs utilisées sur nos films de marque. Compatibles Resolve, Premiere, Final Cut, LumaFusion. Fonctionnent en S-Log3 et Rec.709.', inclus:['10 LUTs .cube','Version log + Rec.709','Guide d’application PDF'] },
+  { id:'l2', fam:'LUTs & Presets', title:'Teal & Orange Cinéma', badge:'Téléchargement', price:18000, slot:'aperçu LUT 16:9', desc:'Le contraste chaud/froid, dosé sans excès.', long:'Six variations d’un teal & orange sobre, calibrées pour les carnations d’Afrique de l’Ouest.', inclus:['6 LUTs .cube','Variantes douces & fortes','Notes d’exposition'] },
+  { id:'l3', fam:'LUTs & Presets', title:'Nostalgie / Luxe', badge:'Téléchargement', price:18000, slot:'aperçu LUT 16:9', desc:'Grain doux, hautes lumières laiteuses, mémoire de pellicule.', long:'Pour les films de mariage et les marques premium : une image qui semble déjà être un souvenir.', inclus:['8 LUTs .cube','2 textures de grain','Presets photo Lightroom'] },
+  { id:'s1', fam:'Packs Services', title:'Visite Premium — Immobilier', badge:'Réservation', price:120000, slot:'still 16:9', desc:'Un bien, un film. Tourné et livré en 5 jours ouvrés.', long:'Repérage, tournage plein format, étalonnage signature, montage vertical et horizontal. Idéal location courte durée.', inclus:['1 film 45-60s','2 verticales 9:16','10 photos extraites','Livraison 5 jours ouvrés'] },
+  { id:'s2', fam:'Packs Services', title:'Pack Présence — Entreprises', badge:'Réservation', price:350000, slot:'still 16:9', desc:'4 vidéos par mois, une identité visuelle constante.', long:'Un jour de tournage mensuel, un planning éditorial, quatre vidéos étalonnées. Engagement 3 mois.', inclus:['4 vidéos / mois','1 jour de tournage','Étalonnage signature','Planning éditorial'] },
+  { id:'s3', fam:'Packs Services', title:'Pack Souvenir — Mariage', badge:'Réservation', price:400000, slot:'still 16:9', desc:'Votre journée, resserrée en un film qu’on regarde encore dans dix ans.', long:'Présence 6h, une caméra, captation son, film de 4 minutes et un reel vertical.', inclus:['Présence 6h','Film 4 min','1 reel vertical','Livraison 10 jours'] }
+];
+
+/* ---------- DONNÉES : services ---------- */
+const SERVICES = [
+  { key:'Entreprises', kicker:'Abonnements mensuels', intro:'Une présence vidéo constante, pas un one-shot. On prend en charge le planning, le tournage et l’étalonnage.', packs:[
+    { name:'Pack Présence', price:350000, unit:'/ mois', cible:'TPE, commerces, marques qui démarrent', engagement:'3 mois', inclus:['4 vidéos / mois','1 jour de tournage','Étalonnage signature','Planning éditorial','Livraison hebdomadaire'], buy:'s2' },
+    { name:'Pack Croissance', price:650000, unit:'/ mois', cible:'PME et marques en développement', engagement:'3 mois', inclus:['8 vidéos / mois','2 jours de tournage','1 film de marque / trimestre','Étalonnage signature','Écriture & storyboard','Reporting mensuel'], buy:null },
+    { name:'Pack Domination', price:1200000, unit:'/ mois', cible:'Groupes, franchises, marques leaders', engagement:'6 mois', inclus:['16 vidéos / mois','4 jours de tournage','2 films de marque / trimestre','Interviews dirigeants','Drone inclus','Direction artistique dédiée','Livraison prioritaire 48h'], buy:null }
+  ]},
+  { key:'Immobilier', kicker:'Location courte durée', intro:'Les biens ne se louent pas sur des photos plates. On filme le désir : lumière, matière, sensation d’habiter.', packs:[
+    { name:'Pack Visite Premium', price:120000, unit:'à l’unité', cible:'Propriétaires, un bien à valoriser', engagement:'Sans engagement', inclus:['1 film 45-60s','2 verticales 9:16','10 photos extraites','Étalonnage signature','Livraison 5 jours ouvrés'], buy:'s1' },
+    { name:'Pack Gestionnaire Pro', price:320000, unit:'/ mois', cible:'Gestionnaires de 3 à 8 biens', engagement:'3 mois', inclus:['3 biens filmés / mois','Verticales pour Airbnb & réseaux','Photos extraites','Étalonnage signature','Priorité de planning'], buy:null },
+    { name:'Pack Gestionnaire Empire', price:600000, unit:'/ mois', cible:'Portefeuilles de 8 biens et plus', engagement:'6 mois', inclus:['6 biens filmés / mois','Drone inclus','Films longs + verticales','Photos HD illimitées','Étalonnage signature','Community-ready : sous-titres'], buy:null }
+  ]},
+  { key:'Mariage', kicker:'Films premium', intro:'Un mariage ne se rejoue pas. On le traite comme un film : intention, silence, émotion — jamais du montage automatique.', packs:[
+    { name:'Pack Souvenir', price:400000, unit:'', cible:'Cérémonies intimes', engagement:'Acompte 50%', inclus:['Présence 6h','1 caméra','Film 4 min','1 reel vertical','Livraison 10 jours'], buy:'s3' },
+    { name:'Pack Élégance', price:750000, unit:'', cible:'Mariages complets', engagement:'Acompte 50%', inclus:['Présence 10h','2 caméras','Film 6 min','Teaser 60s','2 reels verticaux','Captation son'], buy:null },
+    { name:'Pack Héritage', price:1200000, unit:'', cible:'Mariages sur deux jours', engagement:'Acompte 50%', inclus:['Couverture 2 jours','2 caméras + drone','Film 10 min','Teaser cinéma','Séance Fashion Robe','Coffret livraison'], buy:null },
+    { name:'Wedding Film Signature', price:2000000, unit:'', cible:'Une œuvre, sur mesure', engagement:'Sur devis', inclus:['Écriture & repérages','Équipe complète','Direction artistique dédiée','Film 12-15 min','Voix off & musique originale','Projection privée'], buy:null }
+  ]}
+];
+
+const ADDONS = [
+  { t:'Prises de vue drone', p:'à partir de 75 000 F', d:'Autorisations, pilote, plans aériens étalonnés.' },
+  { t:'Fichiers sources', p:'150 000 F', d:'Rushes bruts + projet de montage livrés sur disque.' },
+  { t:'Séance Fashion Robe', p:'180 000 F', d:'Une séance dédiée à la robe, en studio ou en extérieur.' },
+  { t:'Sous-titres & versions', p:'40 000 F', d:'Sous-titres incrustés, formats 9:16 / 1:1 / 16:9.' },
+  { t:'Journée de tournage supplémentaire', p:'250 000 F', d:'Équipe et matériel identiques, même exigence.' },
+  { t:'Livraison express 48h', p:'+30%', d:'Priorité absolue sur le planning de post-production.' }
+];
+
+class Component extends DCLogic {
+  state = { page:'accueil', filter:'Tous', tab:'Ebooks & Guides', cart:[], cartOpen:false, lightbox:null, product:null, scrolled:false, sent:false };
+
+  componentDidMount(){
+    this._onScroll = () => {
+      const s = window.scrollY > 40;
+      if (s !== this.state.scrolled) this.setState({ scrolled:s });
+    };
+    window.addEventListener('scroll', this._onScroll, { passive:true });
+    this.observe();
+  }
+  componentWillUnmount(){ window.removeEventListener('scroll', this._onScroll); }
+  componentDidUpdate(){ this.observe(); }
+
+  /* reveal au scroll */
+  observe(){
+    if (!this._io) this._io = new IntersectionObserver(entries => {
+      entries.forEach(e => { if (e.isIntersecting){ e.target.style.opacity = '1'; e.target.style.transform = 'none'; this._io.unobserve(e.target); } });
+    }, { threshold:0.1, rootMargin:'0px 0px -6% 0px' });
+    requestAnimationFrame(() => {
+      document.querySelectorAll('[data-reveal]').forEach(el => {
+        if (el.dataset.rv) return;
+        el.dataset.rv = '1';
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(26px)';
+        el.style.transition = 'opacity .9s cubic-bezier(.16,1,.3,1), transform .9s cubic-bezier(.16,1,.3,1)';
+        this._io.observe(el);
+      });
+    });
+  }
+
+  go = (page, e) => {
+    if (e) e.preventDefault();
+    this.setState({ page, product:null, lightbox:null, cartOpen:false });
+    window.scrollTo(0, 0);
+  };
+
+  add = (id) => {
+    const cart = this.state.cart.slice();
+    const found = cart.find(l => l.id === id);
+    if (found) found.qty += 1; else cart.push({ id, qty:1 });
+    this.setState({ cart, cartOpen:true });
+  };
+  remove = (id) => this.setState({ cart:this.state.cart.filter(l => l.id !== id) });
+
+  renderVals(){
+    const s = this.state;
+    const pages = [
+      ['Accueil','accueil'], ['Portfolio','portfolio'], ['Services','services'],
+      ['Boutique','boutique'], ['À propos','apropos'], ['Contact','contact']
+    ];
+    const nav = pages.map(([label, key]) => ({
+      label, onClick: (e) => this.go(key, e),
+      color: s.page === key ? '#fff' : '#777',
+      line: s.page === key ? '#fff' : 'transparent'
+    }));
+
+    const openProject = (p) => () => this.setState({ lightbox:p });
+    const proj = (p) => ({
+      ...p, meta: p.client + ' · ' + p.type,
+      ratioLabel: p.ratio === '9 / 16' ? '9:16 · vertical' : '16:9 · horizontal',
+      onOpen: openProject(p)
+    });
+
+    const filtered = (s.filter === 'Tous' ? PROJETS : PROJETS.filter(p => p.cat === s.filter)).map(proj);
+    const filters = ['Tous','Entreprises','Immobilier','Mariage'].map(f => ({
+      label:f, onClick:() => this.setState({ filter:f }),
+      bg: s.filter === f ? '#fff' : 'transparent',
+      fg: s.filter === f ? '#000' : '#BBB',
+      bd: s.filter === f ? '#fff' : '#333'
+    }));
+
+    const prod = (p) => ({
+      ...p, priceLabel: money(p.price) + ' FCFA',
+      cta: p.badge === 'Réservation' ? 'Réserver' : 'Ajouter au panier',
+      onAdd: () => this.add(p.id),
+      onOpen: () => { this.setState({ product:p, page:'produit' }); window.scrollTo(0,0); }
+    });
+
+    const tabs = ['Ebooks & Guides','LUTs & Presets','Packs Services'].map(t => ({
+      label:t, onClick:() => this.setState({ tab:t }),
+      bg: s.tab === t ? '#000' : 'transparent',
+      fg: s.tab === t ? '#fff' : '#333',
+      bd: s.tab === t ? '#000' : '#BBB'
+    }));
+
+    const cartItems = s.cart.map(l => {
+      const p = PRODUITS.find(x => x.id === l.id);
+      return { title:p.title, qtyLabel:'Quantité ' + l.qty, priceLabel: money(p.price * l.qty) + ' F', onRemove:() => this.remove(l.id) };
+    });
+    const total = s.cart.reduce((a, l) => a + PRODUITS.find(x => x.id === l.id).price * l.qty, 0);
+
+    const groups = SERVICES.map(g => ({
+      ...g,
+      packs: g.packs.map(p => ({
+        ...p,
+        priceLabel: money(p.price),
+        onAdd: p.buy ? () => this.add(p.buy) : null,
+        buyable: !!p.buy,
+        waLink: WA + '?text=' + encodeURIComponent('Bonjour WeCreate, je souhaite un devis pour le ' + p.name + ' (' + g.key + ').')
+      }))
+    }));
+
+    return {
+      grain: this.props.grain ?? 0.05,
+      waLink: WA,
+      waCartLink: WA + '?text=' + encodeURIComponent('Bonjour WeCreate, je souhaite commander : ' + (s.cart.map(l => PRODUITS.find(x => x.id === l.id).title + ' x' + l.qty).join(', ') || '—') + ' — Total ' + money(total) + ' FCFA.'),
+      headerPad: s.scrolled ? '12px' : '20px',
+      nav,
+      goHome:(e)=>this.go('accueil',e), goPortfolio:(e)=>this.go('portfolio',e), goServices:(e)=>this.go('services',e),
+      goShop:(e)=>this.go('boutique',e), goAbout:(e)=>this.go('apropos',e), goContact:(e)=>this.go('contact',e),
+      isHome:s.page==='accueil', isPortfolio:s.page==='portfolio', isServices:s.page==='services',
+      isShop:s.page==='boutique', isAbout:s.page==='apropos', isContact:s.page==='contact',
+      isProduct: s.page==='produit' && !!s.product,
+      product: s.product ? { ...prod(s.product) } : null,
+      univers:[
+        { title:'Entreprises', kicker:'Abonnements mensuels', slot:'loop entreprise', desc:'Une présence vidéo constante : 4 à 16 vidéos par mois, étalonnées, planifiées, livrées.', onClick:(e)=>this.go('services',e) },
+        { title:'Immobilier', kicker:'Location courte durée', slot:'loop immobilier', desc:'Des biens filmés comme des décors. On ne montre pas des pièces, on vend une envie.', onClick:(e)=>this.go('services',e) },
+        { title:'Mariage', kicker:'Films premium', slot:'loop mariage', desc:'Des films qu’on regarde encore dans dix ans. Écriture, mise en scène, émotion.', onClick:(e)=>this.go('services',e) }
+      ],
+      homeReel: PROJETS.slice(0,6).map(proj),
+      projects: filtered,
+      filters,
+      projectCount: filtered.length + ' projet' + (filtered.length > 1 ? 's' : ''),
+      preuves:[
+        { big:'5 jours', sub:'Livraison en 5 jours ouvrés après le tournage. Sans relance.' },
+        { big:'Plein format', sub:'Sony ZV-E1, optiques lumineuses, son dédié. Pas de compromis technique.' },
+        { big:'Étalonnage signature', sub:'Une couleur reconnaissable, construite plan par plan. C’est notre empreinte.' },
+        { big:'3 univers', sub:'Entreprises, immobilier, mariage. Une seule exigence : l’œuvre.' }
+      ],
+      featured: [PRODUITS[0], PRODUITS[3], PRODUITS[6]].map(prod),
+      products: PRODUITS.filter(p => p.fam === s.tab).map(prod),
+      tabs, tabLabel:s.tab,
+      addons: ADDONS,
+      groups,
+      cartOpen:s.cartOpen, cartCount:s.cart.reduce((a,l)=>a+l.qty,0), cartItems,
+      cartEmpty: s.cart.length === 0,
+      cartTotal: money(total) + ' FCFA',
+      toggleCart:() => this.setState({ cartOpen: !s.cartOpen }),
+      lightbox: s.lightbox ? proj(s.lightbox) : null,
+      closeLightbox:() => this.setState({ lightbox:null }),
+      sent:s.sent,
+      onSubmit:(e) => { e.preventDefault(); this.setState({ sent:true }); },
+      etapes:[
+        { n:'01', t:'Contact', d:'WhatsApp ou formulaire. Vous décrivez le projet en trois lignes.' },
+        { n:'02', t:'Devis 24-48h', d:'Une proposition claire : périmètre, livrables, prix, délais.' },
+        { n:'03', t:'Signature', d:'Validation et acompte. Le créneau de tournage est bloqué.' },
+        { n:'04', t:'Brief & tournage', d:'Brief créatif, repérage si besoin, puis on tourne.' }
+      ]
+    };
+  }
+}
+
+</script>
+</body>
+</html>

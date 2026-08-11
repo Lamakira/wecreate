@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..700;1,400..700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#0A0A0A;color:#fff;font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden}
+  a{color:inherit;text-decoration:none}
+  a:hover{color:#BBB}
+  :focus-visible{outline:2px solid #fff;outline-offset:3px}
+  @keyframes wc-fade{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+</style>
+</helmet>
+
+<main style="position:relative;width:100vw;height:100vh;overflow:hidden;background:#0A0A0A">
+  <div ref="{{ stageRef }}" style="position:absolute;inset:0;cursor:grab"></div>
+  <div style="position:absolute;inset:0;pointer-events:none;opacity:.06;background-image:repeating-linear-gradient(0deg,#fff 0 1px,transparent 1px 3px)"></div>
+  <div style="position:absolute;left:0;right:0;top:0;height:6vh;background:#000;pointer-events:none"></div>
+  <div style="position:absolute;left:0;right:0;bottom:0;height:6vh;background:#000;pointer-events:none"></div>
+
+  <header style="position:absolute;top:6vh;left:0;right:0;display:flex;align-items:center;justify-content:space-between;gap:20px;padding:clamp(18px,3vw,32px) clamp(18px,4vw,48px);pointer-events:none">
+    <a href="WeCreate.dc.html" style="pointer-events:auto"><img src="assets/logo-blanc.svg" alt="WeCreate" style="height:20px;width:auto;display:block" /></a>
+    <p style="font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:#777;margin:0">Salle de projection · 3D</p>
+  </header>
+
+  <div style="position:absolute;left:0;right:0;bottom:0;height:52vh;pointer-events:none;background:linear-gradient(180deg,rgba(10,10,10,0) 0%,rgba(10,10,10,.72) 55%,rgba(10,10,10,.94) 100%)"></div>
+
+  <div style="position:absolute;left:0;right:0;bottom:calc(6vh + clamp(16px,3vw,36px));padding:0 clamp(18px,4vw,48px);display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:20px;pointer-events:none">
+  <div style="flex:1 1 320px;min-width:0;max-width:52ch;pointer-events:none">
+    <h1 style="font-family:'Playfair Display',serif;font-weight:500;font-size:clamp(26px,4vw,54px);line-height:1.04;margin:0 0 12px">Entrez dans la <em style="font-style:italic">salle</em>.</h1>
+    <p style="font-size:13px;font-weight:300;line-height:1.7;color:#BBB;margin:0 0 14px">Six projets suspendus dans le noir. Faites glisser pour tourner autour, molette pour vous approcher, cliquez sur un écran pour l'ouvrir.</p>
+    <p style="font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:#555;margin:0">{{ status }}</p>
+  </div>
+
+  <div style="flex:0 0 auto;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;justify-content:flex-end;pointer-events:auto">
+    <button type="button" onClick="{{ toggleSpin }}" style="background:none;border:1px solid #333;color:#fff;font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;white-space:nowrap;padding:12px 18px;cursor:pointer;transition:border-color .3s,background .3s" style-hover="border-color:#fff;background:#111">{{ spinLabel }}</button>
+    <a href="WeCreate.dc.html" style="border:1px solid #333;font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;white-space:nowrap;padding:12px 18px;transition:border-color .3s,background .3s" style-hover="border-color:#fff;background:#111;color:#fff">Retour au site</a>
+  </div>
+  </div>
+
+  <sc-if value="{{ selected }}" hint-placeholder-val="{{ false }}">
+    <aside style="position:absolute;top:0;right:0;height:100%;width:min(400px,100%);background:rgba(10,10,10,.94);backdrop-filter:blur(16px);border-left:1px solid #1A1A1A;padding:clamp(26px,4vw,44px);display:flex;flex-direction:column;gap:18px;animation:wc-fade .45s cubic-bezier(.16,1,.3,1) both;overflow-y:auto">
+      <button type="button" onClick="{{ close }}" style="align-self:flex-end;background:none;border:none;color:#777;font-size:10px;letter-spacing:.2em;text-transform:uppercase;cursor:pointer" style-hover="color:#fff">Fermer ×</button>
+      <p style="font-size:10px;letter-spacing:.26em;text-transform:uppercase;color:#777;margin:0">{{ selected.meta }}</p>
+      <h2 style="font-family:'Playfair Display',serif;font-weight:500;font-size:clamp(26px,3vw,40px);line-height:1.06;margin:0">{{ selected.title }}</h2>
+      <div style="aspect-ratio:16 / 9;background:linear-gradient(140deg,#1A1A1A,#3A3A3A 50%,#0F0F0F);display:grid;place-items:center;border:1px solid #1A1A1A">
+        <span style="font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.2em;color:#BBB">▶ lecteur vidéo · 16:9</span>
+      </div>
+      <p style="font-size:14px;font-weight:300;line-height:1.75;color:#BBB;margin:0">{{ selected.desc }}</p>
+      <div style="border-top:1px solid #1A1A1A;padding-top:16px">
+        <p style="font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:#777;margin:0 0 10px">Livrables</p>
+        <p style="font-size:14px;font-weight:300;line-height:1.7;color:#BBB;margin:0">{{ selected.livrables }}</p>
+      </div>
+      <a href="https://wa.me/2290167366726" target="_blank" rel="noopener" style="margin-top:auto;text-align:center;background:#fff;color:#000;font-size:10px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;padding:16px;transition:opacity .3s" style-hover="opacity:.75;color:#000">Un projet comme celui-ci ?</a>
+    </aside>
+  </sc-if>
+</main>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{}">
+const PROJETS = [
+  { title:'Résidence Aurora', meta:'Aurora Stays · Immobilier', ratio:'9:16', desc:"Trois appartements meublés filmés comme des décors de film. Objectif : remplir le calendrier en basse saison.", livrables:'1 film 60s · 3 verticales 9:16 · 12 photos.' },
+  { title:'Maison Kékéré', meta:'Kékéré Design · Entreprises', ratio:'16:9', desc:"Portrait d'atelier : la matière, la main, le geste. Un film de marque qui installe le prix.", livrables:'1 film 90s · 4 coupes réseaux · pack photos.' },
+  { title:'Ayo & Sika', meta:'Mariage privé · Signature', ratio:'16:9', desc:'Un mariage traité comme un court-métrage : lumière naturelle, voix off, montage émotionnel.', livrables:'Film 8 min · teaser 60s · reel vertical.' },
+  { title:'Tankpè Coffee', meta:'Tankpè Coffee · Entreprises', ratio:'9:16', desc:'Huit verticales par mois, un seul jour de tournage. Constance et qualité cinéma.', livrables:'8 verticales 9:16 / mois.' },
+  { title:'Villa Océane', meta:'Océane Rentals · Immobilier', ratio:'16:9', desc:"Une villa en location courte durée, filmée à l'heure dorée. Le taux d'occupation a suivi.", livrables:'1 film 45s · 2 verticales · plans drone.' },
+  { title:'Fashion Robe', meta:'Séance mariage · Add-on', ratio:'9:16', desc:'La robe comme sujet principal. Mouvement, tissu, silence.', livrables:'1 reel 30s · 8 photos.' }
+];
+
+class Component extends DCLogic {
+  state = { selected:null, spin:true, ready:false };
+  stage = React.createRef();
+
+  componentDidMount(){ this.boot(); }
+  componentWillUnmount(){
+    this._alive = false;
+    if (this._ro) this._ro.disconnect();
+    if (this._renderer) this._renderer.dispose();
+  }
+
+  /* --- texture placeholder : dégradé gris + label monospace --- */
+  makeTexture(THREE, p, i){
+    const w = p.ratio === '9:16' ? 540 : 960, h = p.ratio === '9:16' ? 960 : 540;
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    const x = c.getContext('2d');
+    const g = x.createLinearGradient(0, 0, w, h);
+    g.addColorStop(0, '#3A3A3A'); g.addColorStop(.5, '#585858'); g.addColorStop(1, '#1C1C1C');
+    x.fillStyle = g; x.fillRect(0, 0, w, h);
+    x.strokeStyle = 'rgba(255,255,255,.22)'; x.lineWidth = 2; x.strokeRect(1, 1, w - 2, h - 2);
+    const band = x.createLinearGradient(0, h - 150, 0, h);
+    band.addColorStop(0, 'rgba(0,0,0,0)'); band.addColorStop(1, 'rgba(0,0,0,.85)');
+    x.fillStyle = band; x.fillRect(0, h - 150, w, 150);
+    x.fillStyle = 'rgba(255,255,255,.7)'; x.font = '500 24px ui-monospace, monospace';
+    x.fillText(p.ratio.replace(':', ' / ') + '  ·  placeholder', 34, h - 96);
+    x.fillStyle = '#fff'; x.font = '700 52px Inter, sans-serif';
+    x.fillText(p.title, 34, h - 44);
+    x.fillStyle = 'rgba(255,255,255,.08)';
+    for (let k = 0; k < 3000; k++) x.fillRect(Math.random() * w, Math.random() * h, 1, 1);
+    const t = new THREE.CanvasTexture(c);
+    t.anisotropy = 4;
+    return t;
+  }
+
+  async boot(){
+    this._alive = true;
+    const THREE = await import('https://esm.sh/three@0.160.1');
+    if (!this._alive || !this.stage.current) return;
+    const host = this.stage.current;
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color('#0A0A0A');
+    scene.fog = new THREE.FogExp2('#0A0A0A', 0.022);
+
+    const camera = new THREE.PerspectiveCamera(42, host.clientWidth / host.clientHeight, 0.1, 200);
+    const renderer = new THREE.WebGLRenderer({ antialias:true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(host.clientWidth, host.clientHeight);
+    host.appendChild(renderer.domElement);
+    this._renderer = renderer;
+
+    /* lumière : studio noir & blanc, rim light blanche */
+    scene.add(new THREE.AmbientLight('#ffffff', 0.35));
+    const key = new THREE.DirectionalLight('#ffffff', 1.1); key.position.set(4, 8, 6); scene.add(key);
+    const rim = new THREE.PointLight('#ffffff', 40, 30); rim.position.set(0, 2.4, 0); scene.add(rim);
+
+    /* sol : miroir sombre */
+    const floor = new THREE.Mesh(
+      new THREE.CircleGeometry(26, 64),
+      new THREE.MeshStandardMaterial({ color:'#0E0E0E', roughness:0.42, metalness:0.85 })
+    );
+    floor.rotation.x = -Math.PI / 2; floor.position.y = -2.6; scene.add(floor);
+    const grid = new THREE.GridHelper(52, 52, '#222', '#161616');
+    grid.position.y = -2.58; scene.add(grid);
+
+    /* écrans en cercle */
+    const group = new THREE.Group(); scene.add(group);
+    const R = 6.4;
+    this._panels = [];
+    PROJETS.forEach((p, i) => {
+      const a = (i / PROJETS.length) * Math.PI * 2;
+      const vert = p.ratio === '9:16';
+      const w = vert ? 1.9 : 3.9, h = vert ? 3.38 : 2.19;
+      const mat = new THREE.MeshBasicMaterial({ map:this.makeTexture(THREE, p, i), side:THREE.FrontSide });
+      const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
+      /* dos mat : évite le texte en miroir sur la moitié éloignée du cercle */
+      const back = new THREE.Mesh(
+        new THREE.PlaneGeometry(w, h),
+        new THREE.MeshStandardMaterial({ color:'#121212', roughness:0.92, metalness:0.05, side:THREE.FrontSide })
+      );
+      back.rotation.y = Math.PI; back.position.z = -0.012;
+      mesh.add(back);
+      mesh.position.set(Math.sin(a) * R, 0.2 + (i % 2 ? 0.35 : -0.2), Math.cos(a) * R);
+      mesh.lookAt(mesh.position.x * 2, mesh.position.y, mesh.position.z * 2);
+      mesh.userData = { index:i, baseScale:1 };
+      /* cadre fin blanc */
+      const edge = new THREE.LineSegments(
+        new THREE.EdgesGeometry(new THREE.PlaneGeometry(w + 0.06, h + 0.06)),
+        new THREE.LineBasicMaterial({ color:'#555' })
+      );
+      mesh.add(edge);
+      group.add(mesh); this._panels.push(mesh);
+    });
+
+    /* halo central : sprite à dégradé radial, sans arêtes dures */
+    const hc = document.createElement('canvas'); hc.width = hc.height = 256;
+    const hx = hc.getContext('2d');
+    const hg = hx.createRadialGradient(128, 128, 0, 128, 128, 128);
+    hg.addColorStop(0, 'rgba(255,255,255,.30)'); hg.addColorStop(.45, 'rgba(255,255,255,.06)'); hg.addColorStop(1, 'rgba(255,255,255,0)');
+    hx.fillStyle = hg; hx.fillRect(0, 0, 256, 256);
+    const beam = new THREE.Sprite(new THREE.SpriteMaterial({ map:new THREE.CanvasTexture(hc), transparent:true, depthWrite:false, blending:THREE.AdditiveBlending }));
+    beam.scale.set(7, 7, 1); beam.position.set(0, 0.4, 0); scene.add(beam);
+
+    /* interaction : drag / molette / clic */
+    let theta = 0, targetTheta = 0, dist = 13.5, targetDist = 13.5, dragging = false, moved = 0, lastX = 0;
+    const ray = new THREE.Raycaster(), pointer = new THREE.Vector2();
+    const el = renderer.domElement;
+    el.addEventListener('pointerdown', e => { dragging = true; moved = 0; lastX = e.clientX; el.setPointerCapture(e.pointerId); host.style.cursor = 'grabbing'; });
+    el.addEventListener('pointermove', e => {
+      if (!dragging) return;
+      const dx = e.clientX - lastX; lastX = e.clientX; moved += Math.abs(dx);
+      targetTheta -= dx * 0.006;
+    });
+    el.addEventListener('pointerup', e => {
+      dragging = false; host.style.cursor = 'grab';
+      if (moved > 6) return;
+      const r = el.getBoundingClientRect();
+      pointer.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+      ray.setFromCamera(pointer, camera);
+      const hit = ray.intersectObjects(this._panels, false)[0];
+      if (hit) this.setState({ selected:PROJETS[hit.object.userData.index], spin:false });
+    });
+    el.addEventListener('wheel', e => { e.preventDefault(); targetDist = Math.max(7.5, Math.min(20, targetDist + e.deltaY * 0.012)); }, { passive:false });
+
+    this._ro = new ResizeObserver(() => {
+      camera.aspect = host.clientWidth / host.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(host.clientWidth, host.clientHeight);
+    });
+    this._ro.observe(host);
+
+    const clock = new THREE.Clock();
+    const loop = () => {
+      if (!this._alive) return;
+      requestAnimationFrame(loop);
+      const t = clock.getElapsedTime();
+      if (this.state.spin && !dragging) targetTheta += 0.0016;
+      theta += (targetTheta - theta) * 0.07;
+      dist += (targetDist - dist) * 0.07;
+      camera.position.set(Math.sin(theta) * dist, 1.5 + Math.sin(t * 0.25) * 0.35, Math.cos(theta) * dist);
+      camera.lookAt(0, 0.1, 0);
+      this._panels.forEach((m, i) => { m.position.y += Math.sin(t * 0.6 + i) * 0.0012; });
+      beam.material.opacity = 0.75 + Math.sin(t * 0.7) * 0.12;
+      renderer.render(scene, camera);
+    };
+    loop();
+    this.setState({ ready:true });
+  }
+
+  renderVals(){
+    return {
+      stageRef: this.stage,
+      selected: this.state.selected,
+      close: () => this.setState({ selected:null, spin:true }),
+      spin: this.state.spin,
+      spinLabel: this.state.spin ? 'Rotation auto · on' : 'Rotation auto · off',
+      toggleSpin: () => this.setState({ spin: !this.state.spin }),
+      status: this.state.ready ? 'Glisser · molette · clic' : 'Chargement de la salle…'
+    };
+  }
+}
+
+</script>
+</body>
+</html>

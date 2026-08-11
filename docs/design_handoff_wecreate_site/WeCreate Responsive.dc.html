@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..700;1,400..700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#0A0A0A;color:#fff;font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  a:hover{color:#BBB}
+  :focus-visible{outline:2px solid #fff;outline-offset:3px}
+</style>
+</helmet>
+
+<main style="min-height:100vh;padding:clamp(28px,5vw,64px) clamp(18px,4vw,56px) clamp(56px,8vw,110px)">
+  <header style="display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;border-bottom:1px solid #1A1A1A;padding-bottom:26px">
+    <img src="assets/logo-blanc.svg" alt="WeCreate" style="height:22px;width:auto;display:block" />
+    <a href="WeCreate.dc.html" style="font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:#777;border-bottom:1px solid #333;padding-bottom:5px">Ouvrir le site complet →</a>
+  </header>
+
+  <section style="padding:clamp(36px,6vw,72px) 0 clamp(28px,4vw,52px);max-width:1100px">
+    <p style="font-size:10px;letter-spacing:.32em;text-transform:uppercase;color:#777;margin:0 0 20px">Responsive · Mobile-first</p>
+    <h1 style="font-family:'Playfair Display',serif;font-weight:500;font-size:clamp(34px,6vw,84px);line-height:1.02;letter-spacing:-.02em;margin:0">Le même film, sur <em style="font-style:italic">tous les écrans</em>.</h1>
+    <p style="font-size:15px;font-weight:300;line-height:1.75;color:#BBB;margin:24px 0 0;max-width:56ch">Chaque appareil affiche le site réel, en direct. Naviguez à l'intérieur des cadres : les pages, les filtres et le panier fonctionnent exactement comme sur le site.</p>
+  </section>
+
+  <section ref="{{ stageRef }}" style="display:flex;flex-direction:column;gap:clamp(36px,5vw,72px);padding-top:clamp(12px,2vw,24px);width:100%;min-width:0">
+    <sc-for list="{{ devices }}" as="d" hint-placeholder-count="3">
+      <div style="display:flex;flex-direction:column;gap:14px;width:100%;min-width:0">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;border-top:1px solid #1A1A1A;padding-top:14px">
+          <p style="font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:#fff;margin:0">{{ d.label }}</p>
+          <p style="font-size:10px;letter-spacing:.18em;color:#777;margin:0">{{ d.size }}</p>
+        </div>
+        <p style="font-size:12px;font-weight:300;line-height:1.6;color:#777;margin:0;max-width:62ch">{{ d.note }}</p>
+        <div style="width:100%;max-width:100%;height:{{ d.boxH }};overflow:hidden;min-width:0">
+          <div style="width:{{ d.w }};height:{{ d.h }};transform:scale({{ d.scale }});transform-origin:top left;border:1px solid #333;border-radius:{{ d.radius }};overflow:hidden;background:#000;box-shadow:0 30px 80px rgba(0,0,0,.6)">
+            <iframe src="WeCreate.dc.html" title="WeCreate — {{ d.label }}" style="width:100%;height:100%;border:0;display:block"></iframe>
+          </div>
+        </div>
+      </div>
+    </sc-for>
+  </section>
+
+  <section style="margin-top:clamp(56px,8vw,110px);border-top:1px solid #1A1A1A;padding-top:34px">
+    <p style="font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:#777;margin:0 0 26px">Règles de responsive</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:clamp(20px,3vw,44px)">
+      <sc-for list="{{ rules }}" as="r" hint-placeholder-count="4">
+        <div style="border-top:1px solid #1A1A1A;padding-top:18px">
+          <h3 style="font-size:14px;font-weight:500;margin:0 0 8px">{{ r.t }}</h3>
+          <p style="font-size:13px;font-weight:300;line-height:1.7;color:#777;margin:0">{{ r.d }}</p>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+</main>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{}">
+const DEVICES = [
+  { label:'Mobile', w:390, h:780, radius:'26px', note:'Navigation défilable horizontalement, CTA WhatsApp masqué, grilles en une colonne, titres en clamp().' },
+  { label:'Tablette', w:834, h:900, radius:'18px', note:'Deux colonnes sur les grilles produits et packs, portfolio en masonry 2 colonnes.' },
+  { label:'Desktop', w:1440, h:900, radius:'6px', note:'Navigation complète + bouton « Réserver un appel », portfolio 3 colonnes, pleine largeur 1560px max.' }
+];
+
+class Component extends DCLogic {
+  state = { avail: 0 };
+  stage = React.createRef();
+
+  componentDidMount(){
+    this.measure = () => {
+      const w = this.stage.current ? this.stage.current.clientWidth : 0;
+      if (w && w !== this.state.avail) this.setState({ avail:w });
+    };
+    this.measure();
+    window.addEventListener('resize', this.measure);
+  }
+  componentWillUnmount(){ window.removeEventListener('resize', this.measure); }
+
+  renderVals(){
+    const avail = this.state.avail || 1200;
+    return {
+      stageRef: this.stage,
+      devices: DEVICES.map(d => {
+        const scale = Math.min(1, avail / d.w);
+        return { ...d, size: d.w + ' × ' + d.h, w: d.w + 'px', h: d.h + 'px', scale: Math.round(scale * 1000) / 1000, boxH: Math.round(d.h * scale) + 'px' };
+      }),
+      rules: [
+        { t:'Mobile-first', d:'Toutes les tailles sont écrites en clamp() : rien ne casse entre 320px et 2560px.' },
+        { t:'Header adaptatif', d:'Le header se condense au scroll ; le CTA WhatsApp disparaît sous 1120px, la nav devient défilable sous 760px.' },
+        { t:'Grilles fluides', d:'auto-fit + minmax() : les cartes se réorganisent d’elles-mêmes, sans point de rupture arbitraire.' },
+        { t:'Médias en ratio', d:'Chaque placeholder utilise aspect-ratio (9:16, 16:9, 4:5) — les vraies vidéos garderont le même cadrage.' }
+      ]
+    };
+  }
+}
+
+</script>
+</body>
+</html>
