@@ -152,7 +152,6 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
       isVisible: true,
       headline: { lead: "Travaux ", emphasis: "récents", trail: "" },
       link: { label: "Tout le portfolio", href: "/portfolio" },
-      projects: [],
       emptyStateText:
         "Les projets publiés apparaîtront ici dès leur mise en ligne.",
     },
@@ -214,5 +213,19 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
         href: "/contact",
       },
     },
+  },
+  portfolio: {
+    seo: {
+      title: "Portfolio",
+      description:
+        "Les films de WeCreate pour les entreprises, l'immobilier et les mariages : écriture, tournage plein format, étalonnage signature.",
+      openGraphImageUrl: null,
+    },
+    kicker: "Portfolio",
+    headline: { lead: "Chaque projet, une ", emphasis: "œuvre", trail: "." },
+    allUniversesLabel: "Tous",
+    emptyStateText:
+      "Les projets publiés apparaîtront ici dès leur mise en ligne.",
+    projects: [],
   },
 };

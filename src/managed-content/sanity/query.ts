@@ -6,7 +6,33 @@ const MEDIA_FRAME =
   '{ratio, placeholderLabel, alternativeText, "imageUrl": image.asset->url}';
 
 /**
- * Both singletons in one round trip.
+ * A poster asked for at the size the page uses it.
+ *
+ * Sanity's asset CDN resizes and reformats from the URL, so the image arrives
+ * ready and the application never puts a second optimiser in front of it.
+ */
+const POSTER_FRAME =
+  '{ratio, placeholderLabel, alternativeText, "imageUrl": image.asset->url + "?w=1600&auto=format"}';
+
+/**
+ * The video association, in the application's vocabulary rather than Mux's.
+ *
+ * Only what the CMS legitimately knows crosses this line: whether the upload
+ * has finished, its identity, and which caption tracks exist. Turning any of
+ * that into an address is the playback provider's job (ADR-0008).
+ */
+const PLAYBACK_ASSOCIATION = `{
+  "playbackId": playbackId,
+  "isReady": status == "ready",
+  "textTracks": data.tracks[type == "text" && text_type == "subtitles"]{
+    "id": id,
+    "language": language_code,
+    "label": coalesce(name, language_code)
+  }
+}`;
+
+/**
+ * Everything the public site reads, in one round trip.
  *
  * Fields absent from the dataset come back as `null` and are filled in from
  * `DEFAULT_SITE_CONTENT`, so a freshly created Sanity project renders the site
@@ -69,5 +95,29 @@ export const SITE_CONTENT_QUERY = defineQuery(`{
       primaryCta${CALL_TO_ACTION},
       secondaryCta${CALL_TO_ACTION}
     }
-  }
+  },
+  "portfolioPage": *[_type == "portfolioPage"][0]{
+    seo{title, description, "openGraphImageUrl": openGraphImage.asset->url},
+    kicker,
+    headline${SPLIT_HEADLINE},
+    allUniversesLabel,
+    emptyStateText
+  },
+  "portfolioProjects": *[_type == "portfolioProject"]
+    | order(coalesce(publishedAt, _createdAt) desc){
+      "id": _id,
+      "slug": slug.current,
+      title,
+      client,
+      universe,
+      projectType,
+      description,
+      role,
+      deliverables,
+      media${POSTER_FRAME},
+      "video": video.asset->${PLAYBACK_ASSOCIATION},
+      hasPublicationPermission,
+      spokenContent,
+      transcript
+    }
 }`);

@@ -2,18 +2,89 @@ import "server-only";
 
 import { getSanityClient } from "@/sanity/client";
 import { assertSanityConfigured } from "@/sanity/env";
+import type { PlaybackAssociation } from "@/video-playback/provider";
+import { videoPlaybackProvider } from "@/video-playback/provider";
 
 import { DEFAULT_SITE_CONTENT } from "../default-content";
 import { mergeContent, type DeepPartial } from "../merge";
 import type { ManagedContentProvider } from "../provider";
-import type { SiteContent } from "../types";
+import type {
+  HomePage,
+  MediaFrameContent,
+  PortfolioContent,
+  PortfolioProject,
+  PortfolioUniverse,
+  SiteSettings,
+  SpokenContentSupport,
+} from "../types";
+import { PORTFOLIO_UNIVERSES } from "../types";
 import { SITE_CONTENT_QUERY } from "./query";
 
 /**
  * Sanity returns every unfilled field as `null`, and returns `null` for the
- * whole document when it does not exist yet.
+ * whole document when it does not exist yet — including for a Portfolio Project
+ * an editor has only just created.
  */
-type SanityContentResult = DeepPartial<SiteContent> | null;
+type SanityProject = DeepPartial<
+  Omit<PortfolioProject, "playbackAsset" | "media">
+> & {
+  media?: DeepPartial<MediaFrameContent> | null;
+  video?: DeepPartial<PlaybackAssociation> | null;
+};
+
+interface SanityContentResult {
+  settings?: DeepPartial<SiteSettings> | null;
+  homePage?: DeepPartial<HomePage> | null;
+  portfolioPage?: DeepPartial<Omit<PortfolioContent, "projects">> | null;
+  portfolioProjects?: Array<SanityProject | null> | null;
+}
+
+/** An editor's choice, or nothing — never a universe the application invented. */
+function toUniverse(value: string | null | undefined): PortfolioUniverse | null {
+  return PORTFOLIO_UNIVERSES.find((universe) => universe === value) ?? null;
+}
+
+/**
+ * One Sanity document, in the application's own vocabulary.
+ *
+ * Every field falls back to something empty rather than to something invented:
+ * an incomplete project has to stay recognisably incomplete, because that is
+ * what the publication rule reads to decide it may not be shown.
+ */
+function toPortfolioProject(document: SanityProject): PortfolioProject {
+  const association = document.video;
+
+  return {
+    // Sanity prefixes an unpublished document's id with `drafts.`; stripping it
+    // keeps one project one identity across both perspectives.
+    id: (document.id ?? "").replace(/^drafts\./, ""),
+    slug: document.slug ?? "",
+    title: document.title ?? "",
+    client: document.client ?? "",
+    universe: toUniverse(document.universe),
+    projectType: document.projectType ?? "",
+    description: document.description ?? "",
+    role: document.role ?? "",
+    deliverables: document.deliverables ?? [],
+    media: {
+      ratio: document.media?.ratio ?? "16 / 9",
+      placeholderLabel: document.media?.placeholderLabel ?? "",
+      imageUrl: document.media?.imageUrl ?? null,
+      alternativeText: document.media?.alternativeText ?? "",
+    },
+    playbackAsset: association?.playbackId
+      ? videoPlaybackProvider.resolve({
+          playbackId: association.playbackId,
+          isReady: association.isReady === true,
+          alternativeText: document.media?.alternativeText ?? "",
+          textTracks: association.textTracks ?? [],
+        })
+      : null,
+    hasPublicationPermission: document.hasPublicationPermission === true,
+    spokenContent: (document.spokenContent ?? "none") as SpokenContentSupport,
+    transcript: document.transcript ?? null,
+  };
+}
 
 export const sanityContentProvider: ManagedContentProvider = {
   id: "sanity",
@@ -21,20 +92,33 @@ export const sanityContentProvider: ManagedContentProvider = {
     assertSanityConfigured();
 
     const client = getSanityClient(perspective);
-    const result = await client.fetch<SanityContentResult>(SITE_CONTENT_QUERY);
-    const content = mergeContent(DEFAULT_SITE_CONTENT, result);
+    const result = await client.fetch<SanityContentResult | null>(
+      SITE_CONTENT_QUERY,
+    );
+    const content = mergeContent(DEFAULT_SITE_CONTENT, {
+      settings: result?.settings ?? undefined,
+      homePage: result?.homePage ?? undefined,
+    });
 
     return {
       ...content,
       homePage: {
         ...content.homePage,
-        // Portfolio Projects (issue #3) and Digital Products (issue #7) are not
-        // modelled in Sanity yet. Until they are, these lists stay empty rather
-        // than falling back to the bundled sample entries: WeCreate publishes
-        // only real, approved work, so an unfinished section shows its empty
-        // state instead of fabricated projects or products.
-        recentWork: { ...content.homePage.recentWork, projects: [] },
+        // Digital Products (issue #7) are not modelled in Sanity yet. Until they
+        // are, this list stays empty rather than falling back to the bundled
+        // sample entries: WeCreate publishes only real, approved work, so an
+        // unfinished section shows its empty state instead of fabricated
+        // products.
         shopPreview: { ...content.homePage.shopPreview, products: [] },
+      },
+      portfolio: {
+        ...mergeContent(DEFAULT_SITE_CONTENT.portfolio, {
+          ...result?.portfolioPage,
+          projects: undefined,
+        }),
+        projects: (result?.portfolioProjects ?? [])
+          .filter((document): document is SanityProject => Boolean(document))
+          .map(toPortfolioProject),
       },
     };
   },

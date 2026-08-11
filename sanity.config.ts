@@ -2,6 +2,7 @@ import { visionTool } from "@sanity/vision";
 import { defineConfig } from "sanity";
 import { presentationTool } from "sanity/presentation";
 import { structureTool } from "sanity/structure";
+import { muxInput } from "sanity-plugin-mux-input";
 
 import { apiVersion, dataset, projectId } from "./src/sanity/env";
 import { SINGLETON_TYPES, schemaTypes } from "./src/sanity/schema";
@@ -46,6 +47,13 @@ export default defineConfig({
 
   plugins: [
     structureTool({ structure }),
+    // Video uploads go straight from the Studio to Mux, which transcodes them
+    // and issues the playback identity (ADR-0007). An editor drops in a file;
+    // they never see, type or manage a playback id.
+    //
+    // Nothing is stored above 1080p and no downloadable rendition is generated:
+    // the website streams WeCreate's work, and the archival master stays off it.
+    muxInput({ max_resolution_tier: "1080p", static_renditions: [] }),
     presentationTool({
       previewUrl: {
         origin: siteUrl(),
