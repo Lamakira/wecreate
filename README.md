@@ -223,9 +223,27 @@ on *any* background — its ceiling against pure black is 4.69:1 — so no amoun
 darkening fixes it. The current page stays distinguishable by its underline as
 well as its colour.
 
-Other `#777` micro-labels elsewhere on the page sit on a stable `#0A0A0A` and
-measure 4.22:1. Still short of 4.5:1, but pre-existing and design-level: issue
-#16 owns it.
+## Greys and contrast
+
+The design handoff's tertiary greys do not meet WCAG 2.2 AA on this site's own
+surfaces, so the palette carries corrected values:
+
+| Token | Handoff | Now | Why |
+| --- | --- | --- | --- |
+| `wc-muted-2` | `#777` | `#8A8A8A` | `#777` measures 4.42:1 on `#0A0A0A` and 4.22:1 on `#111111` |
+| `wc-muted-on-light` | — | `#6A6A6A` | New. `#777` measures 4.48:1 on the white band |
+| `wc-muted` | `#555` | `#555` | Kept, but for rules and underlines only — as text it reaches 2.8:1 |
+
+No single grey can serve both grounds: against `#0A0A0A` and `#FFFFFF` together,
+the best any grey manages is 4.39:1. That is why dark and light surfaces have
+separate tokens, and why `#777` could not simply be darkened into compliance —
+its ceiling against pure black is 4.69:1.
+
+`tests/e2e/contrast.spec.ts` guards all of this. Flat surfaces are checked from
+computed styles; the hero is checked by sampling painted pixels across several
+frames, because its ground is a shader under a gradient and no computed style
+describes it. Reverting `wc-muted-2` to `#777` fails that test with eleven named
+elements, which is how it was verified to be worth having.
 
 ## Typography
 

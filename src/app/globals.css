@@ -99,8 +99,18 @@
   --color-wc-line-dark: #1a1a1a;
   --color-wc-line-darker: #141414;
   --color-wc-border: #333333;
+  /* A line colour, not a text colour. Rules and underlines only: as text it
+   * reaches 2.8:1 at best on this palette's darkest ground. */
   --color-wc-muted: #555555;
-  --color-wc-muted-2: #777777;
+  /* Tertiary text on dark surfaces — micro-labels, meta lines, empty states.
+   * The handoff specifies #777, which clears 4.5:1 on nothing this palette
+   * offers: 4.42:1 on #0A0A0A, 4.22:1 on #111111, 4.48:1 on white. Raised until
+   * it passes on the lightest dark surface it is used on. */
+  --color-wc-muted-2: #8a8a8a;
+  /* The same role on the light band. No single grey can pass 4.5:1 against both
+   * #0A0A0A and #FFFFFF — the best any grey manages against both is 4.39:1 — so
+   * light surfaces need their own value. */
+  --color-wc-muted-on-light: #6a6a6a;
   --color-wc-soft: #bbbbbb;
   --color-wc-line-light: #eeeeee;
   --color-wc-ink: #333333;

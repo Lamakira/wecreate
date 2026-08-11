@@ -93,10 +93,10 @@ export function SiteFooter({ settings }: SiteFooterProps) {
       </div>
 
       <div className="wc-container mt-[clamp(36px,5vw,64px)] flex flex-wrap justify-between gap-4 border-t border-wc-line-dark pt-[22px]">
-        <p className="m-0 text-micro tracking-20 uppercase text-wc-muted">
+        <p className="m-0 text-micro tracking-20 uppercase text-wc-muted-2">
           {footer.legalLine}
         </p>
-        <p className="m-0 text-micro tracking-20 uppercase text-wc-muted">
+        <p className="m-0 text-micro tracking-20 uppercase text-wc-muted-2">
           {settings.positioningLine}
         </p>
       </div>

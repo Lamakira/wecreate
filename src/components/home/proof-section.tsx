@@ -20,7 +20,7 @@ export function ProofSection({ section }: ProofSectionProps) {
         <Reveal>
           <h2
             id="proof-heading"
-            className="m-0 mb-[clamp(32px,5vw,56px)] text-micro tracking-30 uppercase font-normal text-wc-muted-2"
+            className="m-0 mb-[clamp(32px,5vw,56px)] text-micro tracking-30 uppercase font-normal text-wc-muted-on-light"
           >
             {section.kicker}
           </h2>
