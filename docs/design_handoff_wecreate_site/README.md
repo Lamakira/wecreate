@@ -7,6 +7,12 @@ Le site comporte 6 pages publiques (Accueil, Portfolio, Services, Boutique, À p
 
 Devise : **FCFA (F)**. Langue : **français**. Contact : WhatsApp +229 01 67 36 67 26 · wecreate08@gmail.com · Instagram & TikTok @wecreate.bj.
 
+## Validated transaction direction
+
+The Digital Product transaction journey uses the **split transaction ticket** direction selected on 11 August 2026: a black order ticket preserves WeCreate's cinematic identity while a white working surface carries checkout, payment verification, recovery, receipt, and Order Access. On narrow screens, the ticket collapses to the order total and Order Snapshot duration so the current transaction state remains visible in the first viewport.
+
+The full throwaway comparison and review record are preserved on branch `prototype/digital-transactions`; production code must recreate the selected structure rather than promote the prototype HTML directly.
+
 ## About the Design Files
 Les fichiers de ce bundle sont des **références de design réalisées en HTML** — des prototypes qui montrent l'apparence et le comportement attendus, **pas du code de production à copier tel quel**. Le travail consiste à **recréer ces designs dans l'environnement existant du codebase cible** (React, Vue, Next, Astro, SwiftUI, natif…) en suivant ses conventions, ses composants et ses librairies. S'il n'existe pas encore d'environnement, choisir le framework le plus adapté (une stack statique type Astro/Next + Tailwind convient très bien à ce site) et y implémenter les designs.
 
