@@ -20,10 +20,15 @@ test.describe("Site shell", () => {
     ).toBeVisible();
   });
 
-  test("reaches every page in the navigation", async ({ page }) => {
+  test("reaches every page in the navigation", async ({ page, isMobile }) => {
     await page.goto("/");
 
-    const nav = page.getByRole("navigation", { name: "Navigation principale" });
+    if (isMobile) {
+      await page.getByTestId("navigation-menu-button").click();
+    }
+    const nav = page.getByRole("navigation", {
+      name: isMobile ? "Navigation mobile" : "Navigation principale",
+    });
     const links = await nav.getByRole("link").all();
     expect(links).toHaveLength(6);
 
@@ -49,10 +54,15 @@ test.describe("Site shell", () => {
     }
   });
 
-  test("marks the page the visitor is on", async ({ page }) => {
+  test("marks the page the visitor is on", async ({ page, isMobile }) => {
     await page.goto("/portfolio");
 
-    const nav = page.getByRole("navigation", { name: "Navigation principale" });
+    if (isMobile) {
+      await page.getByTestId("navigation-menu-button").click();
+    }
+    const nav = page.getByRole("navigation", {
+      name: isMobile ? "Navigation mobile" : "Navigation principale",
+    });
     await expect(nav.getByRole("link", { name: "Portfolio" })).toHaveAttribute(
       "aria-current",
       "page",
@@ -131,6 +141,25 @@ test.describe("Site shell", () => {
     }
   });
 
+  test("starts page content below the fixed header", async ({ page }) => {
+    // The header is fixed, so it covers whatever is beneath it. Page content is
+    // pushed clear by a padding token, and the two drift apart easily — the
+    // header's height changes with its breakpoint and its call CTA.
+    await page.goto("/portfolio");
+
+    const measurements = await page.evaluate(() => ({
+      headerHeight: document.querySelector("header")!.getBoundingClientRect()
+        .height,
+      offset: Number.parseFloat(
+        getComputedStyle(document.querySelector("main")!).paddingTop,
+      ),
+    }));
+
+    expect(measurements.offset).toBeGreaterThanOrEqual(
+      measurements.headerHeight,
+    );
+  });
+
   test("carries WeCreate's contact routes in the footer", async ({ page }) => {
     await page.goto("/");
 
@@ -170,24 +199,66 @@ test.describe("Site shell", () => {
 test.describe("Site shell on a narrow screen", () => {
   test.skip(({ isMobile }) => !isMobile, "Covers the mobile layout only.");
 
-  test("keeps the six navigation links reachable without the call CTA", async ({
+  test("puts all six links and the call CTA in the menu panel", async ({
     page,
   }) => {
     await page.goto("/");
 
-    // Below 1120px the call CTA is dropped. Navigation is never collapsed
-    // behind a menu button, so all six links stay operable — the strip scrolls
-    // horizontally instead.
+    // Six links do not fit across a phone, so the header shows a menu button
+    // instead of clipping them. Nothing is merely scrolled out of sight.
     await expect(
-      page.getByRole("link", { name: "Réserver un appel" }),
+      page.getByRole("navigation", { name: "Navigation principale" }),
     ).toBeHidden();
 
-    const nav = page.getByRole("navigation", { name: "Navigation principale" });
-    await expect(nav.getByRole("link")).toHaveCount(6);
+    const menuButton = page.getByTestId("navigation-menu-button");
+    await expect(menuButton).toHaveAttribute("aria-expanded", "false");
+    await menuButton.click();
 
-    const contact = nav.getByRole("link", { name: "Contact" });
-    await contact.scrollIntoViewIfNeeded();
-    await expect(contact).toBeInViewport();
+    const panel = page.getByTestId("navigation-drawer");
+    await expect(panel).toBeVisible();
+    await expect(menuButton).toHaveAttribute("aria-expanded", "true");
+
+    // Every link is on screen at a tap size, not behind an invisible swipe.
+    const links = panel.getByRole("navigation").getByRole("link");
+    await expect(links).toHaveCount(6);
+    for (const name of ["Accueil", "Contact"]) {
+      const link = links.filter({ hasText: name });
+      await expect(link).toBeInViewport();
+      expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    }
+
+    // The call CTA is dropped from the header below 1120px; the panel is where
+    // it goes, so it is never simply lost.
+    await expect(
+      panel.getByRole("link", { name: "Réserver un appel" }),
+    ).toBeVisible();
+  });
+
+  test("closes the menu after following a link", async ({ page }) => {
+    await page.goto("/");
+
+    await page.getByTestId("navigation-menu-button").click();
+    await page
+      .getByTestId("navigation-drawer")
+      .getByRole("link", { name: "Services" })
+      .click();
+
+    await expect(page).toHaveURL(/\/services$/);
+    await expect(page.getByTestId("navigation-drawer")).toBeHidden();
+  });
+
+  test("returns focus to the menu button when dismissed", async ({ page }) => {
+    await page.goto("/");
+
+    const menuButton = page.getByTestId("navigation-menu-button");
+    await menuButton.click();
+    await expect(
+      page.getByTestId("navigation-drawer").getByRole("button"),
+    ).toBeFocused();
+
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("navigation-drawer")).toBeHidden();
+    await expect(menuButton).toBeFocused();
   });
 
   test("lays the homepage out without sideways scrolling", async ({ page }) => {

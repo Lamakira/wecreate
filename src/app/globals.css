@@ -192,7 +192,10 @@
   --spacing-heading-gap: clamp(28px, 4vw, 48px);
   --spacing-heading-gap-lg: clamp(36px, 5vw, 64px);
   --spacing-letterbox: clamp(28px, 6vh, 64px);
-  --spacing-header-offset: 74px;
+  /* Clears the fixed header. Measured against its tallest state — unscrolled,
+   * with the call CTA — so no page can start underneath it. The hero
+   * deliberately sits behind the header and sets its own padding. */
+  --spacing-header-offset: 86px;
 
   /* Content width. */
   --container-site: 1560px;
@@ -317,16 +320,4 @@
 @utility wc-revealed {
   opacity: 1;
   transform: none;
-}
-
-/* Utility: horizontally scrollable strip with the scrollbar hidden. Used by the
- * mobile navigation, which must stay reachable when the call CTA is gone. */
-@utility wc-scroll-strip {
-  overflow-x: auto;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
-
-  &::-webkit-scrollbar {
-    display: none;
-  }
 }

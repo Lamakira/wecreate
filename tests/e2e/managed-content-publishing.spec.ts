@@ -81,7 +81,10 @@ test.describe("Editing and publishing Managed Content", () => {
     await expect(page.getByRole("region", { name: "Ce qu'on fait" })).toBeVisible();
   });
 
-  test("takes navigation labels from Managed Content", async ({ page }) => {
+  test("takes navigation labels from Managed Content", async ({
+    page,
+    isMobile,
+  }) => {
     await content.editDraft({
       settings: {
         navigation: [
@@ -94,7 +97,12 @@ test.describe("Editing and publishing Managed Content", () => {
 
     await page.goto("/");
 
-    const nav = page.getByRole("navigation", { name: "Navigation principale" });
+    if (isMobile) {
+      await page.getByTestId("navigation-menu-button").click();
+    }
+    const nav = page.getByRole("navigation", {
+      name: isMobile ? "Navigation mobile" : "Navigation principale",
+    });
     await expect(nav.getByRole("link")).toHaveCount(2);
     await expect(nav.getByRole("link", { name: "Nos films" })).toHaveAttribute(
       "href",

@@ -1,5 +1,7 @@
 "use client";
 
+import { ShoppingCartIcon } from "@heroicons/react/24/outline";
+
 import { useDigitalCart } from "@/digital-cart/use-digital-cart";
 
 interface CartIndicatorProps {
@@ -24,11 +26,7 @@ export function CartIndicator({ onOpen }: CartIndicatorProps) {
       aria-label={`Panier, ${itemCount} ${itemCount === 1 ? "article" : "articles"}`}
       className="relative grid h-10 w-10 place-items-center border border-wc-border text-wc-white transition-colors duration-300 hover:border-wc-white hover:bg-wc-surface-2"
     >
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-        <path d="M2 3h2l1.6 8h7L15 5H5" stroke="currentColor" strokeWidth="1.2" />
-        <circle cx="6.5" cy="13.5" r="1.1" fill="currentColor" />
-        <circle cx="12" cy="13.5" r="1.1" fill="currentColor" />
-      </svg>
+      <ShoppingCartIcon className="h-5 w-5" aria-hidden="true" />
       <span
         aria-hidden="true"
         className="absolute -top-[7px] -right-[7px] grid h-[18px] min-w-[18px] place-items-center rounded-[9px] bg-wc-white px-1 text-micro font-bold text-wc-pure"

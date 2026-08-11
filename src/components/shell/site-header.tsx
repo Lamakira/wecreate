@@ -1,5 +1,6 @@
 "use client";
 
+import { Bars3Icon } from "@heroicons/react/24/outline";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -7,23 +8,33 @@ import { useEffect, useState } from "react";
 
 import { CtaLink } from "@/components/primitives/cta-link";
 import { CartIndicator } from "@/components/shell/cart-indicator";
+import { isCurrentPath } from "@/lib/current-path";
 import type { SiteSettings } from "@/managed-content/types";
 
 interface SiteHeaderProps {
   settings: SiteSettings;
+  isMenuOpen: boolean;
   onOpenCart: () => void;
+  onOpenMenu: () => void;
 }
 
 /**
  * The fixed header: logo, six-link navigation, Digital Cart indicator and the
  * call CTA.
  *
- * Two responsive rules from the design, both about keeping navigation usable
- * when space runs out: below 1120px the call CTA is hidden, and below 900px the
- * word-mark becomes the icon and the navigation becomes a horizontally
- * scrollable strip. Navigation is never collapsed behind a menu button.
+ * Two responsive rules, both about keeping navigation usable as space runs out.
+ * Below 1120px the call CTA is dropped. Below 900px the word-mark becomes the
+ * icon and the six links move into a panel behind a menu button — they do not
+ * fit across a phone, and the alternative the design first specified, a
+ * horizontally scrollable strip, left two of them behind an invisible swipe.
+ * The panel restores the call CTA at its foot, so nothing is lost.
  */
-export function SiteHeader({ settings, onOpenCart }: SiteHeaderProps) {
+export function SiteHeader({
+  settings,
+  isMenuOpen,
+  onOpenCart,
+  onOpenMenu,
+}: SiteHeaderProps) {
   const pathname = usePathname();
   const [isCondensed, setIsCondensed] = useState(false);
 
@@ -66,11 +77,10 @@ export function SiteHeader({ settings, onOpenCart }: SiteHeaderProps) {
 
         <nav
           aria-label="Navigation principale"
-          className="wc-scroll-strip ml-auto flex flex-auto flex-nowrap items-center justify-start gap-[clamp(10px,1.6vw,26px)] min-[900px]:justify-end min-[900px]:overflow-visible"
+          className="ml-auto hidden flex-auto flex-nowrap items-center justify-end gap-[clamp(10px,1.6vw,26px)] min-[900px]:flex"
         >
           {settings.navigation.map((link) => {
-            const isCurrent =
-              link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
+            const isCurrent = isCurrentPath(pathname, link.href);
             return (
               <Link
                 key={link.href}
@@ -88,8 +98,20 @@ export function SiteHeader({ settings, onOpenCart }: SiteHeaderProps) {
           })}
         </nav>
 
-        <div className="flex flex-none items-center gap-3">
+        <div className="ml-auto flex flex-none items-center gap-3 min-[900px]:ml-0">
           <CartIndicator onOpen={onOpenCart} />
+
+          <button
+            type="button"
+            onClick={onOpenMenu}
+            aria-label="Ouvrir le menu"
+            aria-expanded={isMenuOpen}
+            data-testid="navigation-menu-button"
+            className="grid h-10 w-10 place-items-center border border-wc-border text-wc-white transition-colors duration-300 hover:border-wc-white hover:bg-wc-surface-2 min-[900px]:hidden"
+          >
+            <Bars3Icon className="h-5 w-5" aria-hidden="true" />
+          </button>
+
           {/* Wrapped rather than given a `hidden` class of its own: the button
               variant already sets a display utility, and two competing display
               utilities on one element resolve by stylesheet order rather than
