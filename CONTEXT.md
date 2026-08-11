@@ -1,6 +1,6 @@
 # WeCreate
 
-The shared language for WeCreate's portfolio, digital commerce, and service-reservation experience.
+The shared language for WeCreate's portfolio, digital commerce, and service-enquiry experience.
 
 ## Language
 
@@ -29,11 +29,11 @@ Portfolio projects, products, prices, and editorial copy that WeCreate can maint
 _Avoid_: Hard-coded content, static content
 
 **Order Snapshot**:
-The immutable product names, prices, deposit terms, and quantities captured when a customer starts an order. Later Managed Content changes do not alter it.
+The immutable product names, prices, Paid Deliverable Versions, and quantities captured when a customer starts an order. Later Managed Content changes do not alter it.
 _Avoid_: Live product data, current catalogue
 
 **Digital Cart**:
-An anonymous collection of distinct Digital Products intended for immediate online purchase. Service offers and Reservation Requests never enter it.
+An anonymous collection of distinct Digital Products intended for immediate online purchase. Service offers and Service Enquiries never enter it.
 _Avoid_: Service cart, reservation cart, basket
 
 **Order Access**:
@@ -69,7 +69,7 @@ A Digital Product removed from new sales while remaining identifiable in histori
 _Avoid_: Deleted product, unpublished order item
 
 **Payment State**:
-The independently tracked outcome of collecting money for an order or Service Deposit.
+The independently tracked outcome of collecting money for a Digital Product order.
 _Avoid_: Order status, fulfillment status
 
 **Fulfillment State**:

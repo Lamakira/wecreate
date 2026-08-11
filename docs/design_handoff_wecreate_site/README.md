@@ -11,6 +11,8 @@ Devise : **FCFA (F)**. Langue : **français**. Contact : WhatsApp +229 01 67 36 
 
 The Digital Product transaction journey uses the **split transaction ticket** direction selected on 11 August 2026: a black order ticket preserves WeCreate's cinematic identity while a white working surface carries checkout, payment verification, recovery, receipt, and Order Access. On narrow screens, the ticket collapses to the order total and Order Snapshot duration so the current transaction state remains visible in the first viewport.
 
+On mobile, the existing cart remains a quick-review drawer with an anchored checkout action; checkout itself opens a dedicated transaction route. Pending, approved, failed, and fulfillment-failed states use explicit French headings, symbols, structure, and next-action copy rather than color. Order Access shows the expiry date and remaining allowance per product in plain language, while connection failures preserve the order reference and remain retry-safe without being presented as payment failures.
+
 The full throwaway comparison and review record are preserved on branch `prototype/digital-transactions`; production code must recreate the selected structure rather than promote the prototype HTML directly.
 
 ## About the Design Files

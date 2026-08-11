@@ -1,0 +1,315 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+ * Self-hosted brand typography.
+ *
+ * These are the production font assets (Inter and Playfair Display, both SIL
+ * Open Font License), served from our own origin so no third party sits on the
+ * critical path of a Benin mobile connection.
+ *
+ * `font-display: swap` guarantees text is painted in the fallback face rather
+ * than held invisible while the woff2 loads. If the files under `public/fonts`
+ * are ever absent, every `font-family` below still names a system fallback, so
+ * the page degrades to a readable development rendering instead of breaking.
+ * See `public/fonts/README.md`.
+ * ------------------------------------------------------------------------- */
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url("/fonts/inter-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url("/fonts/inter-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
+    U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+    U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Playfair Display";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/fonts/playfair-display-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Playfair Display";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/fonts/playfair-display-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
+    U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+    U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Playfair Display";
+  font-style: italic;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/fonts/playfair-display-italic-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Playfair Display";
+  font-style: italic;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/fonts/playfair-display-italic-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
+    U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+    U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* ---------------------------------------------------------------------------
+ * Design tokens.
+ *
+ * Every value below comes from the approved high-fidelity design handoff
+ * (`docs/design_handoff_wecreate_site/README.md`). The handoff is authoritative
+ * for appearance: change a token here rather than hard-coding a one-off value
+ * in a component.
+ * ------------------------------------------------------------------------- */
+
+@theme {
+  /* Palette — strict black and white. The only colour on the site comes from
+   * photography and video thumbnails. */
+  --color-wc-black: #0a0a0a;
+  --color-wc-pure: #000000;
+  --color-wc-surface: #0f0f0f;
+  --color-wc-surface-2: #111111;
+  --color-wc-line-dark: #1a1a1a;
+  --color-wc-line-darker: #141414;
+  --color-wc-border: #333333;
+  --color-wc-muted: #555555;
+  --color-wc-muted-2: #777777;
+  --color-wc-soft: #bbbbbb;
+  --color-wc-line-light: #eeeeee;
+  --color-wc-ink: #333333;
+  --color-wc-white: #ffffff;
+
+  /* Typefaces */
+  --font-display: "Playfair Display", "Iowan Old Style", "Palatino Linotype",
+    Palatino, Georgia, "Times New Roman", serif;
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+    monospace;
+
+  /* Fluid type scale, with the metrics each role is paired with. */
+  --text-hero: clamp(40px, 8.4vw, 124px);
+  --text-hero--line-height: 0.98;
+  --text-hero--letter-spacing: -0.02em;
+
+  --text-page-title: clamp(38px, 7.2vw, 104px);
+  --text-page-title--line-height: 1;
+  --text-page-title--letter-spacing: -0.02em;
+
+  --text-section: clamp(30px, 4.6vw, 64px);
+  --text-section--line-height: 1.05;
+
+  --text-cta-heading: clamp(34px, 6vw, 86px);
+  --text-cta-heading--line-height: 1.02;
+
+  --text-quote: clamp(26px, 4.6vw, 60px);
+  --text-quote--line-height: 1.18;
+
+  --text-proof: clamp(28px, 3.4vw, 44px);
+  --text-proof--line-height: 1.1;
+
+  --text-card-title: 30px;
+  --text-card-title--line-height: 1.15;
+
+  --text-product-title: 22px;
+  --text-product-title--line-height: 1.2;
+
+  --text-baseline: 18px;
+  --text-baseline--line-height: 1.5;
+
+  --text-body-lg: clamp(14px, 1.5vw, 18px);
+  --text-body-lg--line-height: 1.7;
+
+  --text-body: 14px;
+  --text-body--line-height: 1.7;
+
+  --text-body-sm: 13px;
+  --text-body-sm--line-height: 1.65;
+
+  --text-meta: 13px;
+  --text-meta--line-height: 1.4;
+
+  --text-button: 11px;
+  --text-button--line-height: 1;
+
+  --text-micro: 10px;
+  --text-micro--line-height: 1.4;
+
+  --text-badge: 9px;
+  --text-badge--line-height: 1.4;
+
+  /* Letter-spacing. Named by hundredths of an em so the design handoff's exact
+   * values survive into the markup without arbitrary-value noise. */
+  --tracking-16: 0.16em;
+  --tracking-18: 0.18em;
+  --tracking-20: 0.2em;
+  --tracking-22: 0.22em;
+  --tracking-24: 0.24em;
+  --tracking-26: 0.26em;
+  --tracking-28: 0.28em;
+  --tracking-30: 0.3em;
+  --tracking-32: 0.32em;
+  --tracking-34: 0.34em;
+  --tracking-42: 0.42em;
+
+  /* Vertical rhythm and gutters. */
+  --spacing-gutter: clamp(20px, 5vw, 64px);
+  --spacing-section: clamp(72px, 10vw, 140px);
+  --spacing-section-lg: clamp(72px, 10vw, 150px);
+  --spacing-section-sm: clamp(56px, 8vw, 110px);
+  --spacing-section-xs: clamp(48px, 7vw, 96px);
+  --spacing-proof: clamp(64px, 9vw, 128px);
+  --spacing-grid-gap: clamp(12px, 2vw, 28px);
+  --spacing-grid-gap-sm: clamp(12px, 1.6vw, 20px);
+  --spacing-grid-gap-lg: clamp(14px, 2vw, 26px);
+  --spacing-heading-gap: clamp(28px, 4vw, 48px);
+  --spacing-heading-gap-lg: clamp(36px, 5vw, 64px);
+  --spacing-letterbox: clamp(28px, 6vh, 64px);
+  --spacing-header-offset: 74px;
+
+  /* Content width. */
+  --container-site: 1560px;
+  --container-hero: 1280px;
+  --container-prose: 1100px;
+
+  /* Motion. */
+  --ease-signature: cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-wc-fade: wc-fade 1.1s var(--ease-signature) both;
+  --animate-wc-fade-fast: wc-fade 0.45s var(--ease-signature) both;
+  --animate-wc-marquee: wc-marquee 26s linear infinite;
+}
+
+@keyframes wc-fade {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes wc-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Base layer
+ * ------------------------------------------------------------------------- */
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    margin: 0;
+    background: var(--color-wc-black);
+    color: var(--color-wc-white);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* Radius is 0 everywhere in this identity; the cart count pill is the single
+   * deliberate exception and opts back in locally. */
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  button {
+    font-family: inherit;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-wc-white);
+    outline-offset: 3px;
+  }
+
+  /* Light sections invert the focus ring so it stays visible against white. */
+  [data-surface="light"] :focus-visible {
+    outline-color: var(--color-wc-pure);
+  }
+
+  ::selection {
+    background: var(--color-wc-white);
+    color: var(--color-wc-pure);
+  }
+}
+
+/* Visitors who ask for less motion get none of the decorative kind. The JS side
+ * (`useReducedMotion`) additionally keeps optional video from autoplaying. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Utility: the scroll-reveal start state. Elements are revealed by
+ * `<Reveal>`; without JavaScript they simply stay visible. */
+@utility wc-reveal {
+  opacity: 0;
+  transform: translateY(26px);
+  transition:
+    opacity 0.9s var(--ease-signature),
+    transform 0.9s var(--ease-signature);
+}
+
+@utility wc-revealed {
+  opacity: 1;
+  transform: none;
+}
+
+/* Utility: horizontally scrollable strip with the scrollbar hidden. Used by the
+ * mobile navigation, which must stay reachable when the call CTA is gone. */
+@utility wc-scroll-strip {
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
