@@ -13,7 +13,7 @@ export function UniversesSection({ section }: UniversesSectionProps) {
   return (
     <section
       aria-labelledby="universes-heading"
-      className="mx-auto max-w-site px-gutter py-section"
+      className="wc-container py-section"
     >
       <Reveal className="mb-heading-gap-lg flex flex-wrap items-baseline justify-between gap-6">
         <h2

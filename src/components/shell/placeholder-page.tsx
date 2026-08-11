@@ -17,7 +17,7 @@ interface PlaceholderPageProps {
  */
 export function PlaceholderPage({ title }: PlaceholderPageProps) {
   return (
-    <section className="mx-auto max-w-site px-gutter py-section">
+    <section className="wc-container py-section">
       <p className="m-0 mb-[22px] text-micro tracking-32 uppercase text-wc-muted-2">
         Bientôt disponible
       </p>

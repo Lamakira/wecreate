@@ -287,6 +287,23 @@
   }
 }
 
+/* Utility: the page's horizontal rhythm.
+ *
+ * One rule for every full-width band — header, sections, footer — so the logo,
+ * every heading and every footer column share a single left edge. Put the
+ * max-width and the gutter on the same element: a band that pads its outer
+ * element and centres a narrower one inside lands somewhere else entirely, and
+ * the mismatch only shows up on wide screens.
+ *
+ * Bands that need a full-bleed background (the hero, the light proof band) keep
+ * their background on the outer element and put this on the content inside. */
+@utility wc-container {
+  margin-inline: auto;
+  width: 100%;
+  max-width: var(--container-site);
+  padding-inline: var(--spacing-gutter);
+}
+
 /* Utility: the scroll-reveal start state. Elements are revealed by
  * `<Reveal>`; without JavaScript they simply stay visible. */
 @utility wc-reveal {

@@ -23,7 +23,7 @@ export function ShopPreviewSection({ section }: ShopPreviewSectionProps) {
   return (
     <section
       aria-labelledby="shop-preview-heading"
-      className="mx-auto max-w-site px-gutter py-section"
+      className="wc-container py-section"
     >
       <Reveal className="mb-heading-gap flex flex-wrap items-baseline justify-between gap-6">
         <h2

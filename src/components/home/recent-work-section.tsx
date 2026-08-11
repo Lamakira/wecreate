@@ -23,7 +23,7 @@ export function RecentWorkSection({ section }: RecentWorkSectionProps) {
   return (
     <section
       aria-labelledby="recent-work-heading"
-      className="mx-auto max-w-site px-gutter py-section-xs"
+      className="wc-container py-section-xs"
     >
       <Reveal className="mb-heading-gap flex flex-wrap items-baseline justify-between gap-6">
         <SplitHeading

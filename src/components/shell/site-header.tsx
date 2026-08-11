@@ -37,7 +37,7 @@ export function SiteHeader({ settings, onOpenCart }: SiteHeaderProps) {
   return (
     <header className="fixed inset-x-0 top-0 z-900 border-b border-wc-line-dark bg-wc-black/[0.82] backdrop-blur-[14px]">
       <div
-        className={`mx-auto flex max-w-site flex-nowrap items-center gap-[clamp(10px,2vw,36px)] px-[clamp(16px,4vw,56px)] transition-[padding] duration-[350ms] ease-signature ${
+        className={`wc-container flex flex-nowrap items-center gap-[clamp(10px,2vw,36px)] transition-[padding] duration-[350ms] ease-signature ${
           isCondensed ? "py-3" : "py-5"
         }`}
       >

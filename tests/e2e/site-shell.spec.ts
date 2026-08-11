@@ -93,6 +93,44 @@ test.describe("Site shell", () => {
     await expect(indicator).toBeFocused();
   });
 
+  test("lines every band up with the header logo", async ({ page }) => {
+    await page.goto("/");
+
+    // The logo sets the page's left edge. Header, hero, each section and the
+    // footer all have to start there — they are separate full-width bands, and
+    // it is easy for one of them to acquire its own padding and drift a few
+    // dozen pixels out on a wide screen without anyone noticing.
+    const leftEdgeOf = async (locator: ReturnType<typeof page.locator>) => {
+      const box = await locator.first().boundingBox();
+      return Math.round(box!.x);
+    };
+
+    const logo = await leftEdgeOf(
+      page.getByRole("banner").getByRole("link", { name: "WeCreate — accueil" }),
+    );
+
+    const bands = {
+      "hero heading": page.getByRole("heading", { level: 1 }),
+      "section heading": page.getByRole("heading", {
+        level: 2,
+        name: "Ce qu'on fait",
+      }),
+      "light band heading": page.getByRole("heading", {
+        level: 2,
+        name: "La différence WeCreate",
+      }),
+      "footer logo": page.getByRole("contentinfo").locator("img").first(),
+      "footer legal line": page.getByText("WeCreate — Calavi Tankpè, Bénin"),
+    };
+
+    for (const [name, locator] of Object.entries(bands)) {
+      await locator.scrollIntoViewIfNeeded();
+      expect(await leftEdgeOf(locator), `${name} should start at the logo`).toBe(
+        logo,
+      );
+    }
+  });
+
   test("carries WeCreate's contact routes in the footer", async ({ page }) => {
     await page.goto("/");
 

@@ -44,9 +44,7 @@ test.describe("Homepage", () => {
     await expect(heading.locator("em")).toHaveText("œuvres");
 
     await expect(
-      page.getByText(
-        "Production vidéo cinématographique · Calavi Tankpè, Bénin",
-      ),
+      page.getByText("Production vidéo cinématographique", { exact: true }),
     ).toBeVisible();
 
     await expect(
@@ -134,7 +132,7 @@ test.describe("Homepage", () => {
 
     const finalCta = page.getByRole("region", { name: /Parlons de votre projet/ });
     await expect(
-      finalCta.getByRole("link", { name: "WhatsApp +229 01 67 36 67 26" }),
+      finalCta.getByRole("link", { name: "WhatsApp", exact: true }),
     ).toHaveAttribute("href", "https://wa.me/2290167366726");
     await expect(
       finalCta.getByRole("link", { name: "Nous contacter" }),

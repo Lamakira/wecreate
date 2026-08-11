@@ -74,7 +74,7 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
       openGraphImageUrl: null,
     },
     hero: {
-      kicker: "Production vidéo cinématographique · Calavi Tankpè, Bénin",
+      kicker: "Production vidéo cinématographique",
       headline: {
         lead: "Nous fabriquons des ",
         emphasis: "œuvres",
@@ -206,7 +206,7 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
       headline: { lead: "Parlons de votre ", emphasis: "projet", trail: "." },
       subtitle: "Devis sous 24-48h. Livraison en 5 jours ouvrés.",
       primaryCta: {
-        label: "WhatsApp +229 01 67 36 67 26",
+        label: "WhatsApp",
         href: WHATSAPP_URL,
       },
       secondaryCta: {

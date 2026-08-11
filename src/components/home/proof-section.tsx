@@ -14,9 +14,9 @@ export function ProofSection({ section }: ProofSectionProps) {
     <section
       aria-labelledby="proof-heading"
       data-surface="light"
-      className="bg-wc-white px-gutter py-proof text-wc-pure"
+      className="bg-wc-white py-proof text-wc-pure"
     >
-      <div className="mx-auto max-w-site">
+      <div className="wc-container">
         <Reveal>
           <h2
             id="proof-heading"

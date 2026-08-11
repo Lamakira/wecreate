@@ -11,8 +11,8 @@ export function SiteFooter({ settings }: SiteFooterProps) {
   const { contact, footer, socialAccounts, navigation, brandName } = settings;
 
   return (
-    <footer className="border-t border-wc-line-dark bg-wc-pure px-gutter pt-section-xs pb-[34px]">
-      <div className="mx-auto grid max-w-site grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-[clamp(28px,4vw,56px)]">
+    <footer className="border-t border-wc-line-dark bg-wc-pure pt-section-xs pb-[34px]">
+      <div className="wc-container grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-[clamp(28px,4vw,56px)]">
         <div>
           <Image
             src="/brand/logo-blanc.svg"
@@ -92,7 +92,7 @@ export function SiteFooter({ settings }: SiteFooterProps) {
         </div>
       </div>
 
-      <div className="mx-auto mt-[clamp(36px,5vw,64px)] flex max-w-site flex-wrap justify-between gap-4 border-t border-wc-line-dark pt-[22px]">
+      <div className="wc-container mt-[clamp(36px,5vw,64px)] flex flex-wrap justify-between gap-4 border-t border-wc-line-dark pt-[22px]">
         <p className="m-0 text-micro tracking-20 uppercase text-wc-muted">
           {footer.legalLine}
         </p>
