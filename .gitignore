@@ -52,3 +52,9 @@ next-env.d.ts
 
 # sanity
 /.sanity/
+
+# local agent instructions
+/CLAUDE.md
+
+# editor
+/.idea/
