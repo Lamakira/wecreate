@@ -187,6 +187,35 @@ that bring per-worker persistence can lift that.
 
 Browsers are installed once with `pnpm exec playwright install chromium`.
 
+## The hero background
+
+The hero is layered, and every layer above the first is optional:
+
+1. **The gradient, halo and letterbox bands** — the design's baseline. Always
+   painted, and what a visitor sees when everything above is absent.
+2. **A generated WebGL field** (`hero-background.tsx`, rendered with `ogl`) —
+   an approved shader preset. Treat the GLSL and its preset values as an asset,
+   not as code to refactor.
+3. **A scrim** — see below.
+4. **An optional Playback Asset**, when Managed Content has one.
+
+The background is deliberately absent more often than not. It is never loaded
+for a visitor who prefers reduced motion or has Save-Data on; it stops rendering
+once the hero scrolls out of view; and if WebGL2 is unavailable or the context is
+lost it removes itself and the gradient shows through.
+
+**The scrim is not decoration.** The shader's pale folds sweep through the area
+the copy sits in, and contrast cannot be left to a surface that changes every
+frame. The scrim restores a dark, stable ground where the text is, releasing
+toward the top right so the field still reads. It is tuned against measured
+worst-case contrast across desktop, tablet and mobile — the tightest margin is
+the subtitle at 5.15:1 against a 4.5:1 requirement. Re-measure if the preset's
+colours, the scrim or the hero's type colours change.
+
+For the same reason the hero's kicker is `text-wc-soft`, not the `text-wc-muted-2`
+the other kickers use: `#777` cannot reach 4.5:1 on *any* background — its
+ceiling against pure black is 4.69:1.
+
 ## Typography
 
 Inter and Playfair Display are self-hosted from `public/fonts` with

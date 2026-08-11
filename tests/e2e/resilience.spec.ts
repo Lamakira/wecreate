@@ -48,6 +48,21 @@ test.describe("The homepage without its optional layers", () => {
     expect(after?.x).toBeCloseTo(before?.x ?? 0, 1);
   });
 
+  test("does not render the generated hero background", async ({ page }) => {
+    await page.goto("/");
+
+    // The WebGL background is decorative and continuous. It is not merely
+    // paused for these visitors — the module is never loaded, so a metered
+    // connection is not charged for a renderer it will not use.
+    await expect(page.getByTestId("hero-background")).toHaveCount(0);
+
+    // The hero still looks finished: its gradient is the design's baseline.
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Voir le portfolio" }),
+    ).toBeVisible();
+  });
+
   test("does not download the optional hero loop", async ({ page }) => {
     await content.editDraft({
       homePage: { hero: { playbackAsset: SAMPLE_HERO_PLAYBACK } },
@@ -144,6 +159,21 @@ test.describe("The optional hero loop", () => {
     }
 
     // Either way the hero reads the same.
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  });
+});
+
+test.describe("The generated hero background", () => {
+  test("renders behind the hero when motion is allowed", async ({ page }) => {
+    await page.goto("/");
+
+    const backdrop = page.getByTestId("hero-background");
+    await expect(backdrop).toBeAttached();
+    await expect(backdrop.locator("canvas")).toBeAttached();
+
+    // Decorative: it carries no meaning and is kept out of the accessibility
+    // tree, so the heading above it is what a screen reader encounters.
+    await expect(backdrop).toHaveAttribute("aria-hidden", "true");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 });
