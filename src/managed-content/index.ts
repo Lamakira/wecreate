@@ -6,6 +6,8 @@ import { draftMode } from "next/headers";
 import { isPublishable } from "./portfolio";
 import { getManagedContentProvider } from "./provider";
 import type {
+  AboutContent,
+  ContactContent,
   HomePage,
   PortfolioContent,
   PortfolioProject,
@@ -74,6 +76,21 @@ export async function readHomePage(): Promise<HomePage> {
  */
 export async function readServices(): Promise<ServicesContent> {
   return (await readSiteContent()).services;
+}
+
+/**
+ * The two editorial pages, read the same way the service catalogue is.
+ *
+ * Neither carries a gate of its own: they hold WeCreate's own words about
+ * itself, not client work, so there is no permission or media requirement to
+ * satisfy before a visitor may see them. Draft and published still separate.
+ */
+export async function readAbout(): Promise<AboutContent> {
+  return (await readSiteContent()).about;
+}
+
+export async function readContact(): Promise<ContactContent> {
+  return (await readSiteContent()).contact;
 }
 
 /**

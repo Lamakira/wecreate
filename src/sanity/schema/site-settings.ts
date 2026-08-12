@@ -54,21 +54,28 @@ export const siteSettings = defineType({
       title: "Coordonnées",
       type: "object",
       group: "contact",
+      // These are the three approved ways to reach WeCreate, and the Contact
+      // page is built out of them. A label left empty here would ship a link
+      // with no accessible name, so the Studio refuses it while the editor is
+      // still looking at the field.
       fields: [
         defineField({
           name: "whatsappLabel",
           title: "Libellé WhatsApp",
           type: "string",
+          validation: (rule) => rule.required(),
         }),
         defineField({
           name: "whatsappUrl",
           title: "Lien WhatsApp",
           type: "url",
+          validation: (rule) => rule.required(),
         }),
         defineField({
           name: "discoveryCallLabel",
           title: "Libellé de l'appel découverte",
           type: "string",
+          validation: (rule) => rule.required(),
         }),
         defineField({
           name: "discoveryCallUrl",
@@ -76,8 +83,14 @@ export const siteSettings = defineType({
           type: "url",
           description:
             "La page Calendly hébergée de l'appel découverte de 30 minutes. Le site n'y charge aucun widget : c'est un lien, ouvert dans un nouvel onglet.",
+          validation: (rule) => rule.required(),
         }),
-        defineField({ name: "email", title: "Email", type: "string" }),
+        defineField({
+          name: "email",
+          title: "Email",
+          type: "string",
+          validation: (rule) => rule.required(),
+        }),
         defineField({ name: "locationLabel", title: "Localisation", type: "string" }),
       ],
     }),

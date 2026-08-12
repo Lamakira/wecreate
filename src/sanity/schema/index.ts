@@ -1,5 +1,7 @@
 import type { SchemaTypeDefinition } from "sanity";
 
+import { aboutPage } from "./about-page";
+import { contactPage } from "./contact-page";
 import { homePage } from "./home-page";
 import { objectTypes } from "./objects";
 import { portfolioPage, portfolioProject } from "./portfolio";
@@ -18,6 +20,8 @@ export const SINGLETON_TYPES = [
   "homePage",
   "portfolioPage",
   "servicesPage",
+  "aboutPage",
+  "contactPage",
 ] as const;
 
 export const schemaTypes: SchemaTypeDefinition[] = [
@@ -30,5 +34,7 @@ export const schemaTypes: SchemaTypeDefinition[] = [
   servicePack,
   comparisonRow,
   serviceAddOn,
+  aboutPage,
+  contactPage,
   ...objectTypes,
 ];
