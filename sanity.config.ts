@@ -51,9 +51,21 @@ export default defineConfig({
     // and issues the playback identity (ADR-0007). An editor drops in a file;
     // they never see, type or manage a playback id.
     //
-    // Nothing is stored above 1080p and no downloadable rendition is generated:
-    // the website streams WeCreate's work, and the archival master stays off it.
-    muxInput({ max_resolution_tier: "1080p", static_renditions: [] }),
+    // Three settings, and each one is a cost decision as much as a quality one:
+    //
+    // - `basic` is Mux's free encoding tier. It streams adaptively up to 1080p,
+    //   which is the whole of what this website does with video. `plus` buys
+    //   per-title encoding and bills per minute encoded; moving to it is a
+    //   deliberate WeCreate decision about picture quality, not a default.
+    // - Nothing is ingested or stored above 1080p. Storage is billed by
+    //   resolution tier, and the archival master stays off the website anyway.
+    // - No downloadable rendition is generated. WeCreate streams its work; it
+    //   does not hand out the file.
+    muxInput({
+      video_quality: "basic",
+      max_resolution_tier: "1080p",
+      static_renditions: [],
+    }),
     presentationTool({
       previewUrl: {
         origin: siteUrl(),

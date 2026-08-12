@@ -173,6 +173,13 @@ puts a content read on every request into the portfolio (ADR-0003). See
    the environment, so each environment's dataset carries its own — which is
    also what keeps staging uploads out of the production Mux environment.
 
+Uploads use Mux's `basic` quality level, capped at 1080p, with no downloadable
+rendition. Encoding is free at that level and the first 100,000 delivered
+minutes each month are free, so a portfolio of this size is billed for storage
+and very little else. `plus` buys per-title encoding at a per-minute charge:
+worth considering once WeCreate has real films on the site, and a deliberate
+decision when it happens rather than a default that quietly costs money.
+
 The Studio is served by the application itself, so there is no separate Studio
 deployment to manage.
 
