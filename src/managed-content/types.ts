@@ -40,6 +40,13 @@ export interface SplitHeadline {
 export interface ContactDetails {
   whatsappLabel: string;
   whatsappUrl: string;
+  /**
+   * The hosted 30-minute Discovery Call page. A plain address an editor
+   * maintains: nothing on the site loads a scheduling widget, so a slow or
+   * unavailable calendar can never hold up a WeCreate page.
+   */
+  discoveryCallLabel: string;
+  discoveryCallUrl: string;
   email: string;
   locationLabel: string;
 }
@@ -331,9 +338,143 @@ export interface PortfolioContent {
   projects: PortfolioProject[];
 }
 
+/**
+ * One commercial offer inside a service universe.
+ *
+ * A pack is priced, described and contactable — never purchasable. Nothing here
+ * carries a SKU, a purchase flag or a Paid Deliverable, because a service offer
+ * can never enter the Digital Cart, create an Order Snapshot or reach FedaPay
+ * (ADR-0006). `paymentTerms` is commercial information WeCreate states out
+ * loud so a visitor can prepare; the website neither calculates nor collects it.
+ */
+export interface ServicePack {
+  /**
+   * Stable identity, and the one `id` among the service types — its siblings
+   * carry a `key`, the way `UniverseCard` and `ProofPoint` do. The difference
+   * is real: a universe, a comparison row and an add-on are content blocks in a
+   * list, while a pack is a named commercial offer that a Service Enquiry
+   * message identifies. It survives a rename.
+   */
+  id: string;
+  name: string;
+  /**
+   * Whole XOF. WeCreate's published reference price, kept even for a pack
+   * quoted on request, because it is what the conversation starts from.
+   */
+  priceXof: number;
+  /** What the price buys, e.g. `par mois`. Empty when it is a one-off fee. */
+  priceUnit: string;
+  /**
+   * Quoted rather than listed: the page shows `ServicesContent.onRequestLabel`
+   * in place of the amount.
+   */
+  isOnRequest: boolean;
+  /** Who the pack is for. */
+  audience: string;
+  /** How long the client commits for, e.g. `3 mois`. */
+  commitment: string;
+  /** When each part is due. Stated only — see `ServiceEnquiryContent.notice`. */
+  paymentTerms: string;
+  inclusions: string[];
+}
+
+/**
+ * A family of offers: Entreprises, Immobilier or Mariage. The same three
+ * universes a Portfolio Project belongs to, sold rather than shown.
+ */
+export interface ServiceUniverse {
+  key: string;
+  kicker: string;
+  title: string;
+  intro: string;
+  /** Display order is this array's order. */
+  packs: ServicePack[];
+}
+
+/** One row of the comparison table. */
+export interface ServiceComparisonRow {
+  key: string;
+  label: string;
+  /** One cell per entry of `ServiceComparisonContent.columns`, in the same order. */
+  values: string[];
+}
+
+/**
+ * The Entreprises packs side by side, on the light band. A table because it is
+ * one: row headers, column headers and a caption, so it is navigable by a
+ * screen reader instead of being a grid of loose cells.
+ */
+export interface ServiceComparisonContent extends SectionVisibility {
+  kicker: string;
+  title: string;
+  /** The table's accessible name. */
+  caption: string;
+  /** Column headings, in display order. */
+  columns: string[];
+  rows: ServiceComparisonRow[];
+}
+
+/** An option sold alongside a pack, never on its own. */
+export interface ServiceAddOn {
+  key: string;
+  title: string;
+  /** Whole XOF. */
+  priceXof: number;
+  /** What the price covers, e.g. `par vidéo`. Empty when it is a flat fee. */
+  priceUnit: string;
+  description: string;
+}
+
+export interface ServiceAddOnsContent extends SectionVisibility {
+  kicker: string;
+  title: string;
+  addOns: ServiceAddOn[];
+}
+
+/**
+ * What a service CTA is, and the words it carries.
+ *
+ * Both actions leave the site: a prefilled WhatsApp conversation, and a hosted
+ * Discovery Call page. `notice` is what keeps them honest — a visitor is told,
+ * in the same place they press, that this opens a conversation and nothing
+ * else.
+ */
+export interface ServiceEnquiryContent {
+  title: string;
+  notice: string;
+  whatsappLabel: string;
+  /** `%s` is replaced with the offer the visitor chose. */
+  whatsappMessageTemplate: string;
+  discoveryCallLabel: string;
+  discoveryCallNote: string;
+}
+
+/**
+ * The Services page: WeCreate's method, its three universes and their packs,
+ * the Entreprises comparison and the add-ons.
+ *
+ * Like the homepage this is a fixed set of named sections. An editor changes
+ * copy, prices, inclusions, order and whether the last two sections are shown —
+ * never the page's structure.
+ */
+export interface ServicesContent {
+  seo: PageSeo;
+  kicker: string;
+  headline: SplitHeadline;
+  /** The three columns of method copy under the title. */
+  methodColumns: string[];
+  /** Shown in place of a price for a pack quoted on request. */
+  onRequestLabel: string;
+  enquiry: ServiceEnquiryContent;
+  universes: ServiceUniverse[];
+  comparison: ServiceComparisonContent;
+  addOns: ServiceAddOnsContent;
+}
+
 /** Everything the public site needs from Managed Content in one place. */
 export interface SiteContent {
   settings: SiteSettings;
   homePage: HomePage;
   portfolio: PortfolioContent;
+  services: ServicesContent;
 }

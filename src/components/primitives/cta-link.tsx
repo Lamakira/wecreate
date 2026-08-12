@@ -10,18 +10,34 @@ export function isExternalHref(href: string): boolean {
 const VARIANTS = {
   /** Solid white on dark: the primary action. */
   solid:
-    "inline-block whitespace-nowrap bg-wc-white px-7 py-[17px] text-button font-semibold tracking-18 uppercase text-wc-pure transition-opacity duration-300 hover:opacity-75",
+    "bg-wc-white text-wc-pure transition-opacity duration-300 hover:opacity-75",
   /** Outlined: the secondary action on a dark surface. */
   ghost:
-    "inline-block whitespace-nowrap border border-wc-border px-7 py-[17px] text-button font-semibold tracking-18 uppercase text-wc-white transition-colors duration-300 hover:border-wc-white hover:bg-wc-surface-2",
-  /** Underlined text: a quiet in-section link. */
+    "border border-wc-border text-wc-white transition-colors duration-300 hover:border-wc-white hover:bg-wc-surface-2",
+  /** Underlined text: a quiet in-section link, with metrics of its own. */
   underline:
     "inline-block border-b border-wc-muted pb-[5px] text-micro tracking-24 uppercase transition-colors duration-300 hover:border-wc-white",
+} as const;
+
+const SIZES = {
+  /** A button standing on its own in a section. */
+  default:
+    "inline-block whitespace-nowrap px-7 py-[17px] text-button font-semibold tracking-18 uppercase",
+  /** One of a stack filling the foot of a card, at the card's smaller type. */
+  block:
+    "block w-full px-5 py-[15px] text-center text-micro font-semibold tracking-18 uppercase",
 } as const;
 
 interface CtaLinkProps {
   cta: CallToAction;
   variant: keyof typeof VARIANTS;
+  /** Ignored by `underline`, which carries its own box. */
+  size?: keyof typeof SIZES;
+  /**
+   * Appended to the accessible name and hidden visually. What distinguishes
+   * one "Demander un devis" from the nine others on the same page.
+   */
+  context?: string;
   className?: string;
 }
 
@@ -30,8 +46,27 @@ interface CtaLinkProps {
  * navigation and a plain external link from the destination itself. Editors
  * type a destination; they never have to know which kind of link it becomes.
  */
-export function CtaLink({ cta, variant, className }: CtaLinkProps) {
-  const classes = className ? `${VARIANTS[variant]} ${className}` : VARIANTS[variant];
+export function CtaLink({
+  cta,
+  variant,
+  size = "default",
+  context,
+  className,
+}: CtaLinkProps) {
+  const classes = [
+    variant === "underline" ? "" : SIZES[size],
+    VARIANTS[variant],
+    className ?? "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const content = (
+    <>
+      {cta.label}
+      {context ? <span className="sr-only"> — {context}</span> : null}
+    </>
+  );
 
   if (isExternalHref(cta.href)) {
     return (
@@ -41,14 +76,14 @@ export function CtaLink({ cta, variant, className }: CtaLinkProps) {
         rel="noopener noreferrer"
         className={classes}
       >
-        {cta.label}
+        {content}
       </a>
     );
   }
 
   return (
     <Link href={cta.href} className={classes}>
-      {cta.label}
+      {content}
     </Link>
   );
 }

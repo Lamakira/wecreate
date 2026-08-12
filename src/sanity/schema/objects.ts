@@ -1,4 +1,4 @@
-import { defineField, defineType } from "sanity";
+import { defineField, defineType, type FieldDefinition } from "sanity";
 
 /**
  * Reusable field objects.
@@ -7,6 +7,23 @@ import { defineField, defineType } from "sanity";
  * no rich-text or free-form block type anywhere in this schema: editors change
  * WeCreate's words, never its layout or markup.
  */
+
+/**
+ * The switch every optional section carries.
+ *
+ * Hiding a section is the whole of an editor's control over a page's shape:
+ * they cannot add one, remove one or reorder them (ADR-0001). One definition,
+ * so every page offers the same wording for the same decision.
+ */
+export function visibilityField(): FieldDefinition {
+  return defineField({
+    name: "isVisible",
+    title: "Section affichée",
+    type: "boolean",
+    initialValue: true,
+    description: "Décochez pour retirer la section de la page publique.",
+  });
+}
 
 export const callToAction = defineType({
   name: "callToAction",

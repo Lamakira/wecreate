@@ -65,6 +65,18 @@ export const siteSettings = defineType({
           title: "Lien WhatsApp",
           type: "url",
         }),
+        defineField({
+          name: "discoveryCallLabel",
+          title: "Libellé de l'appel découverte",
+          type: "string",
+        }),
+        defineField({
+          name: "discoveryCallUrl",
+          title: "Lien de l'appel découverte",
+          type: "url",
+          description:
+            "La page Calendly hébergée de l'appel découverte de 30 minutes. Le site n'y charge aucun widget : c'est un lien, ouvert dans un nouvel onglet.",
+        }),
         defineField({ name: "email", title: "Email", type: "string" }),
         defineField({ name: "locationLabel", title: "Localisation", type: "string" }),
       ],

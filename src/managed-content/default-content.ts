@@ -1,6 +1,419 @@
-import type { SiteContent } from "./types";
+import type { ServicesContent, SiteContent } from "./types";
 
 const WHATSAPP_URL = "https://wa.me/2290167366726";
+/**
+ * WeCreate's hosted 30-minute Discovery Call. A default an editor replaces in
+ * the Studio once the production Calendly account exists; the site never loads
+ * Calendly's own script, so a wrong address is a broken link and nothing more.
+ */
+const DISCOVERY_CALL_URL = "https://calendly.com/wecreate-bj/30min";
+
+/**
+ * Every commercial value below comes from the project brief (`docs/BRIEF-PROJET
+ * -Site-WeCreate.md`, §6.4 and §7), which issue #1 makes authoritative wherever
+ * it disagrees with the design prototype. The prototype's contradictory numbers
+ * — 16 videos a month on Domination, its shooting-day and drone comparison
+ * rows, and its six invented add-on prices — are deliberately not here.
+ *
+ * Payment conditions are shown because a prospective client needs them before a
+ * conversation. Nothing on the site computes or collects them: a service offer
+ * ends in WhatsApp or a Discovery Call, never in a cart (ADR-0006).
+ */
+const SERVICES_CONTENT: ServicesContent = {
+  seo: {
+    title: "Services",
+    description:
+      "Les packs vidéo WeCreate pour les entreprises, l'immobilier et le mariage : tarifs en FCFA, inclus détaillés, engagement et conditions de paiement. Chaque offre ouvre une conversation, pas une commande.",
+    openGraphImageUrl: null,
+  },
+  kicker: "Services · Trois univers",
+  headline: { lead: "La méthode ", emphasis: "WeCreate", trail: "." },
+  methodColumns: [
+    "On commence par comprendre ce que vous vendez et à qui. Ensuite on écrit. Puis on tourne — plein format, lumière travaillée, son propre.",
+    "L'étalonnage signature vient à la fin : c'est là que l'image devient reconnaissable. Rien n'est laissé au hasard, jamais de gabarit.",
+    "Livraison en 5 jours ouvrés, formats prêts à publier. Devis sous 24-48h, tarifs en FCFA, tout est écrit.",
+  ],
+  onRequestLabel: "Sur demande",
+  enquiry: {
+    title: "Comment on démarre",
+    notice:
+      "Écrire sur WhatsApp ou réserver un appel découverte est une demande de service : le site ne prend aucune commande, ne bloque aucune date et n'encaisse aucun paiement pour les prestations. Le devis, le planning et les conditions se décident ensemble, pendant la conversation.",
+    whatsappLabel: "Demander un devis",
+    whatsappMessageTemplate:
+      "Bonjour WeCreate. Je vous écris au sujet de %s. Pouvons-nous en parler ?",
+    discoveryCallLabel: "Appel découverte · 30 min",
+    discoveryCallNote:
+      "L'appel s'ouvre sur le calendrier de WeCreate, dans un nouvel onglet. Si le calendrier est lent ou indisponible, WhatsApp reste la voie la plus directe.",
+  },
+  universes: [
+    {
+      key: "entreprises",
+      kicker: "Abonnements mensuels",
+      title: "Entreprises",
+      intro:
+        "Une présence vidéo constante, pas un one-shot. On prend en charge le planning, le tournage et l'étalonnage.",
+      packs: [
+        {
+          id: "entreprises-presence",
+          name: "Pack Présence",
+          priceXof: 350000,
+          priceUnit: "par mois",
+          isOnRequest: false,
+          audience: "TPE, commerces, marques qui démarrent",
+          commitment: "3 mois",
+          paymentTerms:
+            "100 % du premier mois à la signature, puis mensuel d'avance.",
+          inclusions: [
+            "4 vidéos verticales cinéma 30-60s par mois",
+            "Étalonnage signature",
+            "Musique sous licence",
+            "1 cycle de retouches",
+            "2 demi-journées de tournage",
+            "Livraison en 5 jours ouvrés",
+            "Stockage des rushes 3 mois",
+          ],
+        },
+        {
+          id: "entreprises-croissance",
+          name: "Pack Croissance",
+          priceXof: 650000,
+          priceUnit: "par mois",
+          isOnRequest: false,
+          audience: "PME et marques en développement",
+          commitment: "6 mois",
+          paymentTerms:
+            "100 % du premier mois à la signature, puis mensuel d'avance.",
+          inclusions: [
+            "8 vidéos par mois",
+            "3 photos HD",
+            "2 variantes par mois",
+            "1 vidéo pub cinéma 60-90s par trimestre, concept, voix off et casting compris",
+            "2 cycles de retouches",
+            "4 demi-journées de tournage",
+            "Brief d'1h et bilan trimestriel",
+            "Stockage des rushes 6 mois",
+          ],
+        },
+        {
+          id: "entreprises-domination",
+          name: "Pack Domination",
+          priceXof: 1200000,
+          priceUnit: "par mois",
+          isOnRequest: false,
+          audience: "Groupes, franchises, marques leaders",
+          commitment: "12 mois",
+          paymentTerms:
+            "100 % du premier mois à la signature, puis mensuel d'avance.",
+          inclusions: [
+            "12 vidéos par mois, verticales et horizontales",
+            "10 photos HD",
+            "4 variantes par mois",
+            "1 vidéo pub cinéma 90-120s par trimestre, multilingue possible",
+            "2 couvertures événementielles par an",
+            "Délais express : 3 jours pour les vidéos, 7 jours pour les films",
+            "WhatsApp prioritaire et bilan annuel de 3h",
+            "Stockage des rushes 12 mois",
+          ],
+        },
+      ],
+    },
+    {
+      key: "immobilier",
+      kicker: "Location courte durée",
+      title: "Immobilier",
+      intro:
+        "Les biens ne se louent pas sur des photos plates. On filme le désir : lumière, matière, sensation d'habiter.",
+      packs: [
+        {
+          id: "immobilier-visite-premium",
+          name: "Pack Visite Premium",
+          priceXof: 120000,
+          priceUnit: "à l'unité",
+          isOnRequest: false,
+          audience: "Propriétaires, un bien à valoriser",
+          commitment: "Prestation ponctuelle",
+          paymentTerms: "50 % à la réservation, 50 % à la livraison.",
+          inclusions: [
+            "1 vidéo verticale 60-90s au format 9:16",
+            "Étalonnage cinéma",
+            "Musique sous licence",
+            "1 cycle de retouches",
+            "Tournage de 2 à 3h en plein format Sony ZV-E1",
+            "Livraison en 5 jours ouvrés",
+          ],
+        },
+        {
+          id: "immobilier-gestionnaire-pro",
+          name: "Pack Gestionnaire Pro",
+          priceXof: 320000,
+          priceUnit: "par mois",
+          isOnRequest: false,
+          audience: "Gestionnaires de 3 à 8 biens",
+          commitment: "3 mois",
+          paymentTerms:
+            "100 % du premier mois à la signature, puis mensuel d'avance.",
+          inclusions: [
+            "3 vidéos par mois",
+            "Drone inclus",
+            "3 photos HD par bien",
+            "2 cycles de retouches",
+            "Livraison en 4 jours",
+          ],
+        },
+        {
+          id: "immobilier-gestionnaire-empire",
+          name: "Pack Gestionnaire Empire",
+          priceXof: 600000,
+          priceUnit: "par mois",
+          isOnRequest: false,
+          audience: "Portefeuilles de 8 biens et plus",
+          commitment: "6 mois",
+          paymentTerms:
+            "100 % du premier mois à la signature, puis mensuel d'avance.",
+          inclusions: [
+            "6 vidéos par mois",
+            "Drone inclus",
+            "5 photos HD par bien",
+            "3 cycles de retouches",
+            "1 livraison express 48h par mois",
+            "Conseil trimestriel",
+            "Livraison en 3 jours",
+          ],
+        },
+      ],
+    },
+    {
+      key: "mariage",
+      kicker: "Films premium",
+      title: "Mariage",
+      intro:
+        "Un mariage ne se rejoue pas. On le traite comme un film : intention, silence, émotion — jamais du montage automatique.",
+      packs: [
+        {
+          id: "mariage-souvenir",
+          name: "Pack Souvenir",
+          priceXof: 400000,
+          priceUnit: "",
+          isOnRequest: false,
+          audience: "Cérémonies intimes",
+          commitment: "Prestation ponctuelle",
+          paymentTerms:
+            "70 % à la réservation, la date est alors bloquée. 30 % à la livraison.",
+          inclusions: [
+            "1 récap cinéma de 3 à 5 min au format 16:9",
+            "Version verticale",
+            "Teaser 30s",
+            "5 photos HD",
+            "Étalonnage cinéma",
+          ],
+        },
+        {
+          id: "mariage-elegance",
+          name: "Pack Élégance",
+          priceXof: 750000,
+          priceUnit: "",
+          isOnRequest: false,
+          audience: "Mariages complets",
+          commitment: "Prestation ponctuelle",
+          paymentTerms:
+            "70 % à la réservation, la date est alors bloquée. 30 % à la livraison.",
+          inclusions: [
+            "Tout le pack Souvenir",
+            "Séance Fashion Robe de 3h",
+            "Vidéo fashion 60-90s",
+            "Version horizontale",
+            "5 photos éditoriales",
+            "Direction artistique",
+          ],
+        },
+        {
+          id: "mariage-heritage",
+          name: "Pack Héritage",
+          priceXof: 1200000,
+          priceUnit: "",
+          isOnRequest: false,
+          audience: "Mariages sur trois cérémonies",
+          commitment: "Prestation ponctuelle",
+          paymentTerms:
+            "70 % à la réservation, la date est alors bloquée. 30 % à la livraison.",
+          inclusions: [
+            "Couverture de 3 cérémonies",
+            "Récap global de 6 à 8 min",
+            "3 récaps individuels",
+            "Film fashion",
+            "5 verticales et 4 teasers",
+            "15 photos HD",
+            "2e cameraman au religieux",
+          ],
+        },
+        {
+          id: "mariage-wedding-film-signature",
+          name: "Wedding Film Signature",
+          priceXof: 2000000,
+          priceUnit: "",
+          isOnRequest: true,
+          audience: "Une œuvre, sur mesure",
+          commitment: "Prestation ponctuelle",
+          paymentTerms:
+            "70 % à la réservation, la date est alors bloquée. 30 % à la livraison.",
+          inclusions: [
+            "Œuvre narrative de 10 à 15 min",
+            "Highlight et récaps",
+            "6 verticales et 5 teasers",
+            "25 photos éditoriales",
+            "Wedding Reveal Screening privé",
+          ],
+        },
+      ],
+    },
+  ],
+  comparison: {
+    isVisible: true,
+    kicker: "Comparatif · Abonnements Entreprises",
+    title: "Choisir son rythme",
+    caption: "Comparatif des trois abonnements Entreprises",
+    columns: ["Pack Présence", "Pack Croissance", "Pack Domination"],
+    rows: [
+      {
+        key: "prix",
+        label: "Prix mensuel",
+        values: ["350 000 F", "650 000 F", "1 200 000 F"],
+      },
+      { key: "videos", label: "Vidéos par mois", values: ["4", "8", "12"] },
+      { key: "photos", label: "Photos HD", values: ["—", "3", "10"] },
+      {
+        key: "film-de-marque",
+        label: "Vidéo pub cinéma",
+        values: [
+          "—",
+          "1 par trimestre, 60-90s",
+          "1 par trimestre, 90-120s, multilingue possible",
+        ],
+      },
+      {
+        key: "evenementiel",
+        label: "Couvertures événementielles",
+        values: ["—", "—", "2 par an"],
+      },
+      { key: "variantes", label: "Variantes par mois", values: ["—", "2", "4"] },
+      {
+        key: "delais",
+        label: "Délais de livraison",
+        values: [
+          "5 jours ouvrés",
+          "5 jours ouvrés",
+          "Express : 3 jours, 7 jours pour les films",
+        ],
+      },
+      {
+        key: "bilans",
+        label: "Bilans",
+        values: ["—", "Bilan trimestriel", "Bilan annuel de 3h"],
+      },
+      {
+        key: "stockage",
+        label: "Stockage des rushes",
+        values: ["3 mois", "6 mois", "12 mois"],
+      },
+      {
+        key: "engagement",
+        label: "Engagement minimum",
+        values: ["3 mois", "6 mois", "12 mois"],
+      },
+    ],
+  },
+  addOns: {
+    isVisible: true,
+    kicker: "Add-ons",
+    title: "À ajouter à n'importe quel pack",
+    addOns: [
+      {
+        key: "drone-entreprise",
+        title: "Drone — entreprises et immobilier",
+        priceXof: 50000,
+        priceUnit: "par vidéo",
+        description: "Autorisations, pilote, plans aériens étalonnés.",
+      },
+      {
+        key: "drone-mariage",
+        title: "Drone — mariage",
+        priceXof: 100000,
+        priceUnit: "une cérémonie",
+        description: "Les plans aériens de la journée, sur une cérémonie.",
+      },
+      {
+        key: "drone-mariage-multiple",
+        title: "Drone — mariage, plusieurs cérémonies",
+        priceXof: 200000,
+        priceUnit: "",
+        description: "Les mêmes plans aériens, sur l'ensemble des cérémonies.",
+      },
+      {
+        key: "fichiers-raw",
+        title: "Fichiers sources RAW",
+        priceXof: 50000,
+        priceUnit: "par projet",
+        description: "Les rushes bruts, livrés en fin de projet.",
+      },
+      {
+        key: "photos-dediees",
+        title: "Séance photos dédiée",
+        priceXof: 50000,
+        priceUnit: "",
+        description: "Immobilier : un passage photo en plus du tournage.",
+      },
+      {
+        key: "ambiance-soir",
+        title: "Tournage ambiance soir",
+        priceXof: 30000,
+        priceUnit: "",
+        description: "Une seconde passe à la tombée de la nuit.",
+      },
+      {
+        key: "voix-off",
+        title: "Voix off française professionnelle",
+        priceXof: 25000,
+        priceUnit: "",
+        description: "Comédien voix, direction de jeu et mixage.",
+      },
+      {
+        key: "version-horizontale",
+        title: "Version horizontale 16:9",
+        priceXof: 20000,
+        priceUnit: "",
+        description: "Le même film remonté pour le web et YouTube.",
+      },
+      {
+        key: "express-48h",
+        title: "Livraison express 48h",
+        priceXof: 30000,
+        priceUnit: "",
+        description: "Priorité absolue sur le planning de post-production.",
+      },
+      {
+        key: "fashion-robe",
+        title: "Séance Fashion Robe",
+        priceXof: 250000,
+        priceUnit: "",
+        description: "Une séance dédiée à la robe, en studio ou en extérieur.",
+      },
+      {
+        key: "tiktok-couple",
+        title: "Challenge ou transition TikTok couple",
+        priceXof: 150000,
+        priceUnit: "",
+        description: "Une vidéo pensée pour les réseaux, tournée le jour J.",
+      },
+      {
+        key: "teaser-supplementaire",
+        title: "Teaser 30s supplémentaire",
+        priceXof: 100000,
+        priceUnit: "",
+        description: "Un second teaser, monté pour une autre plateforme.",
+      },
+    ],
+  },
+};
 
 /**
  * The canonical starting state of WeCreate's Managed Content.
@@ -40,6 +453,8 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
     contact: {
       whatsappLabel: "WhatsApp +229 01 67 36 67 26",
       whatsappUrl: WHATSAPP_URL,
+      discoveryCallLabel: "Réserver un appel découverte",
+      discoveryCallUrl: DISCOVERY_CALL_URL,
       email: "wecreate08@gmail.com",
       locationLabel: "Calavi Tankpè, Bénin",
     },
@@ -228,4 +643,5 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
       "Les projets publiés apparaîtront ici dès leur mise en ligne.",
     projects: [],
   },
+  services: SERVICES_CONTENT,
 };

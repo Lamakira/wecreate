@@ -44,7 +44,14 @@ export const SITE_CONTENT_QUERY = defineQuery(`{
     positioningLine,
     navigation[]{label, href},
     headerCta${CALL_TO_ACTION},
-    contact{whatsappLabel, whatsappUrl, email, locationLabel},
+    contact{
+      whatsappLabel,
+      whatsappUrl,
+      discoveryCallLabel,
+      discoveryCallUrl,
+      email,
+      locationLabel
+    },
     socialAccounts[]{label, url},
     footer{baseline, navigationHeading, contactHeading, socialHeading, legalLine},
     seo{
@@ -94,6 +101,58 @@ export const SITE_CONTENT_QUERY = defineQuery(`{
       subtitle,
       primaryCta${CALL_TO_ACTION},
       secondaryCta${CALL_TO_ACTION}
+    }
+  },
+  "servicesPage": *[_type == "servicesPage"][0]{
+    seo{title, description, "openGraphImageUrl": openGraphImage.asset->url},
+    kicker,
+    headline${SPLIT_HEADLINE},
+    methodColumns,
+    onRequestLabel,
+    enquiry{
+      title,
+      notice,
+      whatsappLabel,
+      whatsappMessageTemplate,
+      discoveryCallLabel,
+      discoveryCallNote
+    },
+    universes[]{
+      "key": coalesce(key.current, _key),
+      kicker,
+      title,
+      intro,
+      packs[]{
+        "id": coalesce(id.current, _key),
+        name,
+        priceXof,
+        priceUnit,
+        isOnRequest,
+        audience,
+        commitment,
+        paymentTerms,
+        inclusions
+      }
+    },
+    comparison{
+      isVisible,
+      kicker,
+      title,
+      caption,
+      columns,
+      rows[]{"key": coalesce(key.current, _key), label, values}
+    },
+    addOns{
+      isVisible,
+      kicker,
+      title,
+      addOns[]{
+        "key": coalesce(key.current, _key),
+        title,
+        priceXof,
+        priceUnit,
+        description
+      }
     }
   },
   "portfolioPage": *[_type == "portfolioPage"][0]{
