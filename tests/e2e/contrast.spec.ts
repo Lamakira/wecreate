@@ -117,6 +117,28 @@ async function collectText(page: Page): Promise<CollectedText[]> {
   });
 }
 
+/** Every collected run of text, measured against the surface behind it. */
+function expectMeetsAa(texts: CollectedText[]): void {
+  const failures: string[] = [];
+  for (const text of texts) {
+    if (!text.background) {
+      failures.push(`${text.label} — sits on no opaque surface`);
+      continue;
+    }
+
+    const ratio = contrastRatio(
+      relativeLuminance(...text.color),
+      relativeLuminance(...text.background),
+    );
+    const needs = text.isLarge ? AA_LARGE : AA_NORMAL;
+    if (ratio < needs) {
+      failures.push(`${text.label} — ${ratio.toFixed(2)}:1, needs ${needs}:1`);
+    }
+  }
+
+  expect(failures, `\n${failures.join("\n")}\n`).toEqual([]);
+}
+
 test.describe("Text contrast", () => {
   let content: ManagedContent;
 
@@ -143,24 +165,22 @@ test.describe("Text contrast", () => {
     const texts = (await collectText(page)).filter((text) => !text.inHero);
     expect(texts.length).toBeGreaterThan(20);
 
-    const failures: string[] = [];
-    for (const text of texts) {
-      if (!text.background) {
-        failures.push(`${text.label} — sits on no opaque surface`);
-        continue;
-      }
+    expectMeetsAa(texts);
+  });
 
-      const ratio = contrastRatio(
-        relativeLuminance(...text.color),
-        relativeLuminance(...text.background),
-      );
-      const needs = text.isLarge ? AA_LARGE : AA_NORMAL;
-      if (ratio < needs) {
-        failures.push(`${text.label} — ${ratio.toFixed(2)}:1, needs ${needs}:1`);
-      }
-    }
+  test("the services page meets WCAG AA, light comparison band included", async ({
+    page,
+  }) => {
+    // Services carries the site's second white band. Its table headers, row
+    // labels and pack meta lines are the tertiary greys the palette had to
+    // correct, on both grounds at once.
+    await page.goto("/services");
+    await page.waitForTimeout(800);
 
-    expect(failures, `\n${failures.join("\n")}\n`).toEqual([]);
+    const texts = await collectText(page);
+    expect(texts.length).toBeGreaterThan(40);
+
+    expectMeetsAa(texts);
   });
 
   test("the portfolio and its project dialog meet WCAG AA", async ({ page }) => {
@@ -176,24 +196,7 @@ test.describe("Text contrast", () => {
     const texts = await collectText(page);
     expect(texts.length).toBeGreaterThan(10);
 
-    const failures: string[] = [];
-    for (const text of texts) {
-      if (!text.background) {
-        failures.push(`${text.label} — sits on no opaque surface`);
-        continue;
-      }
-
-      const ratio = contrastRatio(
-        relativeLuminance(...text.color),
-        relativeLuminance(...text.background),
-      );
-      const needs = text.isLarge ? AA_LARGE : AA_NORMAL;
-      if (ratio < needs) {
-        failures.push(`${text.label} — ${ratio.toFixed(2)}:1, needs ${needs}:1`);
-      }
-    }
-
-    expect(failures, `\n${failures.join("\n")}\n`).toEqual([]);
+    expectMeetsAa(texts);
   });
 
   test("the hero meets WCAG AA over its generated background", async ({

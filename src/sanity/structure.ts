@@ -31,6 +31,12 @@ export const structure: StructureResolver = (S) =>
           S.document().schemaType("portfolioPage").documentId("portfolioPage"),
         ),
       S.listItem()
+        .title("Page services")
+        .id("servicesPage")
+        .child(
+          S.document().schemaType("servicesPage").documentId("servicesPage"),
+        ),
+      S.listItem()
         .title("Paramètres du site")
         .id("siteSettings")
         .child(

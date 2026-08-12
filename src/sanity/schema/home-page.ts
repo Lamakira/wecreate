@@ -1,4 +1,6 @@
-import { defineField, defineType, type FieldDefinition } from "sanity";
+import { defineField, defineType } from "sanity";
+
+import { visibilityField } from "./objects";
 
 /**
  * The homepage: a fixed, named set of sections.
@@ -8,17 +10,6 @@ import { defineField, defineType, type FieldDefinition } from "sanity";
  * and a page builder, and it is what keeps the approved design and its
  * accessibility guarantees intact (ADR-0001).
  */
-
-/** Every optional section carries the same visibility switch. */
-function visibilityField(): FieldDefinition {
-  return defineField({
-    name: "isVisible",
-    title: "Section affichée",
-    type: "boolean",
-    initialValue: true,
-    description: "Décochez pour retirer la section de la page publique.",
-  });
-}
 
 export const homePage = defineType({
   name: "homePage",

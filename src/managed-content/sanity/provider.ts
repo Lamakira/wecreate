@@ -14,6 +14,11 @@ import type {
   PortfolioContent,
   PortfolioProject,
   PortfolioUniverse,
+  ServiceAddOn,
+  ServiceComparisonRow,
+  ServicePack,
+  ServiceUniverse,
+  ServicesContent,
   SiteSettings,
   SpokenContentSupport,
 } from "../types";
@@ -37,6 +42,7 @@ interface SanityContentResult {
   homePage?: DeepPartial<HomePage> | null;
   portfolioPage?: DeepPartial<Omit<PortfolioContent, "projects">> | null;
   portfolioProjects?: Array<SanityProject | null> | null;
+  servicesPage?: DeepPartial<ServicesContent> | null;
 }
 
 /** An editor's choice, or nothing — never a universe the application invented. */
@@ -86,6 +92,97 @@ function toPortfolioProject(document: SanityProject): PortfolioProject {
   };
 }
 
+/**
+ * The service catalogue, normalised.
+ *
+ * `mergeContent` replaces arrays wholesale rather than merging element by
+ * element, which is right — an editor who deletes a pack means to delete it —
+ * but it means an element the editor left half-filled arrives with `null`
+ * fields. These functions give every one of them an empty value, so a pack
+ * saved without its inclusions renders as a pack with nothing listed instead of
+ * throwing on the way out of the server.
+ */
+function toServicePack(document: DeepPartial<ServicePack>, index: number): ServicePack {
+  return {
+    id: document.id ?? `pack-${index}`,
+    name: document.name ?? "",
+    priceXof: document.priceXof ?? 0,
+    priceUnit: document.priceUnit ?? "",
+    isOnRequest: document.isOnRequest === true,
+    audience: document.audience ?? "",
+    commitment: document.commitment ?? "",
+    paymentTerms: document.paymentTerms ?? "",
+    inclusions: document.inclusions ?? [],
+  };
+}
+
+function toServiceUniverse(
+  document: DeepPartial<ServiceUniverse>,
+  index: number,
+): ServiceUniverse {
+  return {
+    key: document.key ?? `universe-${index}`,
+    kicker: document.kicker ?? "",
+    title: document.title ?? "",
+    intro: document.intro ?? "",
+    packs: (document.packs ?? []).map(toServicePack),
+  };
+}
+
+function toServiceComparisonRow(
+  document: DeepPartial<ServiceComparisonRow>,
+  index: number,
+): ServiceComparisonRow {
+  return {
+    key: document.key ?? `row-${index}`,
+    label: document.label ?? "",
+    values: document.values ?? [],
+  };
+}
+
+function toServiceAddOn(
+  document: DeepPartial<ServiceAddOn>,
+  index: number,
+): ServiceAddOn {
+  return {
+    key: document.key ?? `add-on-${index}`,
+    title: document.title ?? "",
+    priceXof: document.priceXof ?? 0,
+    priceUnit: document.priceUnit ?? "",
+    description: document.description ?? "",
+  };
+}
+
+function toServices(
+  document: DeepPartial<ServicesContent> | null | undefined,
+): ServicesContent {
+  const merged = mergeContent(DEFAULT_SITE_CONTENT.services, {
+    ...document,
+    universes: undefined,
+    comparison: { ...document?.comparison, rows: undefined },
+    addOns: { ...document?.addOns, addOns: undefined },
+  });
+
+  return {
+    ...merged,
+    universes: document?.universes
+      ? document.universes.map(toServiceUniverse)
+      : merged.universes,
+    comparison: {
+      ...merged.comparison,
+      rows: document?.comparison?.rows
+        ? document.comparison.rows.map(toServiceComparisonRow)
+        : merged.comparison.rows,
+    },
+    addOns: {
+      ...merged.addOns,
+      addOns: document?.addOns?.addOns
+        ? document.addOns.addOns.map(toServiceAddOn)
+        : merged.addOns.addOns,
+    },
+  };
+}
+
 export const sanityContentProvider: ManagedContentProvider = {
   id: "sanity",
   async read(perspective) {
@@ -120,6 +217,7 @@ export const sanityContentProvider: ManagedContentProvider = {
           .filter((document): document is SanityProject => Boolean(document))
           .map(toPortfolioProject),
       },
+      services: toServices(result?.servicesPage),
     };
   },
 };

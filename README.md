@@ -91,9 +91,11 @@ Two rules keep this useful:
 - **Tests never mock internals.** They swap the provider at this boundary and
   drive the real running application, so they stay valid across refactors.
 
-Later integrations — FedaPay, Resend, Calendly, Supabase Storage — get their own
-boundary of the same shape. Mux already has one; see *Portfolio Projects and
-video* below.
+Later integrations — FedaPay, Resend, Supabase Storage — get their own boundary
+of the same shape. Mux already has one; see *Portfolio Projects and video*
+below. Calendly is the exception and never gets one: the site links to its
+hosted page and loads none of its code, so there is no vendor behind a boundary
+to hide (see *Services and Service Enquiries*).
 
 ### Homepage sections, not a page builder
 
@@ -161,6 +163,58 @@ streams a static shell before the slug is resolved, so the status is already
 committed by then; a real 404 would mean resolving every slug in a proxy, which
 puts a content read on every request into the portfolio (ADR-0003). See
 `src/app/(site)/not-found.tsx`.
+
+## Services and Service Enquiries
+
+`/services` is where WeCreate sells: three universes — Entreprises, Immobilier,
+Mariage — each with its packs, then the Entreprises comparison and the add-ons.
+Every price, inclusion, commitment, payment condition and the order they appear
+in is Managed Content, and the whole catalogue ships as the baseline in
+`src/managed-content/default-content.ts`.
+
+**The commercial values come from the brief, not the prototype.** Issue #1 makes
+`docs/BRIEF-PROJET-Site-WeCreate.md` authoritative wherever the design handoff
+disagrees, and it disagrees in several places: the handoff sells 16 videos a
+month on Domination against the brief's 12, compares packs on shooting days and
+drone inclusion the brief never promises, and prices six add-ons that do not
+exist. None of those are here. If you are tempted to "restore" a number from the
+prototype, that is the disagreement, and the brief wins.
+
+The same rule decides what the comparison table can say. The brief asks for
+rows on delivery times, retouch cycles, briefs and reviews, but only states some
+of those for some packs — it gives no retouch figure for Domination and no brief
+for Présence or Domination. Those two rows are therefore **absent rather than
+guessed**: in this table an em dash means "not included", so filling a gap with
+one would publish an exclusion WeCreate never agreed to, and inventing a figure
+would be worse. Every row present is complete for all three packs. Add the
+missing rows once WeCreate states the values — they are Managed Content, so that
+is an edit in the Studio, not a code change.
+
+**A pack ends in a conversation, never in a transaction.** ADR-0006 keeps
+services out of website commerce entirely, and the page is built so that it
+cannot drift back:
+
+- Each pack offers a prefilled WhatsApp link first, and WeCreate's hosted
+  Discovery Call second. Both are ordinary `<a>` elements to another origin, so
+  they work with scripting disabled and a slow calendar cannot hold up the page.
+  `src/service-enquiry/enquiry.ts` builds the addresses and holds no state.
+- The message names the offer — `Pack Croissance — Entreprises` — so WeCreate
+  never has to ask what it is about. It is percent-encoded, because
+  `URLSearchParams` would write spaces as `+` and leave the visitor deleting
+  them.
+- Nothing here adds to the Digital Cart, creates an Order Snapshot or reaches
+  FedaPay. The cart's own type only admits a Digital Product, and the Service
+  Enquiry notice above the packs tells the visitor the same thing in French,
+  where they press.
+- Wedding Film Signature shows *Sur demande* instead of an amount. Its reference
+  price stays in Managed Content — it is what the quote starts from — and the
+  page never prints it.
+
+**Calendly is a URL, not an integration.** `settings.contact.discoveryCallUrl`
+is an address an editor maintains, and no Calendly script or iframe is ever
+loaded (issue #1, ADR-0003). A wrong address is therefore a broken link and
+nothing more. The shipped default is a placeholder; WeCreate replaces it in the
+Studio once the production account exists.
 
 ## Setting up Sanity
 
@@ -240,6 +294,9 @@ tests/e2e/
 ├── homepage.spec.ts                  the approved design and its content
 ├── portfolio.spec.ts                 filters, counts, the project dialog and its
 │                                     keyboard, playback fallback, publication
+├── services.spec.ts                  canonical packs and prices, the prefilled
+│                                     WhatsApp message, the hosted Discovery
+│                                     Call, the comparison, no service commerce
 ├── site-shell.spec.ts                header, navigation, cart, footer, fonts
 ├── managed-content-publishing.spec.ts draft, preview, publish, revalidate
 ├── resilience.spec.ts                reduced motion, no JS, nothing published

@@ -9,6 +9,7 @@ import type {
   HomePage,
   PortfolioContent,
   PortfolioProject,
+  ServicesContent,
   SiteContent,
   SiteSettings,
 } from "./types";
@@ -62,6 +63,17 @@ export async function readSiteSettings(): Promise<SiteSettings> {
 
 export async function readHomePage(): Promise<HomePage> {
   return (await readSiteContent()).homePage;
+}
+
+/**
+ * The service catalogue.
+ *
+ * No gate of its own: unlike a Portfolio Project, a service pack carries no
+ * rights or media requirements — it is a price and a description WeCreate
+ * decides to publish. Draft and published still separate the same way.
+ */
+export async function readServices(): Promise<ServicesContent> {
+  return (await readSiteContent()).services;
 }
 
 /**
