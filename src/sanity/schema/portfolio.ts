@@ -112,8 +112,22 @@ export const portfolioProject = defineType({
       type: "mediaFrame",
       group: "media",
       description:
-        "Le format de la carte, et l'affiche si vous en fournissez une. Sans image, l'affiche est générée à partir de la vidéo.",
-      validation: (rule) => rule.required(),
+        "Le format de la carte, et l'affiche si vous en fournissez une. Sans image, l'affiche est générée à partir de la vidéo — le texte alternatif reste obligatoire dans les deux cas.",
+      validation: (rule) =>
+        rule.required().custom((value) => {
+          // `mediaFrame` asks for alternative text only once an image is
+          // uploaded, which is right for a card that may stay a placeholder.
+          // A Portfolio Project always ends up with a poster — the editor's, or
+          // the one the video platform generates — so it always needs
+          // describing, and the publication rule refuses the project without
+          // it. Saying so here means an editor is told while writing rather
+          // than by an empty portfolio.
+          const media = value as { alternativeText?: string } | undefined;
+          if (!media?.alternativeText?.trim()) {
+            return "Décrivez l'affiche : elle est visible même quand la vidéo ne se lit pas.";
+          }
+          return true;
+        }),
     }),
     defineField({
       name: "video",

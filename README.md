@@ -126,9 +126,15 @@ alternative text, video, the client's permission — or, when its speech carries
 meaning, captions or a transcript — is *absent* from what a visitor is served.
 Nothing counts it, links to it, lists it in the sitemap or serves it at its own
 URL. In preview the gate is lifted and each project says what it still needs, so
-an editor reviews their work in the real page. The Studio asks for the same
-fields, so an editor is told while writing; the read-time rule is what stops a
-project that slipped in another way.
+an editor reviews their work in the real page.
+
+The Studio asks for the same fields, so an editor is told while writing rather
+than by an empty portfolio. Keep the two in step: a requirement added to
+`publicationRequirements()` without a matching rule in
+`src/sanity/schema/portfolio.ts` lets an editor publish something the site then
+refuses, with nothing on screen to explain it. The client's permission is the
+one deliberate exception — the Studio accepts an unticked box, because deciding
+not to publish yet is a normal thing for an editor to do.
 
 **Video goes through its own boundary** (ADR-0007, ADR-0008):
 

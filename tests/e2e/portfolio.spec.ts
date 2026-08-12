@@ -292,6 +292,22 @@ test.describe("Publishing a Portfolio Project", () => {
       },
     },
     {
+      // The editor uploaded no image, so the poster is the one the video
+      // platform generated — and nobody described it. An editor meets this by
+      // doing nothing at all, which is why it has its own case.
+      what: "its generated poster has no alternative text",
+      overrides: {
+        playbackAsset: {
+          streamId: null,
+          posterUrl: "/brand/logo-noir.svg",
+          alternativeText: "",
+          sources: [{ src: "/sample-project.mp4", type: "video/mp4" }],
+          preview: null,
+          captions: [],
+        },
+      },
+    },
+    {
       what: "no video has been associated with it",
       overrides: { playbackAsset: null },
     },
