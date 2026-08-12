@@ -266,6 +266,138 @@ export interface HomePage {
 }
 
 /**
+ * One step of a sequence a visitor reads in order: WeCreate's method on À
+ * propos, and *Comment démarrer* on Contact.
+ *
+ * It carries no number of its own. The design prints `01` to `04`, and those
+ * come from the step's position when it is rendered — an editor who reorders or
+ * removes a step cannot leave the page counting `01, 02, 04`.
+ */
+export interface NumberedStep {
+  key: string;
+  title: string;
+  description: string;
+}
+
+/**
+ * One line of what WeCreate can do: a role on the team, or a piece of the kit.
+ *
+ * A role, deliberately, and not a person. WeCreate has supplied no approved
+ * team identities, and a name written into application source would be a
+ * placeholder identity on a public page — indistinguishable, to a visitor, from
+ * a real one. The Studio asks for the same shape, so an editor adds the people
+ * once WeCreate has decided who is named.
+ */
+export interface Capability {
+  key: string;
+  title: string;
+  description: string;
+}
+
+/** A titled column of capabilities: *L'équipe*, *L'équipement*. */
+export interface CapabilityColumn {
+  kicker: string;
+  items: Capability[];
+}
+
+export interface AboutStoryContent {
+  paragraphs: string[];
+  /**
+   * A brand statement WeCreate has approved — the promise from the project
+   * brief, not an aphorism invented for the design prototype. Displayed as the
+   * page's one large italic line.
+   */
+  brandStatement: string;
+  /** The studio portrait. A labelled placeholder frame until a real one exists. */
+  portrait: MediaFrameContent;
+}
+
+export interface AboutMethodContent extends SectionVisibility {
+  kicker: string;
+  title: string;
+  steps: NumberedStep[];
+}
+
+/** Where WeCreate films, and the way into a conversation about it. */
+export interface AboutCoverageContent {
+  kicker: string;
+  text: string;
+  link: CallToAction;
+}
+
+/**
+ * The À propos page: WeCreate's story, its method, its team and kit, and the
+ * area it works in.
+ *
+ * A fixed set of named sections like every other page here. An editor owns the
+ * words, the steps and the people; they do not own the page's shape (ADR-0001).
+ */
+export interface AboutContent {
+  seo: PageSeo;
+  kicker: string;
+  headline: SplitHeadline;
+  story: AboutStoryContent;
+  method: AboutMethodContent;
+  team: CapabilityColumn;
+  equipment: CapabilityColumn;
+  coverage: AboutCoverageContent;
+}
+
+/**
+ * The Contact page's own copy.
+ *
+ * The channels themselves are not here: WhatsApp, the hosted Discovery Call and
+ * the administrative email are global contact details on `SiteSettings`, so
+ * they are written once and the header, the footer, Services and this page all
+ * read the same values. What belongs to this page is what it says *about* each
+ * of them.
+ */
+export interface ContactChannelsContent {
+  kicker: string;
+  /**
+   * What writing to WeCreate starts. Version one has no contact form and stores
+   * no lead, and a visitor is told so where they press (ADR-0006).
+   */
+  notice: string;
+  whatsappNote: string;
+  discoveryCallNote: string;
+  /** What the address is for — administrative questions, not project briefs. */
+  emailLabel: string;
+  emailNote: string;
+  socialKicker: string;
+  locationNote: string;
+}
+
+export interface ContactGettingStartedContent {
+  kicker: string;
+  steps: NumberedStep[];
+}
+
+/**
+ * The Contact page: three approved channels, what each is for, and how a
+ * project actually starts.
+ *
+ * There is no form and no stored lead. The design prototype had both; issue #1
+ * removed them, so every action here leaves the site as an ordinary link and
+ * nothing on this page is written down anywhere.
+ */
+export interface ContactContent {
+  seo: PageSeo;
+  kicker: string;
+  headline: SplitHeadline;
+  /**
+   * How quickly WeCreate answers, stated before a visitor writes.
+   *
+   * How quickly it *delivers* does not belong here: the brief sets that per
+   * pack, and one figure on this page would promise something WeCreate never
+   * agreed to for every pack at once.
+   */
+  responseExpectation: string;
+  channels: ContactChannelsContent;
+  gettingStarted: ContactGettingStartedContent;
+}
+
+/**
  * The three universes WeCreate sells and films in. A Portfolio Project belongs
  * to exactly one, which is also what the portfolio's filters offer.
  */
@@ -477,4 +609,6 @@ export interface SiteContent {
   homePage: HomePage;
   portfolio: PortfolioContent;
   services: ServicesContent;
+  about: AboutContent;
+  contact: ContactContent;
 }

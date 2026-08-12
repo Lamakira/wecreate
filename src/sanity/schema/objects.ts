@@ -1,4 +1,9 @@
-import { defineField, defineType, type FieldDefinition } from "sanity";
+import {
+  defineField,
+  defineType,
+  type FieldDefinition,
+  type SchemaTypeDefinition,
+} from "sanity";
 
 /**
  * Reusable field objects.
@@ -212,6 +217,55 @@ export const proofPoint = defineType({
   preview: { select: { title: "figure", subtitle: "description" } },
 });
 
+/**
+ * A titled line with a short description, under its own name.
+ *
+ * A method step and a line of *L'équipe* hold the same three fields but are not
+ * the same thing to an editor, so each gets its own type with its own label and
+ * its own guidance — while the shape stays written once.
+ */
+function titledLine(
+  name: string,
+  title: string,
+  description: string,
+): SchemaTypeDefinition {
+  return defineType({
+    name,
+    title,
+    type: "object",
+    description,
+    fields: [
+      defineField({
+        name: "key",
+        title: "Identifiant",
+        type: "slug",
+        options: { source: "title" },
+        validation: (rule) => rule.required(),
+      }),
+      defineField({
+        name: "title",
+        title: "Titre",
+        type: "string",
+        validation: (rule) => rule.required(),
+      }),
+      defineField({ name: "description", title: "Description", type: "text", rows: 2 }),
+    ],
+    preview: { select: { title: "title", subtitle: "description" } },
+  });
+}
+
+export const numberedStep = titledLine(
+  "numberedStep",
+  "Étape",
+  "Le numéro affiché (01, 02…) vient de la position de l'étape dans la liste : réordonnez, et la numérotation suit.",
+);
+
+export const capability = titledLine(
+  "capability",
+  "Ligne",
+  "Un savoir-faire ou un élément de matériel. Pour l'équipe, nommez le rôle : n'écrivez le nom d'une personne qu'une fois que WeCreate a validé qu'il soit public.",
+);
+
 export const objectTypes = [
   callToAction,
   splitHeadline,
@@ -220,4 +274,6 @@ export const objectTypes = [
   socialAccount,
   universeCard,
   proofPoint,
+  numberedStep,
+  capability,
 ];

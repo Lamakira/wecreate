@@ -216,6 +216,50 @@ loaded (issue #1, ADR-0003). A wrong address is therefore a broken link and
 nothing more. The shipped default is a placeholder; WeCreate replaces it in the
 Studio once the production account exists.
 
+## À propos and Contact
+
+The two pages a visitor reads when deciding whether to trust WeCreate, and how
+to reach it. Both are Managed Content in the same shape as the homepage: a fixed
+sequence of named sections whose copy an editor owns and whose structure they do
+not (ADR-0001).
+
+**`/a-propos`** carries the story, the studio portrait, the four-step method on
+the light band, then what the studio is made of — *L'équipe*, *L'équipement* —
+and where it works. Two things it deliberately does not carry:
+
+- **Nobody's words but WeCreate's.** The large italic line is the brief's own
+  promise. The design prototype's "Le budget d'une vidéo n'est pas une dépense.
+  C'est le prix du désir que vous créez." is a commercial claim the brief never
+  makes, and issue #1 gives the brief authority over commercial content, so it
+  is not published. No client is quoted anywhere on the page.
+- **Nobody's name.** *L'équipe* lists roles, and `Capability` has no field for a
+  person — WeCreate has approved no team identities for publication, and a name
+  written into source would read to a visitor exactly like an approved one. The
+  Studio asks for the same shape, so the people go in once WeCreate decides who
+  is named.
+
+The portrait is a `MediaFrame` with no image, so it renders the labelled grey
+frame at 4:5 rather than anything that could pass for a photograph — and it
+reserves the same space either way, so the real one drops in without moving the
+page.
+
+**`/contact`** offers three channels and nothing else: WhatsApp first, the
+hosted Discovery Call second so a slow calendar never leaves a visitor stranded,
+and the administrative email third. Then *Comment démarrer* — contact, quote,
+signature, shoot — which describes how WeCreate works rather than a flow the
+website runs.
+
+There is no form. The prototype had five fields and answered them with "Demande
+enregistrée"; issue #1 removed the generic service enquiry, so this page renders
+links, holds no state and stores no lead. Nothing on it submits, and the notice
+above the channels says so in French where a visitor is about to press.
+
+The addresses themselves are not page content — they are `settings.contact`, the
+same values the header, the footer and every service pack read, so an editor
+changes a number once and the whole site follows. Each link's `href` is the real
+destination: no redirect, no tracker, and one that opens a new tab says so in its
+accessible name.
+
 ## Setting up Sanity
 
 1. Create a project at [sanity.io/manage](https://www.sanity.io/manage) with a
@@ -267,7 +311,8 @@ path (ADR-0003). A publish therefore has to invalidate that cache:
 
 1. In the Sanity project, add a webhook to `POST {origin}/api/revalidate`, with
    a secret, firing on create/update/delete of `siteSettings`, `homePage`,
-   `portfolioPage` and `portfolioProject`.
+   `portfolioPage`, `portfolioProject`, `servicesPage`, `aboutPage` and
+   `contactPage`.
 2. Set the same value as `SANITY_WEBHOOK_SECRET`. The signature is verified
    against the raw request body.
 3. The endpoint expires the `managed-content` cache tag, so the very next
@@ -297,6 +342,10 @@ tests/e2e/
 ├── services.spec.ts                  canonical packs and prices, the prefilled
 │                                     WhatsApp message, the hosted Discovery
 │                                     Call, the comparison, no service commerce
+├── about.spec.ts                     the story, the placeholder portrait, roles
+│                                     without names, the method, no testimonial
+├── contact.spec.ts                   the three channels, the absent form,
+│                                     reading order, keyboard, draft exclusion
 ├── site-shell.spec.ts                header, navigation, cart, footer, fonts
 ├── managed-content-publishing.spec.ts draft, preview, publish, revalidate
 ├── resilience.spec.ts                reduced motion, no JS, nothing published

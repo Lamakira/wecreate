@@ -9,8 +9,13 @@ import { DEFAULT_SITE_CONTENT } from "../default-content";
 import { mergeContent, type DeepPartial } from "../merge";
 import type { ManagedContentProvider } from "../provider";
 import type {
+  AboutContent,
+  Capability,
+  CapabilityColumn,
+  ContactContent,
   HomePage,
   MediaFrameContent,
+  NumberedStep,
   PortfolioContent,
   PortfolioProject,
   PortfolioUniverse,
@@ -43,6 +48,8 @@ interface SanityContentResult {
   portfolioPage?: DeepPartial<Omit<PortfolioContent, "projects">> | null;
   portfolioProjects?: Array<SanityProject | null> | null;
   servicesPage?: DeepPartial<ServicesContent> | null;
+  aboutPage?: DeepPartial<AboutContent> | null;
+  contactPage?: DeepPartial<ContactContent> | null;
 }
 
 /** An editor's choice, or nothing — never a universe the application invented. */
@@ -183,6 +190,91 @@ function toServices(
   };
 }
 
+/**
+ * A titled line, normalised: a method step, or a role or a piece of kit.
+ *
+ * Same reason as the service catalogue above — an array an editor has touched
+ * replaces the baseline wholesale, so a line saved without its description has
+ * to arrive as an empty string rather than as `null` reaching a component.
+ *
+ * `NumberedStep` and `Capability` are separate concepts with the same three
+ * fields, so one function normalises both rather than two that would drift. A
+ * step's displayed number is not among them: it is not stored, it is where the
+ * step sits when the page renders it.
+ */
+function toTitledLine<Line extends NumberedStep | Capability>(
+  document: DeepPartial<Line>,
+  fallbackKey: string,
+): Line {
+  return {
+    key: document.key ?? fallbackKey,
+    title: document.title ?? "",
+    description: document.description ?? "",
+  } as Line;
+}
+
+function toCapabilityColumn(
+  base: CapabilityColumn,
+  document: DeepPartial<CapabilityColumn> | null | undefined,
+): CapabilityColumn {
+  const merged = mergeContent(base, { ...document, items: undefined });
+  return {
+    ...merged,
+    items: document?.items
+      ? document.items.map((item, index) =>
+          toTitledLine<Capability>(item, `capability-${index}`),
+        )
+      : merged.items,
+  };
+}
+
+function toAbout(
+  document: DeepPartial<AboutContent> | null | undefined,
+): AboutContent {
+  const base = DEFAULT_SITE_CONTENT.about;
+  const merged = mergeContent(base, {
+    ...document,
+    method: { ...document?.method, steps: undefined },
+    team: undefined,
+    equipment: undefined,
+  });
+
+  return {
+    ...merged,
+    method: {
+      ...merged.method,
+      steps: document?.method?.steps
+        ? document.method.steps.map((step, index) =>
+            toTitledLine<NumberedStep>(step, `step-${index}`),
+          )
+        : merged.method.steps,
+    },
+    team: toCapabilityColumn(base.team, document?.team),
+    equipment: toCapabilityColumn(base.equipment, document?.equipment),
+  };
+}
+
+function toContact(
+  document: DeepPartial<ContactContent> | null | undefined,
+): ContactContent {
+  const merged = mergeContent(DEFAULT_SITE_CONTENT.contact, {
+    ...document,
+    gettingStarted: { ...document?.gettingStarted, steps: undefined },
+  });
+
+  return {
+    ...merged,
+    gettingStarted: {
+      ...merged.gettingStarted,
+      steps: document?.gettingStarted?.steps
+        ? document.gettingStarted.steps.map((step, index) =>
+            toTitledLine<NumberedStep>(step, `step-${index}`),
+          )
+        : merged.gettingStarted.steps,
+    },
+  };
+}
+
 export const sanityContentProvider: ManagedContentProvider = {
   id: "sanity",
   async read(perspective) {
@@ -218,6 +310,8 @@ export const sanityContentProvider: ManagedContentProvider = {
           .map(toPortfolioProject),
       },
       services: toServices(result?.servicesPage),
+      about: toAbout(result?.aboutPage),
+      contact: toContact(result?.contactPage),
     };
   },
 };

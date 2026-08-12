@@ -19,3 +19,15 @@ export function formatXof(amount: number): string {
   );
   return `${whole < 0 ? "-" : ""}${grouped}${NON_BREAKING_SPACE}F`;
 }
+
+/**
+ * The `01`, `02`, `03` the design prints beside a step, derived from where the
+ * step sits rather than stored with it.
+ *
+ * Numbering a step in Managed Content would let an editor reorder or delete one
+ * and leave the page counting `01, 02, 04`. This cannot: the number is the
+ * position.
+ */
+export function formatStepNumber(index: number): string {
+  return String(index + 1).padStart(2, "0");
+}

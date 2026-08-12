@@ -1,4 +1,9 @@
-import type { ServicesContent, SiteContent } from "./types";
+import type {
+  AboutContent,
+  ContactContent,
+  ServicesContent,
+  SiteContent,
+} from "./types";
 
 const WHATSAPP_URL = "https://wa.me/2290167366726";
 /**
@@ -416,6 +421,203 @@ const SERVICES_CONTENT: ServicesContent = {
 };
 
 /**
+ * À propos: WeCreate's story, its method, what it is made of and where it works.
+ *
+ * The narrative, the method steps, the roles, the kit and the coverage area are
+ * the design handoff's approved copy, which the brief asks À propos to carry
+ * (§3: histoire, philosophie, méthode, équipement, zone d'intervention) without
+ * dictating its words.
+ *
+ * Two things the prototype had are deliberately not here:
+ *
+ * - **Its brand quote.** "Le budget d'une vidéo n'est pas une dépense. C'est le
+ *   prix du désir que vous créez." is a claim about what WeCreate's prices mean,
+ *   and issue #1 makes the brief authoritative for commercial content. The brief
+ *   does not contain it. The statement below is the brief's own promise, which
+ *   WeCreate has approved.
+ * - **Named people.** The team block lists roles, and `Capability` has no field
+ *   for a person at all: a name shipped in source would read to a visitor
+ *   exactly like an approved one.
+ *
+ * The portrait is a `MediaFrameContent` with no image, so it renders the design
+ * handoff's labelled grey frame at 4:5 — visibly a slot awaiting a photograph
+ * rather than a photograph.
+ */
+const ABOUT_CONTENT: AboutContent = {
+  seo: {
+    title: "À propos",
+    description:
+      "WeCreate, studio de production vidéo cinématographique à Calavi Tankpè : notre histoire, notre méthode, notre équipe, notre matériel et notre zone d'intervention au Bénin.",
+    openGraphImageUrl: null,
+  },
+  kicker: "À propos · Studio à Calavi Tankpè",
+  headline: { lead: "Des ", emphasis: "œuvres", trail: ", pas du contenu." },
+  story: {
+    paragraphs: [
+      "WeCreate est né d'un refus : celui de la vidéo tiède. Au Bénin, presque tout le monde « fait du contenu ». Nous fabriquons des images qui marquent — parce qu'une image qui marque est une image qui vend.",
+      "Le studio est basé à Calavi Tankpè. Nous intervenons partout au Bénin : Cotonou, Porto-Novo, Ouidah, Parakou, et à l'international sur devis.",
+    ],
+    brandStatement:
+      "« On ne capture pas des images. On fabrique des œuvres qui font vendre. »",
+    portrait: {
+      ratio: "4 / 5",
+      placeholderLabel: "portrait studio · 4:5",
+      imageUrl: null,
+      alternativeText: "",
+    },
+  },
+  method: {
+    isVisible: true,
+    kicker: "La méthode",
+    title: "Brief, tournage, étalonnage, livraison",
+    steps: [
+      {
+        key: "brief",
+        title: "Brief",
+        description:
+          "Ce que vous vendez, à qui, et ce que la vidéo doit déclencher. Puis on écrit.",
+      },
+      {
+        key: "tournage",
+        title: "Tournage",
+        description:
+          "Plein format, optiques lumineuses, son dédié, mise en scène assumée.",
+      },
+      {
+        key: "etalonnage",
+        title: "Étalonnage signature",
+        description:
+          "La couleur WeCreate, construite plan par plan. Notre empreinte.",
+      },
+      {
+        key: "livraison",
+        title: "Livraison",
+        description: "5 jours ouvrés. Tous les formats, prêts à publier.",
+      },
+    ],
+  },
+  team: {
+    kicker: "L'équipe",
+    items: [
+      {
+        key: "direction-artistique",
+        title: "Direction artistique & réalisation",
+        description: "Écriture, découpage, direction de personnes.",
+      },
+      {
+        key: "image-lumiere",
+        title: "Image & lumière",
+        description: "Cadre, exposition, gestion de la lumière disponible.",
+      },
+      {
+        key: "post-production",
+        title: "Post-production & étalonnage",
+        description: "Montage, son, couleur signature, LUTs maison.",
+      },
+    ],
+  },
+  equipment: {
+    kicker: "L'équipement",
+    items: [
+      {
+        key: "boitier",
+        title: "Sony ZV-E1 — plein format",
+        description: "Basses lumières, S-Log3, stabilisation active.",
+      },
+      {
+        key: "optiques",
+        title: "Optiques lumineuses & stabilisation",
+        description: "Focales fixes, gimbal, slider.",
+      },
+      {
+        key: "son-lumiere",
+        title: "Son & lumière",
+        description: "Micros HF, enregistreur, panneaux LED bi-color.",
+      },
+    ],
+  },
+  coverage: {
+    kicker: "Zone d'intervention",
+    text: "Calavi Tankpè · Cotonou · Porto-Novo · Ouidah · Parakou. Tout le Bénin, et au-delà sur devis.",
+    link: { label: "Nous écrire", href: "/contact" },
+  },
+};
+
+/**
+ * Contact: the three channels WeCreate answers on, and how a project starts.
+ *
+ * The design prototype put a five-field form here and confirmed submissions with
+ * "Demande enregistrée". Issue #1 removed it: version one takes no generic
+ * service enquiry and stores no lead, so this page carries three ordinary links
+ * and nothing that submits.
+ *
+ * The addresses themselves live on `settings.contact` — the same values the
+ * header, the footer and every service pack use — so the only thing written
+ * twice on this page is what each channel is *for*.
+ */
+const CONTACT_CONTENT: ContactContent = {
+  seo: {
+    title: "Contact",
+    description:
+      "Écrire à WeCreate : WhatsApp, appel découverte de 30 minutes ou email. Devis sous 24-48h, studio à Calavi Tankpè, Bénin.",
+    openGraphImageUrl: null,
+  },
+  kicker: "Contact · Devis sous 24-48h",
+  headline: {
+    lead: "Dites-nous ce que vous voulez ",
+    emphasis: "vendre",
+    trail: ".",
+  },
+  // What WeCreate answers in, and nothing about what it delivers in: the brief
+  // sets delivery per pack — three days on Gestionnaire Empire, four on
+  // Gestionnaire Pro, five elsewhere — so a single figure stated here would be
+  // a commitment WeCreate never made. Services prints each pack's own.
+  responseExpectation: "Devis sous 24-48h.",
+  channels: {
+    kicker: "Coordonnées",
+    notice:
+      "Nous écrire ouvre une conversation, rien de plus : ce site n'enregistre aucune demande, ne bloque aucune date et n'encaisse aucun paiement pour les prestations. Le devis, le planning et les conditions se décident ensemble.",
+    whatsappNote:
+      "La voie la plus directe. Décrivez le projet en trois lignes, nous répondons dans la journée ouvrée.",
+    discoveryCallNote:
+      "30 minutes pour cadrer le projet. Le calendrier de WeCreate s'ouvre dans un nouvel onglet ; s'il est lent ou indisponible, WhatsApp reste ouvert.",
+    emailLabel: "Email administratif",
+    emailNote:
+      "Factures, documents, questions administratives. Pour un projet, WhatsApp va plus vite.",
+    socialKicker: "Réseaux",
+    locationNote: "Studio à Calavi Tankpè, Bénin — sur rendez-vous.",
+  },
+  gettingStarted: {
+    kicker: "Comment démarrer",
+    steps: [
+      {
+        key: "contact",
+        title: "Contact",
+        description:
+          "WhatsApp ou appel découverte. Vous décrivez le projet en trois lignes.",
+      },
+      {
+        key: "devis",
+        title: "Devis sous 24-48h",
+        description:
+          "Une proposition claire : périmètre, livrables, prix en FCFA, délais.",
+      },
+      {
+        key: "signature",
+        title: "Signature",
+        description:
+          "Validation et acompte, hors site. Le créneau de tournage est alors bloqué.",
+      },
+      {
+        key: "tournage",
+        title: "Brief & tournage",
+        description: "Brief créatif, repérage si besoin, puis on tourne.",
+      },
+    ],
+  },
+};
+
+/**
  * The canonical starting state of WeCreate's Managed Content.
  *
  * Copy comes from the approved design handoff, corrected where the canonical
@@ -644,4 +846,6 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
     projects: [],
   },
   services: SERVICES_CONTENT,
+  about: ABOUT_CONTENT,
+  contact: CONTACT_CONTENT,
 };

@@ -155,6 +155,51 @@ export const SITE_CONTENT_QUERY = defineQuery(`{
       }
     }
   },
+  "aboutPage": *[_type == "aboutPage"][0]{
+    seo{title, description, "openGraphImageUrl": openGraphImage.asset->url},
+    kicker,
+    headline${SPLIT_HEADLINE},
+    story{
+      paragraphs,
+      brandStatement,
+      portrait${POSTER_FRAME}
+    },
+    method{
+      isVisible,
+      kicker,
+      title,
+      steps[]{"key": coalesce(key.current, _key), title, description}
+    },
+    team{
+      kicker,
+      items[]{"key": coalesce(key.current, _key), title, description}
+    },
+    equipment{
+      kicker,
+      items[]{"key": coalesce(key.current, _key), title, description}
+    },
+    coverage{kicker, text, link${CALL_TO_ACTION}}
+  },
+  "contactPage": *[_type == "contactPage"][0]{
+    seo{title, description, "openGraphImageUrl": openGraphImage.asset->url},
+    kicker,
+    headline${SPLIT_HEADLINE},
+    responseExpectation,
+    channels{
+      kicker,
+      notice,
+      whatsappNote,
+      discoveryCallNote,
+      emailLabel,
+      emailNote,
+      socialKicker,
+      locationNote
+    },
+    gettingStarted{
+      kicker,
+      steps[]{"key": coalesce(key.current, _key), title, description}
+    }
+  },
   "portfolioPage": *[_type == "portfolioPage"][0]{
     seo{title, description, "openGraphImageUrl": openGraphImage.asset->url},
     kicker,

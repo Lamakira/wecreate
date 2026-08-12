@@ -183,6 +183,29 @@ test.describe("Text contrast", () => {
     expectMeetsAa(texts);
   });
 
+  test("À propos meets WCAG AA, light method band included", async ({ page }) => {
+    // The trust page carries the site's third white band, and the greys that
+    // needed correcting appear on both grounds at once: the method's step
+    // numbers on white, the team and equipment meta lines on black.
+    await page.goto("/a-propos");
+    await page.waitForTimeout(800);
+
+    const texts = await collectText(page);
+    expect(texts.length).toBeGreaterThan(30);
+
+    expectMeetsAa(texts);
+  });
+
+  test("Contact meets WCAG AA", async ({ page }) => {
+    await page.goto("/contact");
+    await page.waitForTimeout(800);
+
+    const texts = await collectText(page);
+    expect(texts.length).toBeGreaterThan(25);
+
+    expectMeetsAa(texts);
+  });
+
   test("the portfolio and its project dialog meet WCAG AA", async ({ page }) => {
     await page.goto("/portfolio");
     await page.getByRole("link", { name: /Résidence Aurora/ }).click();

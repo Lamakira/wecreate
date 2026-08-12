@@ -7,6 +7,18 @@ export function isExternalHref(href: string): boolean {
   return /^(https?:)?\/\//i.test(href) || href.startsWith("mailto:");
 }
 
+/**
+ * Whether following this destination should leave the current tab.
+ *
+ * Not the same question as `isExternalHref`, and the difference is the reason
+ * both exist: a `mailto:` is external — it must be a plain `<a>` rather than a
+ * client-side `<Link>` — but it hands over to the visitor's mail client, so
+ * forcing `target="_blank"` on it only leaves an empty tab behind.
+ */
+export function opensNewTab(href: string): boolean {
+  return /^(https?:)?\/\//i.test(href);
+}
+
 const VARIANTS = {
   /** Solid white on dark: the primary action. */
   solid:
@@ -72,8 +84,9 @@ export function CtaLink({
     return (
       <a
         href={cta.href}
-        target="_blank"
-        rel="noopener noreferrer"
+        {...(opensNewTab(cta.href)
+          ? { target: "_blank", rel: "noopener noreferrer" }
+          : undefined)}
         className={classes}
       >
         {content}
