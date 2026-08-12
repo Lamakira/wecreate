@@ -603,6 +603,89 @@ export interface ServicesContent {
   addOns: ServiceAddOnsContent;
 }
 
+/**
+ * Which of WeCreate's legal texts a document is.
+ *
+ * A fixed vocabulary, not an editor's free text, and the reason is the
+ * checkout: an Order Snapshot records *which* terms a buyer accepted, so the
+ * application has to be able to ask for "the CGV" by name. A kind invented in
+ * the Studio could never be required, accepted or recorded, so there is no way
+ * to invent one — an editor owns each document's words and its address, never
+ * the set (ADR-0001).
+ *
+ * The array is the source and the union is derived from it, the way
+ * `PORTFOLIO_UNIVERSES` is: one list, so the presentation order and the type
+ * cannot drift apart. That order is the order everything shows them in — the
+ * footer, the sitemap, and what a checkout asks a buyer to accept.
+ */
+export const LEGAL_DOCUMENT_KINDS = [
+  "cgv",
+  "livraison-remboursement",
+  "licence",
+  "confidentialite",
+  "mentions-legales",
+] as const;
+
+export type LegalDocumentKind = (typeof LEGAL_DOCUMENT_KINDS)[number];
+
+/**
+ * Whether a revision is WeCreate's approved legal text, or a stand-in written
+ * so the site can be built before that text exists.
+ *
+ * Legal copy is an external launch input (issue #1). Everything this repository
+ * ships is therefore `placeholder`, and the difference is enforced rather than
+ * advisory: a placeholder is readable, but it is kept out of the sitemap, it
+ * cannot satisfy the Commerce Launch Gate, and no live checkout will accept it.
+ */
+export type LegalRevisionStatus = "placeholder" | "approved";
+
+/** One titled part of a legal text. Prose, in the order it is read. */
+export interface LegalSection {
+  key: string;
+  heading: string;
+  paragraphs: string[];
+}
+
+/**
+ * A legal text as it stood from one date onwards.
+ *
+ * Revisions are append-only and immutable. New terms are a new revision with a
+ * new `id`, never an edit of the one already published, because an Order
+ * Snapshot references exactly this identity and has to keep resolving to
+ * exactly this text long after WeCreate has moved on to the next version.
+ */
+export interface LegalRevision {
+  /**
+   * Stable identity of this exact text. Recorded in Order Snapshots, so it is
+   * never reused and never re-pointed at different words.
+   */
+  id: string;
+  /** The day the text takes effect, as `YYYY-MM-DD`. */
+  effectiveFrom: string;
+  status: LegalRevisionStatus;
+  sections: LegalSection[];
+}
+
+/**
+ * One of WeCreate's legal documents, with every revision it has had.
+ *
+ * The document is the durable thing — its kind, its title, where it lives —
+ * and its `revisions` are the history of what it said. `previousSlugs` is what
+ * keeps a changed address from breaking a link somebody has already saved or a
+ * crawler has already indexed.
+ */
+export interface LegalDocument {
+  kind: LegalDocumentKind;
+  /** The document's own URL segment under `/legal`. */
+  slug: string;
+  previousSlugs: string[];
+  title: string;
+  /** One line saying what the document covers, shown under its title. */
+  summary: string;
+  /** Oldest first. Appended to; never rewritten. */
+  revisions: LegalRevision[];
+}
+
 /** Everything the public site needs from Managed Content in one place. */
 export interface SiteContent {
   settings: SiteSettings;
@@ -611,4 +694,6 @@ export interface SiteContent {
   services: ServicesContent;
   about: AboutContent;
   contact: ContactContent;
+  /** One entry per `LegalDocumentKind`, in the order they are presented. */
+  legalDocuments: LegalDocument[];
 }

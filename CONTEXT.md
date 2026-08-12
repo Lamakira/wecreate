@@ -48,6 +48,14 @@ _Avoid_: Customer, content editor, site administrator
 A private file purchased as a Digital Product and made accessible only through valid Order Access.
 _Avoid_: CMS asset, public media, attachment
 
+**Legal Document**:
+One of WeCreate's five published legal texts: CGV, digital delivery and refund terms, Digital Product licence, privacy policy, or mentions légales. Its words and its address are editorial; which five exist is not.
+_Avoid_: Terms page, legal notice, editorial page
+
+**Legal Revision**:
+The immutable, dated text of a Legal Document from one day onwards. Publishing new terms adds a revision; it never rewrites the one an Order Snapshot references. The revision in force is the most recent one whose date has arrived — the only one a checkout may present for acceptance.
+_Avoid_: Legal update, current terms, CMS revision
+
 **Commerce Launch Gate**:
 The approval boundary that keeps production purchasing disabled until commercial terms, legal text, real Paid Deliverables, and production integrations are ready.
 _Avoid_: Development completion, staging readiness, site launch

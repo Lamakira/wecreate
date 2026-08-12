@@ -1,6 +1,7 @@
 import type {
   AboutContent,
   ContactContent,
+  LegalDocument,
   ServicesContent,
   SiteContent,
 } from "./types";
@@ -618,6 +619,246 @@ const CONTACT_CONTENT: ContactContent = {
 };
 
 /**
+ * The day the stand-in legal texts below were written.
+ *
+ * A revision states the day it takes effect, and these are no exception — the
+ * model has no "undated" state and a page that hid the date would be the one
+ * place on the site where a visitor could not tell how old the text is. What
+ * makes them harmless is the status beside it, not a missing date.
+ */
+const PLACEHOLDER_EFFECTIVE_FROM = "2026-08-12";
+
+/**
+ * WeCreate's five legal documents, as stand-ins.
+ *
+ * Approved legal copy is an external launch input (issue #1): it is written and
+ * validated by WeCreate with its own counsel, and nothing in this repository may
+ * stand in for it. So each document ships with one `placeholder` revision that
+ * says what the approved text will cover and what WeCreate still has to decide,
+ * and the application treats that status as a fact rather than a label — a
+ * placeholder is readable and previewable, it is kept out of the sitemap, and
+ * it can neither pass the Commerce Launch Gate nor be accepted at a checkout.
+ *
+ * What they *do* state is only what is already true of this site and verifiable
+ * from it: services are not sold here, prices are whole XOF, no account is
+ * created, no marketing consent is collected. Everything a lawyer decides —
+ * jurisdiction, retention periods, refund windows, licence scope — is named as
+ * outstanding instead of being invented.
+ */
+const LEGAL_DOCUMENTS: LegalDocument[] = [
+  {
+    kind: "cgv",
+    slug: "conditions-generales-de-vente",
+    previousSlugs: [],
+    title: "Conditions générales de vente",
+    summary:
+      "Ce que WeCreate vend en ligne, à quelles conditions, et ce qu'une commande engage de part et d'autre.",
+    revisions: [
+      {
+        id: "cgv-placeholder",
+        effectiveFrom: PLACEHOLDER_EFFECTIVE_FROM,
+        status: "placeholder",
+        sections: [
+          {
+            key: "objet",
+            heading: "Objet",
+            paragraphs: [
+              "Ces conditions régiront la vente des produits numériques de WeCreate — ebooks, guides, LUTs et presets — payés en intégralité en ligne et livrés automatiquement après confirmation du paiement.",
+              "Les prestations vidéo ne sont pas vendues sur ce site. Un pack de services ouvre une conversation : le devis, le planning et les conditions se décident hors ligne, et aucun paiement de prestation ne transite par le site.",
+            ],
+          },
+          {
+            key: "commande",
+            heading: "Commande et paiement",
+            paragraphs: [
+              "Les prix sont affichés et encaissés en francs CFA (XOF), en unités entières.",
+              "L'achat se fait sans création de compte. Le paiement est traité par un prestataire externe sur sa propre page : WeCreate ne voit ni ne conserve de données de carte ou de portefeuille mobile.",
+              "Une commande retient le titre, le prix et la version du fichier au moment où elle est créée. Une modification ultérieure du catalogue ne change pas une commande déjà passée.",
+            ],
+          },
+          {
+            key: "a-arreter",
+            heading: "Ce qui reste à arrêter",
+            paragraphs: [
+              "Le texte définitif est rédigé et validé par WeCreate avec son conseil : identité du vendeur, droit applicable, traitement des réclamations et des litiges.",
+              "Tant qu'il ne l'est pas, aucune vente n'est possible sur ce site.",
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    kind: "livraison-remboursement",
+    slug: "livraison-et-remboursement",
+    previousSlugs: [],
+    title: "Livraison numérique et remboursement",
+    summary:
+      "Comment un produit numérique est livré après paiement, et dans quels cas un remboursement peut être demandé.",
+    revisions: [
+      {
+        id: "livraison-remboursement-placeholder",
+        effectiveFrom: PLACEHOLDER_EFFECTIVE_FROM,
+        status: "placeholder",
+        sections: [
+          {
+            key: "livraison",
+            heading: "Livraison",
+            paragraphs: [
+              "Un produit numérique est livré dès que le paiement est confirmé par le prestataire de paiement — et non au retour du navigateur sur le site, qui ne prouve rien.",
+              "L'accès est envoyé par email et reste ouvert pendant une durée limitée, sans création de compte. Les liens de téléchargement sont temporaires et peuvent être réémis.",
+            ],
+          },
+          {
+            key: "remboursement",
+            heading: "Remboursement",
+            paragraphs: [
+              "Un produit numérique est délivré immédiatement et en entier. Le texte définitif précisera les cas ouvrant droit à remboursement — non-livraison, double paiement, fichier inexploitable.",
+              "Aucun remboursement n'est décidé ni exécuté automatiquement par le site : une demande est traitée par une personne, sous la politique validée par WeCreate.",
+            ],
+          },
+          {
+            key: "a-arreter",
+            heading: "Ce qui reste à arrêter",
+            paragraphs: [
+              "Le délai de réclamation, le périmètre exact des cas remboursables et les modalités de remboursement restent à valider par WeCreate.",
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    kind: "licence",
+    slug: "licence-produits-numeriques",
+    previousSlugs: [],
+    title: "Licence des produits numériques",
+    summary:
+      "Ce qu'un acheteur a le droit de faire du fichier acheté, et ce qu'il n'a pas le droit d'en faire.",
+    revisions: [
+      {
+        id: "licence-placeholder",
+        effectiveFrom: PLACEHOLDER_EFFECTIVE_FROM,
+        status: "placeholder",
+        sections: [
+          {
+            key: "usage",
+            heading: "Usage accordé",
+            paragraphs: [
+              "Un produit numérique est vendu à une personne ou à une structure, pour son propre usage, y compris commercial : un LUT acheté peut servir sur des projets facturés.",
+              "Un exemplaire par produit et par commande. Le panier n'accepte pas plusieurs unités du même produit, parce que la licence est nominative.",
+            ],
+          },
+          {
+            key: "interdit",
+            heading: "Ce qui n'est pas accordé",
+            paragraphs: [
+              "La revente, le partage, la redistribution et la mise à disposition publique du fichier ne sont accordés sous aucune forme.",
+              "Aucune licence d'équipe, de revendeur ou de formation n'existe en version un.",
+            ],
+          },
+          {
+            key: "a-arreter",
+            heading: "Ce qui reste à arrêter",
+            paragraphs: [
+              "Le texte définitif précisera la durée, le territoire, les droits attachés à chaque famille de produits et les suites d'un usage non autorisé.",
+              "Un produit numérique ne peut être mis en vente qu'une fois sa licence validée.",
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    kind: "confidentialite",
+    slug: "politique-de-confidentialite",
+    previousSlugs: [],
+    title: "Politique de confidentialité",
+    summary:
+      "Les données que WeCreate collecte, à quoi elles servent, et ce qu'il n'en fait pas.",
+    revisions: [
+      {
+        id: "confidentialite-placeholder",
+        effectiveFrom: PLACEHOLDER_EFFECTIVE_FROM,
+        status: "placeholder",
+        sections: [
+          {
+            key: "donnees",
+            heading: "Données collectées",
+            paragraphs: [
+              "En naviguant : rien qui vous identifie. Ce site ne pose aucun cookie publicitaire et ne charge aucun script tiers de suivi.",
+              "En achetant : nom complet, email, téléphone international et, si vous le renseignez, le nom de votre société. Rien d'autre — ni adresse postale, ni compte client.",
+            ],
+          },
+          {
+            key: "usage",
+            heading: "Ce à quoi elles servent",
+            paragraphs: [
+              "À exécuter la commande : confirmer le paiement, envoyer l'accès et le reçu, répondre à une demande de support la concernant.",
+              "Le paiement est traité par un prestataire externe, qui reçoit ce que la transaction exige. WeCreate ne conserve aucune donnée de carte ni de portefeuille mobile.",
+            ],
+          },
+          {
+            key: "marketing",
+            heading: "Aucun consentement marketing",
+            paragraphs: [
+              "Acheter ne vous inscrit à rien. WeCreate n'envoie pas de lettre d'information, ne déduit aucun consentement commercial d'un achat, et ne revend ni ne loue vos données.",
+              "Les conditions de vente, elles, sont acceptées explicitement avant le paiement. Un consentement marketing serait une demande distincte : il n'en est demandé aucune sur ce site.",
+            ],
+          },
+          {
+            key: "a-arreter",
+            heading: "Ce qui reste à arrêter",
+            paragraphs: [
+              "Les durées de conservation, le responsable du traitement et la procédure d'exercice des droits sont fixés par WeCreate avec son conseil. Ils ne sont pas inventés dans le code.",
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    kind: "mentions-legales",
+    slug: "mentions-legales",
+    previousSlugs: [],
+    title: "Mentions légales",
+    summary: "Qui édite ce site, qui l'héberge, et à qui s'adresser.",
+    revisions: [
+      {
+        id: "mentions-legales-placeholder",
+        effectiveFrom: PLACEHOLDER_EFFECTIVE_FROM,
+        status: "placeholder",
+        sections: [
+          {
+            key: "editeur",
+            heading: "Éditeur du site",
+            paragraphs: [
+              "WeCreate, studio de production vidéo à Calavi Tankpè, Bénin.",
+              "La forme juridique, l'immatriculation, le représentant légal et l'adresse complète sont renseignés par WeCreate avant toute mise en vente.",
+            ],
+          },
+          {
+            key: "contact",
+            heading: "Contact",
+            paragraphs: [
+              "Les coordonnées publiques de WeCreate — WhatsApp, appel découverte, email administratif — sont celles de la page Contact et du pied de page de ce site.",
+            ],
+          },
+          {
+            key: "publication",
+            heading: "Hébergement et propriété",
+            paragraphs: [
+              "L'hébergeur, le nom de domaine et le responsable de la publication sont renseignés avant toute mise en vente.",
+              "Les films, photographies et textes publiés ici appartiennent à WeCreate ou à ses clients, et ne peuvent être réutilisés sans accord écrit.",
+            ],
+          },
+        ],
+      },
+    ],
+  },
+];
+
+/**
  * The canonical starting state of WeCreate's Managed Content.
  *
  * Copy comes from the approved design handoff, corrected where the canonical
@@ -848,4 +1089,5 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
   services: SERVICES_CONTENT,
   about: ABOUT_CONTENT,
   contact: CONTACT_CONTENT,
+  legalDocuments: LEGAL_DOCUMENTS,
 };

@@ -14,6 +14,10 @@ import type {
   CapabilityColumn,
   ContactContent,
   HomePage,
+  LegalDocument,
+  LegalDocumentKind,
+  LegalRevision,
+  LegalSection,
   MediaFrameContent,
   NumberedStep,
   PortfolioContent,
@@ -27,7 +31,7 @@ import type {
   SiteSettings,
   SpokenContentSupport,
 } from "../types";
-import { PORTFOLIO_UNIVERSES } from "../types";
+import { LEGAL_DOCUMENT_KINDS, PORTFOLIO_UNIVERSES } from "../types";
 import { SITE_CONTENT_QUERY } from "./query";
 
 /**
@@ -42,6 +46,16 @@ type SanityProject = DeepPartial<
   video?: DeepPartial<PlaybackAssociation> | null;
 };
 
+/**
+ * A legal document identifies itself by its document id — `legal.cgv` — rather
+ * than by a field an editor picks from a list. The Studio pins one id per kind,
+ * so the identity a checkout resolves terms by cannot be retyped, duplicated or
+ * left blank.
+ */
+type SanityLegalDocument = DeepPartial<Omit<LegalDocument, "kind">> & {
+  documentId?: string | null;
+};
+
 interface SanityContentResult {
   settings?: DeepPartial<SiteSettings> | null;
   homePage?: DeepPartial<HomePage> | null;
@@ -50,6 +64,7 @@ interface SanityContentResult {
   servicesPage?: DeepPartial<ServicesContent> | null;
   aboutPage?: DeepPartial<AboutContent> | null;
   contactPage?: DeepPartial<ContactContent> | null;
+  legalDocuments?: Array<SanityLegalDocument | null> | null;
 }
 
 /** An editor's choice, or nothing — never a universe the application invented. */
@@ -275,6 +290,96 @@ function toContact(
   };
 }
 
+/**
+ * Which legal document a Sanity id names, or nothing.
+ *
+ * `drafts.legal.cgv` and `legal.cgv` are the same document seen from the two
+ * perspectives, so the prefix is stripped the way it is for a Portfolio Project.
+ * An id that is not one of the five known kinds is ignored rather than guessed
+ * at: a document the application cannot name is one a checkout could never
+ * require, present or record.
+ */
+function toLegalKind(documentId: string): LegalDocumentKind | undefined {
+  const kind = documentId.replace(/^drafts\./, "").replace(/^legal\./, "");
+  return LEGAL_DOCUMENT_KINDS.find(
+    (candidate: LegalDocumentKind) => candidate === kind,
+  );
+}
+
+function toLegalSection(
+  document: DeepPartial<LegalSection>,
+  index: number,
+): LegalSection {
+  return {
+    key: document.key ?? `section-${index}`,
+    heading: document.heading ?? "",
+    paragraphs: (document.paragraphs ?? []).filter(Boolean),
+  };
+}
+
+/**
+ * One revision, normalised.
+ *
+ * A revision with no identity is dropped by the caller rather than given one:
+ * an invented id would be a new identity every time the query ran, and an Order
+ * Snapshot pointing at it would resolve to nothing. Status falls back to
+ * `placeholder`, which is the safe direction — unapproved text keeps production
+ * purchasing off, while text wrongly assumed approved would let it through.
+ */
+function toLegalRevision(document: DeepPartial<LegalRevision>): LegalRevision {
+  return {
+    id: document.id ?? "",
+    effectiveFrom: document.effectiveFrom ?? "",
+    status: document.status === "approved" ? "approved" : "placeholder",
+    sections: (document.sections ?? []).map(toLegalSection),
+  };
+}
+
+/**
+ * The five legal documents, one per kind, whatever the dataset holds.
+ *
+ * A kind with no document in Sanity — a fresh project, or one where the editor
+ * has not opened that document yet — keeps the bundled placeholder, so the site
+ * always has a legal page to link to and the Commerce Launch Gate always has
+ * something honest to refuse.
+ */
+function toLegalDocuments(
+  documents: Array<SanityLegalDocument | null> | null | undefined,
+): LegalDocument[] {
+  const byKind = new Map<LegalDocumentKind, SanityLegalDocument>();
+  for (const document of documents ?? []) {
+    const kind = document && toLegalKind(document.documentId ?? "");
+    if (kind && !byKind.has(kind)) {
+      byKind.set(kind, document);
+    }
+  }
+
+  return DEFAULT_SITE_CONTENT.legalDocuments.map((base) => {
+    const document = byKind.get(base.kind);
+    // Field by field rather than by spreading the query result: `documentId` is
+    // how Sanity names the document, not part of the content model, and it must
+    // not ride along into what the rest of the application reads.
+    const merged = mergeContent(base, {
+      slug: document?.slug,
+      previousSlugs: document?.previousSlugs,
+      title: document?.title,
+      summary: document?.summary,
+    });
+
+    return {
+      ...merged,
+      kind: base.kind,
+      revisions: document?.revisions
+        ? document.revisions.map(toLegalRevision).filter(
+            // Nothing without both an identity and a date: one is what an Order
+            // Snapshot references, the other is what decides when it applies.
+            (revision) => revision.id !== "" && revision.effectiveFrom !== "",
+          )
+        : merged.revisions,
+    };
+  });
+}
+
 export const sanityContentProvider: ManagedContentProvider = {
   id: "sanity",
   async read(perspective) {
@@ -312,6 +417,7 @@ export const sanityContentProvider: ManagedContentProvider = {
       services: toServices(result?.servicesPage),
       about: toAbout(result?.aboutPage),
       contact: toContact(result?.contactPage),
+      legalDocuments: toLegalDocuments(result?.legalDocuments),
     };
   },
 };

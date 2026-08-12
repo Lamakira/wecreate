@@ -6,7 +6,7 @@ import { DraftModeBanner } from "@/components/shell/draft-mode-banner";
 import { GrainOverlay } from "@/components/shell/grain-overlay";
 import { SiteFooter } from "@/components/shell/site-footer";
 import { SiteShell } from "@/components/shell/site-shell";
-import { readSiteSettings } from "@/managed-content";
+import { readEffectiveLegalTerms, readSiteSettings } from "@/managed-content";
 import { isIndexable, siteUrl } from "@/site-config";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -41,6 +41,7 @@ export async function generateMetadata(): Promise<Metadata> {
  */
 export default async function SiteLayout({ children }: { children: ReactNode }) {
   const settings = await readSiteSettings();
+  const legalTerms = await readEffectiveLegalTerms();
   const { isEnabled: isDraftMode } = await draftMode();
 
   return (
@@ -50,7 +51,7 @@ export default async function SiteLayout({ children }: { children: ReactNode }) 
         <main id="contenu" className="pt-header-offset">
           {children}
         </main>
-        <SiteFooter settings={settings} />
+        <SiteFooter settings={settings} legalLinks={legalTerms.inForce} />
       </SiteShell>
       {isDraftMode ? <DraftModeBanner /> : null}
     </>

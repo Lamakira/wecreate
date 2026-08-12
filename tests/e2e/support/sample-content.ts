@@ -1,5 +1,8 @@
 import type {
   DigitalProductCard,
+  LegalDocument,
+  LegalDocumentKind,
+  LegalRevision,
   PlaybackAsset,
   PortfolioProject,
 } from "../../../src/managed-content/types";
@@ -261,6 +264,90 @@ export const SAMPLE_DIGITAL_PRODUCTS: DigitalProductCard[] = [
     },
   },
 ];
+
+/**
+ * The five legal documents, as WeCreate would have them once its counsel has
+ * written them.
+ *
+ * Everything the application ships is a `placeholder` revision, which is the
+ * state most of these tests want: it is what a visitor finds before launch, and
+ * what the Commerce Launch Gate refuses. These are the other state — approved
+ * text, in force, indexable — and the tests that need a site past that gate
+ * seed them exactly as an editor would.
+ *
+ * Titles and addresses match the shipped documents, because a test that renamed
+ * them would stop describing WeCreate's site.
+ */
+const LEGAL_DOCUMENTS: ReadonlyArray<{
+  kind: LegalDocumentKind;
+  slug: string;
+  title: string;
+}> = [
+  {
+    kind: "cgv",
+    slug: "conditions-generales-de-vente",
+    title: "Conditions générales de vente",
+  },
+  {
+    kind: "livraison-remboursement",
+    slug: "livraison-et-remboursement",
+    title: "Livraison numérique et remboursement",
+  },
+  {
+    kind: "licence",
+    slug: "licence-produits-numeriques",
+    title: "Licence des produits numériques",
+  },
+  {
+    kind: "confidentialite",
+    slug: "politique-de-confidentialite",
+    title: "Politique de confidentialité",
+  },
+  { kind: "mentions-legales", slug: "mentions-legales", title: "Mentions légales" },
+];
+
+/** One revision of one document, with a body a test can look for by name. */
+export function legalRevision(
+  id: string,
+  effectiveFrom: string,
+  overrides: Partial<LegalRevision> = {},
+): LegalRevision {
+  return {
+    id,
+    effectiveFrom,
+    status: "approved",
+    sections: [
+      {
+        key: "objet",
+        heading: "Objet",
+        paragraphs: [`Texte de la révision ${id}.`],
+      },
+    ],
+    ...overrides,
+  };
+}
+
+/**
+ * Every legal document with approved text in force.
+ *
+ * `edit` is what the test wants different about one of them, written the way
+ * the test reads: return a changed document for the kind under test and the
+ * others stay as they are.
+ */
+export function approvedLegalDocuments(
+  edit: (document: LegalDocument) => LegalDocument = (document) => document,
+): LegalDocument[] {
+  return LEGAL_DOCUMENTS.map(({ kind, slug, title }) =>
+    edit({
+      kind,
+      slug,
+      previousSlugs: [],
+      title,
+      summary: `Ce que couvre le document « ${title} ».`,
+      revisions: [legalRevision(`${kind}-2026-01-15`, "2026-01-15")],
+    }),
+  );
+}
 
 /** The optional hero loop, for the tests that exercise playback behaviour. */
 export const SAMPLE_HERO_PLAYBACK: PlaybackAsset = {
