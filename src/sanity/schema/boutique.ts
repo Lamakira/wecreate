@@ -1,5 +1,6 @@
 import { defineArrayMember, defineField, defineType } from "sanity";
 
+import { isSafeProductReference } from "@/commerce/paid-deliverables";
 import { DIGITAL_PRODUCT_FAMILY_LABELS } from "@/managed-content/digital-products";
 import {
   DIGITAL_PRODUCT_FAMILIES,
@@ -65,6 +66,14 @@ export const digitalProduct = defineType({
           const reference = (sku as string | undefined)?.trim();
           if (!reference) {
             return true;
+          }
+
+          // The commerce system derives a private file's address from this
+          // reference, so its shape is a rule rather than a convention — and the
+          // editor is told here rather than by an upload the back office
+          // refuses. `isSafeProductReference()` is the same rule.
+          if (!isSafeProductReference(reference)) {
+            return "Une référence ne contient que des lettres, des chiffres, un point, un tiret ou un tiret bas, et commence par une lettre ou un chiffre.";
           }
 
           const published = await readPublishedDocument<{ sku?: string }>(

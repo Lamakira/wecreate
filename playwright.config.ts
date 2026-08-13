@@ -27,6 +27,10 @@ const serverEnv: Record<string, string> = {
   ...(process.env as Record<string, string>),
   NODE_ENV: "production",
   WECREATE_CONTENT_PROVIDER: "fixture",
+  // The commerce data plane has its own provider and its own switch: a run can
+  // be on fixture content and a real Supabase project, and the two must never
+  // be selected together by accident.
+  WECREATE_COMMERCE_PROVIDER: "fixture",
   WECREATE_TEST_HOOKS: "1",
   WECREATE_PREVIEW_SECRET: TEST_PREVIEW_SECRET,
   WECREATE_REVALIDATE_SECRET: TEST_REVALIDATE_SECRET,
@@ -36,6 +40,12 @@ const serverEnv: Record<string, string> = {
     ".wecreate",
     "acceptance",
     "content.json",
+  ),
+  WECREATE_COMMERCE_FIXTURE_FILE: path.join(
+    process.cwd(),
+    ".wecreate",
+    "acceptance",
+    "commerce.json",
   ),
   NEXT_PUBLIC_SITE_URL: BASE_URL,
   // Crawlable, like production and unlike every other environment. What the

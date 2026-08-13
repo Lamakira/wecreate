@@ -15,6 +15,7 @@ The canonical specification is GitHub issue #1. Domain vocabulary is defined in
 | UI                | React 19, TypeScript, Tailwind CSS v4           |
 | Managed Content   | Sanity, with the Studio embedded at `/studio`   |
 | Public video      | Mux, uploaded from the Studio                   |
+| Commerce          | Supabase, behind the back office at `/commerce` |
 | Acceptance tests  | Playwright, against the production build        |
 | Package manager   | pnpm                                            |
 
@@ -54,9 +55,12 @@ it belongs to.
    Sanity project, dataset and read token when that is Sanity.
 3. **Video platform** — Mux's environment key, for anonymous aggregate playback
    measurement. Mux's API token is not here: the Studio keeps it in the dataset.
-4. **Preview and revalidation secrets** — who may open a preview session and who
+4. **Commerce data plane** — which one this process talks to, and the Supabase
+   project and anonymous key when that is Supabase. There is no service role
+   key: see *The commerce data plane* below.
+5. **Preview and revalidation secrets** — who may open a preview session and who
    may drop the content cache.
-5. **Acceptance-test hooks** — set by `playwright.config.ts`, never by hand.
+6. **Acceptance-test hooks** — set by `playwright.config.ts`, never by hand.
 
 Secrets are server-only and live in the deployment platform's secret management.
 Anything named `NEXT_PUBLIC_*` is compiled into the browser bundle, so nothing
@@ -96,11 +100,12 @@ Two rules keep this useful:
 - **Tests never mock internals.** They swap the provider at this boundary and
   drive the real running application, so they stay valid across refactors.
 
-Later integrations — FedaPay, Resend, Supabase Storage — get their own boundary
-of the same shape. Mux already has one; see *Portfolio Projects and video*
-below. Calendly is the exception and never gets one: the site links to its
-hosted page and loads none of its code, so there is no vendor behind a boundary
-to hide (see *Services and Service Enquiries*).
+Later integrations — FedaPay, Resend — get their own boundary of the same shape.
+Mux already has one; see *Portfolio Projects and video* below, and Supabase has
+one under `src/commerce/`; see *The commerce data plane*. Calendly is the
+exception and never gets one: the site links to its hosted page and loads none
+of its code, so there is no vendor behind a boundary to hide (see *Services and
+Service Enquiries*).
 
 ### Homepage sections, not a page builder
 
@@ -206,11 +211,12 @@ un fichier activé     an active Paid Deliverable Version, in the commerce
 `purchaseRequirements()` in `src/managed-content/digital-products.ts` is the
 rule, and it also demands a price in whole francs, a cover, a description, the
 inclusions, and the *Licence des produits numériques* in force as **approved**
-text rather than the placeholder that ships. `src/paid-deliverables/versions.ts`
-is the commerce half of the answer; today it reports that nothing is activated,
-because nothing is. Every product therefore reads *Bientôt disponible*, and in
-preview each one lists what it is still missing — including the two things no
-editor can fix, so they know who to ask.
+text rather than the placeholder that ships. `readPurchaseContext()` in
+`src/commerce/` supplies the two answers Managed Content cannot give: whether
+that licence is approved, and which SKUs have an activated Paid Deliverable
+Version. On a shipped checkout neither is true, so every product reads *Bientôt
+disponible*, and in preview each one lists what it is still missing — including
+the two things no editor can fix, so they know who to ask.
 
 A visitor is told one of three things: *Disponible*, *Bientôt disponible*, or
 *Plus disponible*. The third is archiving, and it is not deletion: an
@@ -236,6 +242,112 @@ literally so, since `src/managed-content/addresses.ts` and
 until the one being left behind is in it, and `src/proxy.ts` turns that record
 into a real 308 for both sections before anything renders. See *Legal documents*
 below for why it has to run there.
+
+## The commerce data plane
+
+The other half of the shop, and the other side of the business. Supabase holds
+the private files WeCreate sells, which version of each is on sale, WeCreate's
+own staff accounts, and an append-only record of what they did. It is reached
+through one boundary of the same shape Managed Content has (ADR-0008):
+
+```
+src/commerce/
+├── types.ts             Paid Deliverable Version, Commerce Operator, audit entry
+├── provider.ts          the interface, and which data plane is in use
+├── paid-deliverables.ts what may be uploaded, and where its bytes are addressed
+├── operators.ts         who may see and change commerce data
+├── session.ts           the operator's session, in an http-only cookie
+├── actions.ts           everything an operator can do, as form submissions
+├── messages.ts          what the back office says after one, in French
+├── tag.ts               the cache tag the public read carries
+├── index.ts             the cached public read, and the purchase context
+├── supabase/            the Supabase implementation
+└── fixture/             the deterministic one the acceptance suite runs against
+```
+
+`/commerce` is where a Commerce Operator works. It is not part of the website:
+no header, no footer, no cart, and `noindex` on every deployment including
+production. It holds Digital Product commerce and nothing else — Service
+Enquiries and Calendly bookings are not there and never will be (ADR-0006).
+
+**Two proofs, every time.** Each staff member has their own Supabase Auth
+account and their own authenticator. That nobody shares an account is WeCreate's
+own rule rather than something code can detect — but nothing here makes a shared
+one convenient: sign-up is disabled, each account needs its own enrolled factor,
+and every audit entry names the individual who acted. A password reaches assurance level 1 and
+opens nothing: **reading** which files WeCreate sells is behind level 2 exactly
+as changing them is. A staff member with no factor yet is sent to
+`/commerce/securite` to enrol one, and enrolling a *second* — the backup that
+keeps a lost phone from locking WeCreate out of its own commerce data — needs
+level 2 first, so a stolen password cannot add an authenticator nobody asked
+for. Being fully authenticated is still not being allowed: a Content Editor at
+level 2 is refused, because editorial and commerce are separate permissions even
+when one person holds both (issue #1).
+
+**A version is created once and never edited.** An upload becomes the next
+numbered Paid Deliverable Version of one SKU, with its size, its file name and a
+SHA-256 checksum computed here rather than taken from the browser. Its bytes are
+stored under an address derived from that checksum, so a store that refuses to
+write over an existing object is all it takes to make a version unwritable-over:
+uploading the same file again resolves to the same address, is refused, and is
+told it is already a version. A replacement is a different file, and becomes the
+next version.
+
+**Uploading is not selling.** Activation is a separate, deliberate action, which
+is what lets WeCreate replace a deliverable, check it, and only then put it on
+sale. Activating changes one row — which version future purchases receive — and
+touches no version at all, so an Order Snapshot keeps exactly the file it
+recorded. Both actions write an audit entry naming the individual, the moment,
+the product and the safe half of what changed on either side: version numbers,
+file names, checksums, and never a secret, a token or a storage address.
+
+**Supabase stays off the public browsing path** (ADR-0003). The one thing the
+Boutique needs — which SKUs have an activated version — is read through
+`readActivePaidDeliverableSkus()`, cached under the `paid-deliverables` tag, and
+activating a version expires that tag, so a product goes on sale on the next
+request rather than whenever a cache happened to turn over. A visit to
+`/boutique` reaches no database. If the data plane is unreachable, the answer is
+that nothing may be sold: a product WeCreate cannot confirm a file for reads
+*bientôt disponible* rather than taking money for something it may not be able
+to deliver.
+
+**Postgres enforces the same rules, against requests that never render a page.**
+`supabase/migrations/` is the record. The tables live in a `commerce` schema that
+is not exposed to the data API at all; five functions in `public` are the whole
+surface, and each one refuses a caller who has not reached assurance level 2 with
+the Commerce Operator role. Triggers make the versions and the audit trail
+append-only, so no application bug and no operator can rewrite either. The
+private bucket has an insert policy and deliberately no select, update or delete
+policy: nothing may overwrite a stored version, and nothing reads a Paid
+Deliverable with a staff session — a buyer receives one through Order Access,
+which is issue #12's to build.
+
+**There is no service role key.** The back office signs in as the individual
+doing the work and every statement runs under their identity, which is what makes
+`auth.uid()` in an audit entry mean something and what stops those policies from
+being decorative. Nothing Supabase reaches the browser either: no
+`NEXT_PUBLIC_SUPABASE_*` exists, because there is no browser-side Supabase call
+to configure.
+
+**A session lasts as long as its credentials.** An operator signs in for an
+hour, which is what Supabase's access token is good for. Holding one longer
+means persisting a rotated refresh token on every action — a page cannot write
+a cookie in Next.js — and that is work worth doing when the back office grows
+the daily use issue #15 brings it, not for a surface someone opens to upload a
+file. A session that claimed to last a working day and quietly stopped working
+after an hour would be worse than one that ends when it ends.
+
+One limit worth knowing before real deliverables arrive: an upload travels
+through the application rather than straight to storage, so it is bounded by the
+request body the deployment will carry — 25 MB here, and `serverActions
+.bodySizeLimit` in `next.config.ts` is kept a megabyte above it for multipart
+overhead — and note that limit is global, because Next.js has no per-route one:
+the commerce actions are the only Server Actions in the application today, and
+what actually bounds an upload is `MAX_DELIVERABLE_BYTES`. A platform with a
+smaller request limit of its own (Vercel's serverless functions cap request
+bodies well below this) needs the upload to go directly to storage against a
+signed upload URL before a large ebook can be uploaded there. Final Paid Deliverables are an external launch input in any case
+(issue #1), so this is a Commerce Launch Gate item rather than a live problem.
 
 ## Services and Service Enquiries
 
@@ -469,6 +581,50 @@ path (ADR-0003). A publish therefore has to invalidate that cache:
 `WECREATE_REVALIDATE_SECRET` accepts the same call as a bearer token, for
 operators and for deployments with no Sanity webhook.
 
+## Setting up Supabase
+
+Until this is done the site runs, the Boutique reports that no product has an
+activated file, and `/commerce` says it is not configured. That is a correct
+state, not a broken one — and it is the state a fresh checkout should be in.
+
+1. Create a project at [supabase.com](https://supabase.com) in the **Paris**
+   region (ADR-0003), plus a separate project per non-production environment.
+   Staging and production never share a project, a bucket or a key.
+2. Apply [`supabase/migrations/`](./supabase/migrations) — `supabase db push`,
+   or the SQL editor for a one-off. It creates the `commerce` schema, the
+   private `paid-deliverables` bucket, the policies and the five functions the
+   application calls. Leave `commerce` out of the project's exposed schemas: the
+   functions in `public` are the whole surface, on purpose.
+3. Put the project URL and the **anon** key in `.env.local` (`SUPABASE_URL`,
+   `SUPABASE_ANON_KEY`). Both are server-only. Do not add the service role key
+   to this application — nothing here uses one, and adding it would let a leaked
+   environment read every order WeCreate will ever take.
+4. In *Authentication → Providers*, leave email sign-up **disabled**: WeCreate
+   creates staff accounts itself, one per person, and there is no self-service
+   registration for a commerce back office.
+5. Create one account per member of staff, and give the ones who administer
+   commerce the role the policies ask for:
+
+   ```sql
+   update auth.users
+      set raw_app_meta_data =
+            coalesce(raw_app_meta_data, '{}'::jsonb)
+            || jsonb_build_object('roles', jsonb_build_array('commerce_operator'))
+    where email = 'prenom.nom@wecreate.bj';
+   ```
+
+   A Content Editor does not get it, even when the same person also edits
+   content. Roles live in `app_metadata` rather than `user_metadata` because a
+   signed-in user can edit the latter.
+6. Each staff member signs in at `/commerce`, is sent to `/commerce/securite`,
+   and enrols their authenticator. Ask everyone to enrol a **second** one on
+   another device straight away: without a backup factor, a lost phone locks
+   that person out, and the answer to that must never be a shared account.
+
+Nothing about production purchasing follows from this setup. Uploading and
+activating a Paid Deliverable Version is one of the Commerce Launch Gate's
+prerequisites, not a way past it — see *Before this goes live*.
+
 ## The acceptance seam
 
 ```bash
@@ -478,9 +634,9 @@ pnpm test:e2e homepage             # one spec
 ```
 
 One harness. It builds the application exactly as it ships, starts it against
-the fixture content provider, and drives it through Chromium at a desktop and a
-Pixel 7 viewport. No component tests, no mocked internals, no production
-credentials.
+the fixture content provider and the fixture commerce data plane, and drives it
+through Chromium at a desktop and a Pixel 7 viewport. No component tests, no
+mocked internals, no production credentials.
 
 ```
 tests/e2e/
@@ -500,21 +656,32 @@ tests/e2e/
 ├── legal.spec.ts                     effective dates and revision selection,
 │                                     provisional text, retained revisions,
 │                                     slug redirects, the launch gate
+├── commerce.spec.ts                  staff sign-in and MFA, backup factors,
+│                                     role separation, upload, activation,
+│                                     the audit trail, private deliverables
 ├── site-shell.spec.ts                header, navigation, cart, footer, fonts
 ├── managed-content-publishing.spec.ts draft, preview, publish, revalidate
 ├── resilience.spec.ts                reduced motion, no JS, nothing published
 └── support/
     ├── managed-content.ts            editorial actions, over HTTP
+    ├── commerce.ts                   staff, their authenticators, their actions
     └── sample-content.ts             stand-in projects and products
 ```
 
-Tests act as a Content Editor would, through `/api/test/managed-content`. That
-endpoint responds 404 unless **both** `WECREATE_TEST_HOOKS=1` and
-`WECREATE_CONTENT_PROVIDER=fixture` are set, so it cannot be reached on a
-deployed environment.
+Tests act as a Content Editor would, through `/api/test/managed-content`, and as
+a Commerce Operator would, through the back office itself — signing in with a
+password and a code their authenticator really produces, uploading through the
+real form. `/api/test/commerce` exists only to return the data plane to its
+seeded state between scenarios, which is the one thing no operator can do.
 
-Content is a single shared dataset, so the suite runs serially. Later tickets
-that bring per-worker persistence can lift that.
+Each hook responds 404 unless `WECREATE_TEST_HOOKS=1` **and** its own provider is
+the fixture, so neither can be reached on a deployment backed by a real Sanity or
+Supabase project. The fixture data plane ships published staff credentials, which
+is safe only because it is never selected by inference: an unconfigured
+deployment has no data plane at all rather than falling back to this one.
+
+Content and commerce are each a single shared dataset, so the suite runs
+serially. Later tickets that bring per-worker persistence can lift that.
 
 Browsers are installed once with `pnpm exec playwright install chromium`.
 
@@ -588,12 +755,22 @@ Production purchasing stays disabled until the Commerce Launch Gate is signed
 off — see issue #1. Nothing in this repository may switch FedaPay to live; that
 is a deliberate, named decision by WeCreate.
 
-Two parts of that gate are already enforced in code, and they reinforce each
+Three parts of that gate are already enforced in code, and they reinforce each
 other. Every legal document ships as provisional text, so
 `readEffectiveLegalTerms().checkout` reports `blocked` and names what is still
 waiting for WeCreate's own text until an editor publishes an approved revision of
-each. And every Digital Product ships without purchase enabled, without a cover,
+each. Every Digital Product ships without purchase enabled, without a cover,
 without its inclusions and without an activated Paid Deliverable Version, so
 `purchaseRequirements()` refuses all six — including on the strength of that same
-unapproved licence. See *Legal documents* and *The Boutique and Digital Products*
-above.
+unapproved licence. And a checkout with no Supabase project has no commerce data
+plane at all, so no version can be activated and no staff account exists to
+activate one. See *Legal documents*, *The Boutique and Digital Products* and *The
+commerce data plane* above.
+
+Staff MFA is one of the gate's own prerequisites, and it is enforced rather than
+documented: there is no path into `/commerce` that does not pass through an
+individual account and a second factor. What the gate still asks of WeCreate is
+the rest — approved legal text, validated prices, the real Paid Deliverables and
+covers, a verified sender domain, client-owned production accounts, sandbox
+end-to-end tests, backup and restore checks, monitoring alerts, and MTN/Moov
+field tests.
