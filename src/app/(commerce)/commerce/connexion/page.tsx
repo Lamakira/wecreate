@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
+import { CommerceButton } from "@/components/commerce/commerce-button";
 import {
-  CommerceButton,
   CommerceField,
   CommerceNotice,
   CommercePanel,
@@ -91,7 +91,7 @@ export default async function CommerceSignInPage({
               autoComplete="one-time-code"
             />
             <div>
-              <CommerceButton>Vérifier</CommerceButton>
+              <CommerceButton pendingLabel="Vérification…">Vérifier</CommerceButton>
             </div>
           </form>
         </CommercePanel>
@@ -120,7 +120,7 @@ export default async function CommerceSignInPage({
               autoComplete="current-password"
             />
             <div>
-              <CommerceButton>Se connecter</CommerceButton>
+              <CommerceButton pendingLabel="Connexion…">Se connecter</CommerceButton>
             </div>
           </form>
         </CommercePanel>

@@ -5,8 +5,8 @@ import { ACCESS_REFUSAL_LABELS, accessRefusal } from "@/commerce/operators";
 import { getCommerceProvider } from "@/commerce/provider";
 import { readOperatorCredentials, readSignedInOperator } from "@/commerce/session";
 import { AuditTrail } from "@/components/commerce/audit-trail";
+import { CommerceButton } from "@/components/commerce/commerce-button";
 import {
-  CommerceButton,
   CommerceNotice,
   CommercePanel,
 } from "@/components/commerce/commerce-form";
@@ -65,7 +65,9 @@ export default async function CommercePage({ searchParams }: CommerceRouteProps)
             {ACCESS_REFUSAL_LABELS[refusal ?? "notSignedIn"]}
           </p>
           <form action={signOutAction} className="mt-5">
-            <CommerceButton secondary>Se déconnecter</CommerceButton>
+            <CommerceButton secondary pendingLabel="Déconnexion…">
+            Se déconnecter
+          </CommerceButton>
           </form>
         </CommercePanel>
       </>
@@ -107,7 +109,9 @@ export default async function CommercePage({ searchParams }: CommerceRouteProps)
           <span className="text-body-sm font-light text-wc-muted-2">
             {operator.email}
           </span>
-          <CommerceButton secondary>Se déconnecter</CommerceButton>
+          <CommerceButton secondary pendingLabel="Déconnexion…">
+            Se déconnecter
+          </CommerceButton>
         </form>
       </div>
       <CommerceNotice message={message} />

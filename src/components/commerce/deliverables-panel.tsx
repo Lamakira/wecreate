@@ -7,7 +7,8 @@ import {
 import type { PaidDeliverableVersion } from "@/commerce/types";
 import { formatBytes, formatMoment } from "@/lib/format";
 
-import { CommerceButton, CommerceField, CommercePanel } from "./commerce-form";
+import { CommerceButton } from "./commerce-button";
+import { CommerceField, CommercePanel } from "./commerce-form";
 
 /** One Digital Product, and every version of the file behind it. */
 export interface DeliverableView {
@@ -80,7 +81,7 @@ export function DeliverablesPanel({
             accept={Object.keys(ALLOWED_DELIVERABLE_TYPES).join(",")}
           />
           <div>
-            <CommerceButton>Téléverser</CommerceButton>
+            <CommerceButton pendingLabel="Téléversement…">Téléverser</CommerceButton>
           </div>
         </form>
       </CommercePanel>
@@ -160,7 +161,7 @@ function Deliverable({ deliverable }: { deliverable: DeliverableView }) {
                 <form action={activateVersionAction}>
                   <input type="hidden" name="sku" value={version.sku} />
                   <input type="hidden" name="versionId" value={version.id} />
-                  <CommerceButton secondary>
+                  <CommerceButton secondary pendingLabel="Activation…">
                     Activer la version {version.version}
                   </CommerceButton>
                 </form>

@@ -2,7 +2,8 @@ import { confirmFactorAction, enrolFactorAction } from "@/commerce/actions";
 import type { PendingEnrolment } from "@/commerce/session";
 import type { CommerceOperator } from "@/commerce/types";
 
-import { CommerceButton, CommerceField, CommercePanel } from "./commerce-form";
+import { CommerceButton } from "./commerce-button";
+import { CommerceField, CommercePanel } from "./commerce-form";
 
 /**
  * A shared secret, in blocks of four.
@@ -109,7 +110,7 @@ export function FactorsPanel({
               autoComplete="one-time-code"
             />
             <div>
-              <CommerceButton>Confirmer</CommerceButton>
+              <CommerceButton pendingLabel="Vérification…">Confirmer</CommerceButton>
             </div>
           </form>
         </CommercePanel>
@@ -132,7 +133,7 @@ export function FactorsPanel({
               hint="Par exemple « Téléphone » ou « Tablette de secours »."
             />
             <div>
-              <CommerceButton>Ajouter</CommerceButton>
+              <CommerceButton pendingLabel="Enregistrement…">Ajouter</CommerceButton>
             </div>
           </form>
         </CommercePanel>

@@ -50,27 +50,6 @@ export function CommerceField({ label, name, hint, ...input }: FieldProps) {
   );
 }
 
-export function CommerceButton({
-  children,
-  secondary = false,
-}: {
-  children: ReactNode;
-  secondary?: boolean;
-}) {
-  return (
-    <button
-      type="submit"
-      className={
-        secondary
-          ? "border border-wc-border px-5 py-2 text-button uppercase tracking-24 text-wc-white"
-          : "border border-wc-white bg-wc-white px-5 py-2 text-button uppercase tracking-24 text-wc-pure"
-      }
-    >
-      {children}
-    </button>
-  );
-}
-
 /** A titled block. The back office is a stack of these on every viewport. */
 export function CommercePanel({
   title,

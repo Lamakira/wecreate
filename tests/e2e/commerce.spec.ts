@@ -73,6 +73,19 @@ test.describe("Reaching the back office", () => {
     await expect(page.getByTestId("version-upload")).toHaveCount(0);
   });
 
+  test("shows its controls as things that can be pressed", async ({ page }) => {
+    await page.goto("/commerce/connexion");
+
+    // Tailwind v4's preflight gives every button `cursor: default`, which reads
+    // as "not interactive" — and a staff member who thinks a button is inert
+    // presses it twice or not at all. Guarded here because the rule lives in
+    // one place for the whole site and would go unnoticed if it were dropped.
+    const cursor = await page
+      .getByRole("button", { name: "Se connecter" })
+      .evaluate((button) => getComputedStyle(button).cursor);
+    expect(cursor).toBe("pointer");
+  });
+
   test("refuses a password on its own", async ({ page }) => {
     await enterPassword(page, COMMERCE_OPERATOR);
 
