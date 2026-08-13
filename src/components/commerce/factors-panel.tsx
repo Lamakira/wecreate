@@ -5,6 +5,18 @@ import type { CommerceOperator } from "@/commerce/types";
 import { CommerceButton, CommerceField, CommercePanel } from "./commerce-form";
 
 /**
+ * A shared secret, in blocks of four.
+ *
+ * It is typed into another device by hand, one character at a time, and a
+ * thirty-two character run of letters and digits is where that goes wrong.
+ * Every authenticator accepts the spaces or ignores them, and so does the
+ * `decodeBase32()` this project verifies against.
+ */
+function groupKey(secret: string): string {
+  return secret.replace(/(.{4})(?=.)/g, "$1 ");
+}
+
+/**
  * A staff member's authenticators: the one they sign in with, and the backup
  * that keeps a lost phone from locking WeCreate out of its own commerce data.
  *
@@ -65,10 +77,29 @@ export function FactorsPanel({
               </span>
               <code
                 data-testid="factor-secret"
-                className="mt-2 block border border-wc-border bg-wc-surface px-3 py-2 font-mono text-body break-all"
+                className="mt-2 block border border-wc-border bg-wc-surface px-3 py-2 font-mono text-body tracking-[0.12em] break-all"
               >
-                {pending.secret}
+                {groupKey(pending.secret)}
               </code>
+            </p>
+            {/* A key nobody can mistranscribe matters more here than anywhere
+                else on the site: get one character wrong and the authenticator
+                produces plausible six-digit codes that will never be accepted,
+                which reads as "the site is broken" rather than "the key is
+                wrong". Grouping is half the answer; saying out loud that this
+                alphabet has no 0 and no 1 is the other half. */}
+            <p className="m-0 text-body-sm font-light text-wc-muted-2">
+              Recopiez-la par groupes de quatre, sans les espaces. Cet alphabet
+              ne contient ni le chiffre 0 ni le chiffre 1 : ce sont toujours les
+              lettres O et I.
+            </p>
+            <p className="m-0 text-body-sm font-light">
+              <a
+                href={pending.uri}
+                className="underline underline-offset-4 break-all"
+              >
+                Ouvrir directement dans une application d&apos;authentification
+              </a>
             </p>
             <CommerceField
               label="Code de vérification"
