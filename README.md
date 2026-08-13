@@ -76,6 +76,8 @@ src/managed-content/
 ├── provider.ts          the interface, and which implementation is in use
 ├── index.ts             the cached, draft-aware read API pages call
 ├── portfolio.ts         when a Portfolio Project may be published, and its poster
+├── legal.ts             which legal revision is in force, and what a checkout
+│                        may do with it
 ├── default-content.ts   the canonical starting content
 ├── sanity/              the Sanity implementation
 └── fixture/             the deterministic implementation used by tests and by
@@ -260,6 +262,79 @@ changes a number once and the whole site follows. Each link's `href` is the real
 destination: no redirect, no tracker, and one that opens a new tab says so in its
 accessible name.
 
+## Legal documents
+
+Five documents and exactly five — CGV, livraison et remboursement, licence,
+politique de confidentialité, mentions légales — each published at
+`/legal/<slug>` and listed in the footer. The set is fixed for the reason the
+homepage's sections are, and one more: a checkout records *which* terms a buyer
+accepted, so every document it can require has to be one the application knows
+by name. Editors own each document's words, its address and its history; they
+cannot invent a sixth kind or delete one.
+
+```
+src/managed-content/legal.ts      the rules: what is in force, what a checkout
+                                  must have, what the launch gate is waiting for
+src/app/(site)/legal/[slug]/      the document at its current address
+             └── [revision]/      one named revision, current or superseded
+src/proxy.ts                      a former address, redirected 308
+```
+
+**A revision is append-only.** New terms are a new revision with a new `id` and
+its own effective date, never an edit of the one already published: an Order
+Snapshot references exactly that identity and has to keep resolving to exactly
+those words. `/legal/<slug>/<revision>` is where it resolves — marked as
+archived, `noindex`, and out of the sitemap, because superseded terms must not
+compete in search with the ones in force.
+
+The Studio is where that is enforced, because it is the only place it could be
+broken: the application sees one snapshot of the content and cannot tell an
+edited revision from an honest one. So `src/sanity/schema/legal.ts` compares the
+draft against what is already published and refuses both halves of "does not
+rewrite or delete" — a published revision that has gone, and one whose date,
+status or wording no longer matches what was published under that identity.
+
+**Which revision applies is a question of dates, not of publishing.** It is the
+most recent one whose effective date has arrived, so an editor prepares a change
+weeks ahead and it applies on its own day; until then it has no page and no
+place in the history. Today is read through `readLegalDay()` rather than from
+the clock: Cache Components refuses a moving clock in a prerender, so it is
+cached under the content tag and dropped whenever a publish drops the content —
+which is what makes terms dated today live the moment they are published.
+
+**None of this is WeCreate's text yet.** Legal copy is an external launch input
+(issue #1), so every shipped revision is a `placeholder` that says what the
+approved document will cover and what remains to be decided. The status is
+enforced rather than advisory: a placeholder is readable and previewable, it
+stays out of the sitemap and out of search results, and it appears in
+`readEffectiveLegalTerms().awaitingApproval` — the legal half of the Commerce
+Launch Gate, and the reason a live checkout cannot run. In preview, that same
+list is printed on the page the editor is already looking at.
+
+**Checkout reads a boundary, not a page.** `readEffectiveLegalTerms()` returns
+what is in force, and a `checkout` that is either `blocked` — naming the
+documents still awaiting approval — or `ready`, carrying the revisions a buyer
+must accept before paying (the CGV and the delivery/refund terms, per issue #1).
+A union rather than a list that happens to be empty, because "nothing left to
+accept" and "not allowed to take money" must not look alike to a caller. Issue
+#10 narrows on it and records the revision identities in the Order Snapshot. Each page also states, where a
+visitor reads it, whether the document is accepted before payment or is
+information only — and that nothing on this site collects marketing consent.
+
+**A changed slug keeps its old address.** `previousSlugs` is the record, and the
+Studio will not publish a changed address until the one being left behind is in
+it — so the redirect is part of changing the address rather than a chore beside
+it, which is what issue #1's "publishing a changed slug creates a permanent
+redirect" asks for. `src/proxy.ts` turns that record into a real 308 before
+anything renders, including for a link to one named revision. It has to run there: under Cache Components a route
+with a dynamic segment streams its shell before the slug is resolved, so by the
+time the page knows the address has moved the status is already committed and
+`permanentRedirect()` can only insert a client-side redirect — which the page
+still does, as a fallback. The proxy reads `/api/legal/redirects`, a cached map
+of five documents' former addresses, and its matcher touches no other route.
+`src/app/(site)/not-found.tsx` explains why the portfolio deliberately does not
+do the same.
+
 ## Setting up Sanity
 
 1. Create a project at [sanity.io/manage](https://www.sanity.io/manage) with a
@@ -311,8 +386,8 @@ path (ADR-0003). A publish therefore has to invalidate that cache:
 
 1. In the Sanity project, add a webhook to `POST {origin}/api/revalidate`, with
    a secret, firing on create/update/delete of `siteSettings`, `homePage`,
-   `portfolioPage`, `portfolioProject`, `servicesPage`, `aboutPage` and
-   `contactPage`.
+   `portfolioPage`, `portfolioProject`, `servicesPage`, `aboutPage`,
+   `contactPage` and `legalDocument`.
 2. Set the same value as `SANITY_WEBHOOK_SECRET`. The signature is verified
    against the raw request body.
 3. The endpoint expires the `managed-content` cache tag, so the very next
@@ -346,6 +421,9 @@ tests/e2e/
 │                                     without names, the method, no testimonial
 ├── contact.spec.ts                   the three channels, the absent form,
 │                                     reading order, keyboard, draft exclusion
+├── legal.spec.ts                     effective dates and revision selection,
+│                                     provisional text, retained revisions,
+│                                     slug redirects, the launch gate
 ├── site-shell.spec.ts                header, navigation, cart, footer, fonts
 ├── managed-content-publishing.spec.ts draft, preview, publish, revalidate
 ├── resilience.spec.ts                reduced motion, no JS, nothing published
@@ -433,3 +511,8 @@ Inter and Playfair Display are self-hosted from `public/fonts` with
 Production purchasing stays disabled until the Commerce Launch Gate is signed
 off — see issue #1. Nothing in this repository may switch FedaPay to live; that
 is a deliberate, named decision by WeCreate.
+
+One part of that gate is already enforced in code: every legal document ships as
+provisional text, so `readEffectiveLegalTerms().checkout` reports `blocked` and
+names what is still waiting for WeCreate's own text until an editor publishes an
+approved revision of each. See *Legal documents* above.

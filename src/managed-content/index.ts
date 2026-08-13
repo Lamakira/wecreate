@@ -3,12 +3,23 @@ import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import { draftMode } from "next/headers";
 
+import {
+  effectiveLegalTerms,
+  findLegalDocument,
+  findLegalSlugRedirect,
+  legalSlugRedirects,
+  legalToday,
+  revisionHistory,
+  type EffectiveLegalTerms,
+} from "./legal";
 import { isPublishable } from "./portfolio";
 import { getManagedContentProvider } from "./provider";
 import type {
   AboutContent,
   ContactContent,
   HomePage,
+  LegalDocument,
+  LegalRevision,
   PortfolioContent,
   PortfolioProject,
   ServicesContent,
@@ -117,4 +128,119 @@ export async function readPortfolioProject(
 ): Promise<PortfolioProject | undefined> {
   const { projects } = await readPortfolio();
   return projects.find((project) => project.slug === slug);
+}
+
+/**
+ * Today, as the effective-date rule sees it.
+ *
+ * Cached because Cache Components refuses a moving clock in a prerender, and
+ * tagged with the content tag because of what it decides. An editor publishing
+ * terms dated today must see them in force at once; a day frozen at yesterday
+ * would leave the site serving the previous revision until the clock cache
+ * happened to turn over. The publish drops both, so the two are always read
+ * together.
+ */
+export async function readLegalDay(): Promise<string> {
+  "use cache";
+  cacheTag(MANAGED_CONTENT_TAG);
+  cacheLife("managedContent");
+
+  return legalToday();
+}
+
+/**
+ * WeCreate's legal documents, with every revision each has had.
+ *
+ * No gate of its own, and no filtering: publishing is the whole of the decision
+ * for a legal text, and which revision applies is a question of dates rather
+ * than of readiness. Draft and published separate the way they do everywhere
+ * else, so an editor previews new terms in the real page before anyone is bound
+ * by them.
+ */
+export async function readLegalDocuments(): Promise<LegalDocument[]> {
+  return (await readSiteContent()).legalDocuments;
+}
+
+/** The legal document at an address, or `undefined` if nothing is there. */
+export async function readLegalDocument(
+  slug: string,
+): Promise<LegalDocument | undefined> {
+  return findLegalDocument(await readLegalDocuments(), slug);
+}
+
+/**
+ * A legal document resolved against today: what it says now, and what it has
+ * said before.
+ *
+ * The three travel together everywhere — a page renders one revision, says
+ * whether it is still the one in force, and lists the rest — so they are
+ * resolved once and passed as one thing rather than recomputed side by side.
+ */
+export interface LegalDocumentInForce {
+  document: LegalDocument;
+  /** The revision that applies today. */
+  current: LegalRevision;
+  /** In force now or previously, newest first. */
+  history: LegalRevision[];
+}
+
+/**
+ * The document at an address, with the revision in force.
+ *
+ * `undefined` covers both "no document lives here" and "every revision it has
+ * is dated in the future": either way there is nothing a visitor can be bound
+ * by, and the page answers the same for both rather than hinting that a
+ * different address would behave differently.
+ */
+export async function readLegalDocumentInForce(
+  slug: string,
+): Promise<LegalDocumentInForce | undefined> {
+  const document = await readLegalDocument(slug);
+  if (!document) {
+    return undefined;
+  }
+
+  const today = await readLegalDay();
+  const history = revisionHistory(document, today);
+  const current = history[0];
+
+  return current ? { document, current, history } : undefined;
+}
+
+/**
+ * The address a prior published address now points at.
+ *
+ * Only consulted once `readLegalDocument` has found nothing, so a slug that has
+ * become another document's own address is served rather than redirected.
+ */
+export async function readLegalSlugRedirect(
+  slug: string,
+): Promise<string | undefined> {
+  return findLegalSlugRedirect(await readLegalDocuments(), slug);
+}
+
+/**
+ * Every abandoned legal address and where it now points, as one object.
+ *
+ * Read by `/api/legal/redirects`, which is how `src/proxy.ts` turns a former
+ * address into a real 308 before the page starts rendering. Published content
+ * only — the proxy carries no preview session, and a draft slug is not an
+ * address anyone has ever been able to link to.
+ */
+export async function readLegalSlugRedirects(): Promise<
+  Record<string, string>
+> {
+  return legalSlugRedirects(await readLegalDocuments());
+}
+
+/**
+ * What is legally in force right now.
+ *
+ * The stable boundary issue #1 asks for: checkout takes the revisions it must
+ * present and record from here, and reads `awaitingApproval` to know it may not
+ * run at all. Nothing downstream parses a rendered page to find out what the
+ * terms are.
+ */
+export async function readEffectiveLegalTerms(): Promise<EffectiveLegalTerms> {
+  return effectiveLegalTerms(await readLegalDocuments(), await readLegalDay());
 }

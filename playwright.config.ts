@@ -38,6 +38,11 @@ const serverEnv: Record<string, string> = {
     "content.json",
   ),
   NEXT_PUBLIC_SITE_URL: BASE_URL,
+  // Crawlable, like production and unlike every other environment. What the
+  // site keeps out of search results is then a decision the suite can check —
+  // an unapproved legal text, a superseded revision, a preview session — rather
+  // than a blanket `noindex` hiding whether any of those rules work.
+  WECREATE_ALLOW_INDEXING: "true",
 };
 
 export default defineConfig({

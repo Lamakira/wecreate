@@ -206,6 +206,22 @@ test.describe("Text contrast", () => {
     expectMeetsAa(texts);
   });
 
+  test("a legal document meets WCAG AA, notices and history included", async ({
+    page,
+  }) => {
+    // Legal pages carry text nothing else on the site does: the bordered
+    // notices, the effective-date list with its micro-label terms, and the
+    // revision identities in tertiary grey. All of it is text a visitor may
+    // need to read carefully rather than skim.
+    await page.goto("/legal/conditions-generales-de-vente");
+    await page.waitForTimeout(800);
+
+    const texts = await collectText(page);
+    expect(texts.length).toBeGreaterThan(20);
+
+    expectMeetsAa(texts);
+  });
+
   test("the portfolio and its project dialog meet WCAG AA", async ({ page }) => {
     await page.goto("/portfolio");
     await page.getByRole("link", { name: /Résidence Aurora/ }).click();

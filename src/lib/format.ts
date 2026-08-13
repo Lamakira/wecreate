@@ -20,6 +20,46 @@ export function formatXof(amount: number): string {
   return `${whole < 0 ? "-" : ""}${grouped}${NON_BREAKING_SPACE}F`;
 }
 
+const MONTHS_FR = [
+  "janvier",
+  "février",
+  "mars",
+  "avril",
+  "mai",
+  "juin",
+  "juillet",
+  "août",
+  "septembre",
+  "octobre",
+  "novembre",
+  "décembre",
+];
+
+/**
+ * A legal effective date, written the way French writes one: `2026-09-01` as
+ * `1er septembre 2026`.
+ *
+ * Hand-rolled for the same reason `formatXof` is — a date a visitor is told
+ * their terms took effect on must read identically on every runtime, and month
+ * names and the ordinal `1er` are exactly the kind of thing an ICU update
+ * moves. An unparseable value is returned untouched rather than guessed at.
+ */
+export function formatEffectiveDate(isoDate: string): string {
+  const parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
+  if (!parts) {
+    return isoDate;
+  }
+
+  const [, year, month, day] = parts;
+  const monthName = MONTHS_FR[Number(month) - 1];
+  if (!monthName) {
+    return isoDate;
+  }
+
+  const dayNumber = Number(day);
+  return `${dayNumber === 1 ? "1er" : dayNumber} ${monthName} ${year}`;
+}
+
 /**
  * The `01`, `02`, `03` the design prints beside a step, derived from where the
  * step sits rather than stored with it.

@@ -200,6 +200,19 @@ export const SITE_CONTENT_QUERY = defineQuery(`{
       steps[]{"key": coalesce(key.current, _key), title, description}
     }
   },
+  "legalDocuments": *[_type == "legalDocument"]{
+    "documentId": _id,
+    title,
+    "slug": slug.current,
+    previousSlugs,
+    summary,
+    revisions[]{
+      "id": coalesce(id.current, _key),
+      effectiveFrom,
+      status,
+      sections[]{"key": coalesce(key.current, _key), heading, paragraphs}
+    }
+  },
   "portfolioPage": *[_type == "portfolioPage"][0]{
     seo{title, description, "openGraphImageUrl": openGraphImage.asset->url},
     kicker,

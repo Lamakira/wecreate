@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+
 /**
  * Deployment-level configuration, as opposed to Managed Content.
  *
@@ -42,6 +44,21 @@ export function isIndexablePath(path: string): boolean {
   return !NON_INDEXABLE_PATHS.some(
     (excluded) => path === excluded || path.startsWith(`${excluded}/`),
   );
+}
+
+/**
+ * Page metadata that keeps one page out of search results, for a page the site
+ * serves but does not want found — unapproved legal text, a superseded legal
+ * revision, a preview session.
+ *
+ * Empty on a deployment that is not crawlable at all, and that is the point:
+ * the root layout already says `noindex, nofollow` there, which is stricter
+ * than this. A page-level `robots` value does not merge with the layout's, it
+ * replaces it — so answering here at all would *loosen* the deployment's own
+ * rule, which is how a staging site ends up in a search index.
+ */
+export function keepOutOfSearchResults(): Pick<Metadata, "robots"> {
+  return isIndexable() ? { robots: { index: false, follow: true } } : {};
 }
 
 /** Shared secret that lets a non-Sanity client open a preview session. */
