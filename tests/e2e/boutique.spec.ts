@@ -120,9 +120,11 @@ test.describe("Browsing the Boutique", () => {
     }
 
     // The design handoff puts an "Ajouter au panier" on every card. Nothing here
-    // does — the Digital Cart arrives with issue #9, and a buy button that could
-    // not take money would be worse than none. (The shell's cart indicator is
-    // not part of the catalogue, so the grid is what is asserted.)
+    // does: the control is rendered for a product WeCreate can sell, and before
+    // the Commerce Launch Gate there is none — a buy button that could not take
+    // money would be worse than none. (The shell's cart indicator is not part of
+    // the catalogue, so the grid is what is asserted; `digital-cart.spec.ts`
+    // covers the control once a product is genuinely on sale.)
     await expect(
       page.getByTestId("boutique-grid").getByRole("button"),
     ).toHaveCount(0);

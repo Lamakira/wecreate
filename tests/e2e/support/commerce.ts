@@ -1,4 +1,4 @@
-import type { APIRequestContext, Locator, Page } from "@playwright/test";
+import { expect, type APIRequestContext, type Locator, type Page } from "@playwright/test";
 
 import {
   FIXTURE_STAFF,
@@ -141,4 +141,37 @@ export async function activateVersion(
 /** One product's panel in the back office. */
 export function deliverablePanel(page: Page, sku: string) {
   return page.locator(`[data-testid="deliverable"][data-sku="${sku}"]`);
+}
+
+/**
+ * Put Digital Products on sale: a file for each, and the decision to sell that
+ * version of it.
+ *
+ * The commerce half of "may WeCreate sell this?", performed the way a Commerce
+ * Operator performs it — signing in, uploading, activating. The editorial half
+ * is the caller's, through the Managed Content hook: a published product marked
+ * *En vente*, under an approved licence.
+ */
+export async function putOnSale(
+  page: Page,
+  skus: readonly string[],
+): Promise<void> {
+  await signIn(page, COMMERCE_OPERATOR);
+
+  for (const sku of skus) {
+    await uploadDeliverable(page, {
+      sku,
+      fileName: `${sku.toLowerCase()}.zip`,
+      contents: `fichier livré pour ${sku}`,
+      mimeType: "application/zip",
+    });
+    await expect(deliverablePanel(page, sku).getByTestId("version")).toHaveCount(
+      1,
+    );
+
+    await activateVersion(page, sku, 1);
+    await expect(
+      deliverablePanel(page, sku).getByTestId("active-version"),
+    ).toHaveText("Version 1 en vente");
+  }
 }

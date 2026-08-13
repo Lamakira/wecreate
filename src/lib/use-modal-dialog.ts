@@ -31,6 +31,15 @@ export function useModalDialog(
   const panelRef = useRef<HTMLDivElement | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
 
+  // Held in a ref rather than depended on. A dialog whose contents change while
+  // it is open — the Digital Cart gains and loses lines — is handed a fresh
+  // `onClose` on each render, and re-running the effect for that would restore
+  // focus to whatever opened the dialog while the visitor is still inside it.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
+
   useEffect(() => {
     if (!isOpen) {
       return;
@@ -56,7 +65,7 @@ export function useModalDialog(
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        onClose();
+        onCloseRef.current();
         return;
       }
 
@@ -76,14 +85,16 @@ export function useModalDialog(
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
       const active = document.activeElement;
+      // Focus can be nowhere at all rather than merely at an edge: removing a
+      // line from the Digital Cart takes the button that was focused with it,
+      // leaving the document body holding focus. Tab from there has to come
+      // back into the dialog too, or the next press walks onto the page behind.
+      const isOutside = !panelRef.current.contains(active);
 
-      if (
-        event.shiftKey &&
-        (active === first || !panelRef.current.contains(active))
-      ) {
+      if (event.shiftKey && (active === first || isOutside)) {
         event.preventDefault();
         last.focus();
-      } else if (!event.shiftKey && active === last) {
+      } else if (!event.shiftKey && (active === last || isOutside)) {
         event.preventDefault();
         first.focus();
       }
@@ -96,7 +107,7 @@ export function useModalDialog(
       body.style.paddingRight = restore.paddingRight;
       previouslyFocused?.focus();
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   return { panelRef, closeButtonRef };
 }

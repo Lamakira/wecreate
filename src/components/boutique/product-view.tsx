@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { AddToCartButton } from "@/components/boutique/add-to-cart-button";
 import { AvailabilityBadge } from "@/components/boutique/availability-badge";
 import { PurchaseNotice } from "@/components/boutique/purchase-notice";
 import { MediaFrame } from "@/components/primitives/media-frame";
@@ -141,6 +142,16 @@ export function ProductView({
               </span>
               <AvailabilityBadge availability={availability} />
             </div>
+
+            {availability === "available" ? (
+              <div className="mt-6">
+                <AddToCartButton
+                  productId={product.id}
+                  title={product.title}
+                  size="default"
+                />
+              </div>
+            ) : null}
 
             {product.isArchived ? (
               <p

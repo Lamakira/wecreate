@@ -37,7 +37,14 @@ export function isIndexable(): boolean {
  * Order Access surfaces here as they build them, rather than this file guessing
  * their URLs in advance.
  */
-export const NON_INDEXABLE_PATHS = ["/studio", "/commerce", "/api"] as const;
+export const NON_INDEXABLE_PATHS = [
+  "/studio",
+  "/commerce",
+  "/api",
+  // Checkout. Issue #1 keeps every transaction surface out of search results,
+  // and this one is a page a crawler could otherwise reach from the cart.
+  "/commande",
+] as const;
 
 /** Whether a path may appear in search results and in the sitemap. */
 export function isIndexablePath(path: string): boolean {

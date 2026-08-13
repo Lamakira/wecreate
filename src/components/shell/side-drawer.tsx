@@ -15,6 +15,12 @@ interface SideDrawerProps {
   closeLabel: string;
   /** Identifies the panel in acceptance tests. */
   testId: string;
+  /**
+   * Whether what the panel shows is currently being fetched. Announced as
+   * `aria-busy`, so assistive technology waits for the update rather than
+   * reading a half-replaced list.
+   */
+  isBusy?: boolean;
   /** Top-left content beside the close button. */
   heading?: ReactNode;
   /** Scrollable body. */
@@ -36,6 +42,7 @@ export function SideDrawer({
   label,
   closeLabel,
   testId,
+  isBusy,
   heading,
   children,
   footer,
@@ -60,6 +67,7 @@ export function SideDrawer({
         role="dialog"
         aria-modal="true"
         aria-label={label}
+        aria-busy={isBusy === undefined ? undefined : isBusy}
         data-testid={testId}
         className="relative flex h-full w-[min(430px,100%)] animate-wc-fade-fast flex-col border-l border-wc-line-dark bg-wc-black"
       >
@@ -78,7 +86,15 @@ export function SideDrawer({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-[26px] py-2">{children}</div>
+        {/* The one part of the panel that scrolls. On a phone this is what
+            keeps a long list of products from pushing the action at the foot of
+            the drawer off the screen. */}
+        <div
+          data-testid={`${testId}-body`}
+          className="flex-1 overflow-y-auto px-[26px] py-2"
+        >
+          {children}
+        </div>
 
         {footer ? (
           <div className="border-t border-wc-line-dark px-[26px] pt-6 pb-[30px]">

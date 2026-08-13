@@ -153,6 +153,18 @@ export async function readBoutique(): Promise<BoutiqueContent> {
 }
 
 /**
+ * Every Digital Product, archived ones included.
+ *
+ * What the Digital Cart resolves its identifiers against, and deliberately not
+ * `readBoutique()`'s list: a shopper whose product was withdrawn while it sat
+ * in their cart has to be told so, which needs the product to still answer to
+ * its identity. Same reason `readDigitalProduct()` ignores the filter.
+ */
+export async function readDigitalProducts(): Promise<DigitalProduct[]> {
+  return (await readSiteContent()).boutique.products;
+}
+
+/**
  * One Digital Product by slug, archived ones included.
  *
  * Deliberately not `readBoutique()`'s filtered list: a withdrawn product has to

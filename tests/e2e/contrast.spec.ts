@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { PNG } from "pngjs";
 
+import { arriveWithCart, openCart } from "./support/digital-cart";
 import { ManagedContent } from "./support/managed-content";
 import { SAMPLE_PORTFOLIO_PROJECTS } from "./support/sample-content";
 
@@ -209,6 +210,27 @@ test.describe("Text contrast", () => {
     expect(product.length).toBeGreaterThan(15);
 
     expectMeetsAa(product);
+  });
+
+  test("the Digital Cart drawer meets WCAG AA, refusals included", async ({
+    page,
+  }) => {
+    // The drawer carries the site's only refusing control — a checkout action
+    // that keeps its place and says why it will not move — plus the notices
+    // beside a withdrawn product. All of it is tertiary grey on the panel's own
+    // dark ground, and all of it is text a shopper has to read to get unstuck.
+    await arriveWithCart(page, [
+      ["ebk-01", 15000],
+      ["pas-un-produit", 1],
+    ]);
+    await page.goto("/boutique");
+    await openCart(page);
+    await page.waitForTimeout(800);
+
+    const texts = await collectText(page);
+    expect(texts.length).toBeGreaterThan(20);
+
+    expectMeetsAa(texts);
   });
 
   test("Contact meets WCAG AA", async ({ page }) => {
