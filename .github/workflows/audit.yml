@@ -1,0 +1,40 @@
+# A published advisory against something we install should not wait for
+# somebody to think of running `pnpm audit` by hand. This is the whole of the
+# repository's CI today, on purpose: it is the one check the acceptance suite
+# cannot make for itself, because it is a question about the outside world
+# rather than about this application's behaviour.
+#
+# `--audit-level high` is the failure threshold, not the reporting one: the job
+# prints everything it finds and fails only on high and critical. The scheduled
+# run is what catches an advisory published against a dependency nobody has
+# touched since the last pull request.
+name: Audit
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 7 * * 1"
+
+jobs:
+  dependencies:
+    name: Dependency advisories
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      # Advisories are matched against the resolved tree, so the lockfile has to
+      # be honoured exactly. `--frozen-lockfile` also fails the job if the
+      # lockfile and `package.json` have drifted apart, which is worth knowing
+      # on its own.
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm audit --audit-level high

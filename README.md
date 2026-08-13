@@ -749,6 +749,57 @@ Inter and Playfair Display are self-hosted from `public/fonts` with
 `font-display: swap` and a real fallback stack. See
 [`public/fonts/README.md`](./public/fonts/README.md).
 
+## Security headers
+
+Every response carries `X-Content-Type-Options`, `Referrer-Policy`,
+`Strict-Transport-Security`, a `Permissions-Policy` and a
+Content-Security-Policy. They are set in one place, `headers()` in
+`next.config.ts`, and asserted from the outside in
+`tests/e2e/security-headers.spec.ts`.
+
+There are two policies, not one. The public site gets the narrow one; `/studio`
+overrides it with a wider one, because Sanity's Studio is a vendor
+single-page application that evaluates code at runtime and holds a websocket
+open to the content API — needs no marketing page has. Both keep
+`frame-ancestors 'self'`, which is what lets the Presentation tool preview the
+real pages in an iframe and stops anyone else framing them.
+
+**The public policy has no nonce, on purpose.** The strict form of a CSP names a
+fresh random nonce per request; Next.js requires dynamic rendering to generate
+one, and dynamic rendering is what ADR-0003 spends `cacheComponents` to avoid.
+Rather than make every marketing page render per request, `script-src` admits
+the inline bootstrap Next.js emits and pins the origin — an injected
+`<script src>` pointing anywhere else is still refused, as are `object-src`,
+`base-uri` and `form-action`.
+
+**Adding an external service means adding its origin.** The policy names only
+what the site genuinely reaches: `cdn.sanity.io` for editorial images,
+`*.mux.com` for video, `*.litix.io` for Mux's playback telemetry. A new embed,
+font host, analytics script or payment widget will be blocked until its origin
+is added to the right directive — which is the point, but it means the failure
+looks like "the thing silently does not load". Check the browser console for a
+CSP violation before looking anywhere else.
+
+**Why Mux is a wildcard and Sanity is not.** A playback URL starts at
+`stream.mux.com`, but the manifest and segments are then served from whichever
+CDN edge Mux picked for that request — `manifest-…-vop1.fastly.mux.com` and its
+siblings, which are not knowable in advance. Naming only `stream.mux.com` leaves
+the poster frame showing and playback failing with a status-0 network error. The
+acceptance suite cannot catch this: it runs on fixture content whose videos are
+plain files, so the adaptive path is only exercised against a real Mux asset.
+Load a portfolio project in a browser after changing anything under `media-src`,
+`img-src` or `connect-src`.
+
+Editors are constrained at the other end: `callToAction.href`,
+`navigationLink.href` and `universeCard.href` accept only a site-relative path,
+an `https://` address or a `mailto:`, and the Studio says so when they type
+something else. This is a usability guard, not an XSS control — React refuses to
+render a `javascript:` href at all.
+
+`.github/workflows/audit.yml` runs `pnpm audit` on every pull request, on pushes
+to `main`, and weekly, failing on a high or critical advisory. The weekly run is
+what catches an advisory published against a dependency nobody has touched.
+
 ## Before this goes live
 
 Production purchasing stays disabled until the Commerce Launch Gate is signed

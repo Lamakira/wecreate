@@ -20,9 +20,24 @@ import { previewSecret } from "@/site-config";
  * cache.
  */
 
-/** Only same-origin absolute paths, so a preview link cannot become an open redirect. */
+/**
+ * Only same-origin absolute paths, so a preview link cannot become an open
+ * redirect.
+ *
+ * A leading `/` is not enough on its own. `//evil.example` is a
+ * protocol-relative URL, and a browser parsing a `Location` treats a backslash
+ * exactly as it treats a slash — so `/\evil.example` and `/\/evil.example` are
+ * off-origin too, however much they look like paths. The backslash is rejected
+ * outright rather than in the one position that is dangerous today: no route
+ * this application serves contains one, so there is nothing to lose by it.
+ */
 function safeRedirectPath(value: string | null): string {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) {
+  if (
+    !value ||
+    !value.startsWith("/") ||
+    value.startsWith("//") ||
+    value.includes("\\")
+  ) {
     return "/";
   }
   return value;
