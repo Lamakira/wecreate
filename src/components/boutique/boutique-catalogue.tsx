@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 
+import { AddToCartButton } from "@/components/boutique/add-to-cart-button";
 import { AvailabilityBadge } from "@/components/boutique/availability-badge";
 import { PurchaseNotice } from "@/components/boutique/purchase-notice";
 import { MediaFrame } from "@/components/primitives/media-frame";
@@ -156,10 +157,10 @@ interface ProductCardProps {
  * it is the price and whether the product can be bought — facts about the
  * product rather than a second way to open it.
  *
- * There is deliberately no *Ajouter au panier*, which the design handoff puts
- * here: the Digital Cart arrives with issue #9, no product is purchase-enabled
- * before the Commerce Launch Gate, and a buy button that could not take money is
- * worse than none.
+ * *Ajouter au panier* is the design handoff's own control, and it appears only
+ * on a product WeCreate can actually sell. Before the Commerce Launch Gate no
+ * product is purchase-enabled, so the whole grid ships without one: a buy button
+ * that could not take money is worse than none.
  */
 function ProductCard({
   product,
@@ -205,6 +206,12 @@ function ProductCard({
         </span>
         <AvailabilityBadge availability={availability} />
       </div>
+
+      {availability === "available" ? (
+        <div className="px-[22px] pb-[22px]">
+          <AddToCartButton productId={product.id} title={product.title} />
+        </div>
+      ) : null}
 
       {showRequirements ? (
         <div className="px-[22px] pb-[22px]">

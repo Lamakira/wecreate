@@ -17,7 +17,9 @@ import { defineConfig, devices } from "@playwright/test";
  */
 
 const PORT = Number(process.env.WECREATE_TEST_PORT ?? 3100);
-const BASE_URL = `http://127.0.0.1:${PORT}`;
+
+/** Where the suite's application runs. Exported for the tests that seed a cookie. */
+export const BASE_URL = `http://127.0.0.1:${PORT}`;
 
 /** Test-run secrets. Real deployments read these from secret management. */
 export const TEST_PREVIEW_SECRET = "acceptance-preview-secret";

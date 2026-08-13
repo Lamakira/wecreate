@@ -6,14 +6,14 @@ interface PlaceholderPageProps {
 }
 
 /**
- * A route that exists so navigation works, and says plainly that its content is
+ * A route that exists so an action works, and says plainly that its content is
  * still to come.
  *
- * The six-link navigation ships with the homepage, so these routes have to
- * resolve — a nav that 404s is not a usable nav. It carries none of the real
- * page's editorial copy: each owning ticket brings its own approved wording
- * along with the page itself. See the comment in each page file for which
- * ticket that is.
+ * The six-link navigation shipped with the homepage and the Digital Cart's
+ * *Passer commande* has to lead somewhere, so these routes have to resolve — a
+ * control that 404s is not a usable control. It carries none of the real page's
+ * editorial copy: each owning ticket brings its own approved wording along with
+ * the page itself. See the comment in each page file for which ticket that is.
  */
 export function PlaceholderPage({ title }: PlaceholderPageProps) {
   return (

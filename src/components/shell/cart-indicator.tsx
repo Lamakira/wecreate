@@ -14,6 +14,10 @@ interface CartIndicatorProps {
  * The count is part of the accessible name rather than a bare number floating
  * next to an icon, so a screen-reader user hears "Panier, 0 article" instead of
  * an unexplained digit.
+ *
+ * It is right on arrival without asking the server anything: the count comes
+ * from the cart cookie this browser is already carrying, and only opening the
+ * drawer reaches the shop for what is actually in it.
  */
 export function CartIndicator({ onOpen }: CartIndicatorProps) {
   const { itemCount } = useDigitalCart();

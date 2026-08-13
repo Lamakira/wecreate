@@ -222,9 +222,9 @@ A visitor is told one of three things: *Disponible*, *Bientôt disponible*, or
 *Plus disponible*. The third is archiving, and it is not deletion: an
 `isArchived` product leaves the Boutique, the homepage teaser, the sitemap and
 search, and keeps its identity and its page, because an Order Snapshot, an Order
-Access grant and a receipt all point at it. There is no *Ajouter au panier*
-anywhere — the Digital Cart arrives with issue #9, and a buy button that could
-not take money would be worse than none.
+Access grant and a receipt all point at it. *Ajouter au panier* is rendered for
+*Disponible* and for nothing else, so on a shipped checkout it appears nowhere at
+all: a buy button that could not take money would be worse than none.
 
 **Sanity holds the shop, never the goods.** The `digitalProduct` document type
 has covers, words, a price, availability flags and a SKU, and no file field at
@@ -242,6 +242,78 @@ literally so, since `src/managed-content/addresses.ts` and
 until the one being left behind is in it, and `src/proxy.ts` turns that record
 into a real 308 for both sections before anything renders. See *Legal documents*
 below for why it has to run there.
+
+## The Digital Cart
+
+One copy of each Digital Product a shopper means to buy, carried for thirty
+days, and checked against what WeCreate actually sells before any of it can be
+paid for.
+
+```
+src/digital-cart/
+├── cart.ts             what may be stored, and what the shop makes of it
+├── cookie.ts           the thirty-day cookie
+├── actions.ts          add, remove, accept a new price — as Server Functions
+└── use-digital-cart.tsx the browser's side: the drawer, the count, the controls
+```
+
+**The cookie is a list of identifiers, and nothing in it is believed.** It holds
+one pair per line — a Digital Product's id, and the whole-XOF amount the shopper
+last accepted — and no title, no Paid Deliverable, and nothing about the person
+carrying it. Every title, every price and every answer to *may this still be
+bought* is read back from published Managed Content and from
+`readPurchaseContext()` each time the cart is shown, which is what issue #1 means
+by treating the stored cart as a convenience pointer. The amount is stored for
+one purpose and used for one: noticing that a published price has moved. It is
+never displayed and never charged — the drawer prints today's price and says
+that it changed, and the figure in the cookie only decides whether it has to say
+so.
+
+**Why the amount is there at all**, against an acceptance criterion that asks
+for identifiers only: telling a shopper their price has changed means knowing
+what it was before, and an anonymous cart has nowhere else to keep that. The
+alternatives are a server-side store keyed to a shopper who has no identity —
+which puts a database on the browsing path ADR-0003 keeps it off — or never
+warning a returning shopper at all. Tampering with it buys nothing: set it low
+and the shop asks you to accept today's price, set it to today's price and you
+have skipped a confirmation for yourself. Nothing gets cheaper either way.
+
+A cart that names something the shop cannot resolve therefore fails safe rather
+than failing loudly. Four outcomes, and the last is what makes ADR-0006
+structural rather than a rule someone has to remember:
+
+| What the identifier names          | What the shopper sees                     |
+| ---------------------------------- | ----------------------------------------- |
+| a product WeCreate may sell        | an ordinary line                          |
+| one whose price has changed        | the new amount, and a request to accept it |
+| one archived or not on sale        | the line, the reason, and no way past it  |
+| anything else                      | dropped, counted, and said out loud       |
+
+A service pack, an add-on and the Wedding Film Signature all land in the last
+row by construction: the cart resolves Digital Product identities, and a service
+offer has none.
+
+**Accepting a price accepts the one that was on screen.** *Accepter les nouveaux
+prix* sends the amounts the drawer was showing, and a line is accepted only
+where that amount is still the amount on sale. A price published between the
+drawer being drawn and the button being pressed is therefore refused and asked
+again with the newer figure — accepting an amount nobody has seen is the exact
+surprise the step exists to prevent.
+
+**It is the one cookie here a page may read.** Every other one this application
+sets is `httpOnly`, because every other one is a credential. This is a shopping
+list, so being readable costs nothing and buys the header its count without a
+request — a visitor whose cart is empty, which is every visitor before the
+Commerce Launch Gate, causes no cart traffic at all. Nothing else is read from
+it in the browser, and the application is still its only writer: the four
+Server Functions in `actions.ts` own every change, which is also what gives a
+state-changing surface its CSRF protection without inventing a token scheme.
+
+The drawer is quick review and removal with the checkout action anchored below a
+scrolling list, which is the shape issue #1 asks for on a phone. Form entry is
+not there: *Passer commande* leaves for `/commande`, which is a stub until issue
+#10 builds guest checkout, and which is out of search results from the day the
+address exists.
 
 ## The commerce data plane
 
@@ -342,8 +414,9 @@ through the application rather than straight to storage, so it is bounded by the
 request body the deployment will carry — 25 MB here, and `serverActions
 .bodySizeLimit` in `next.config.ts` is kept a megabyte above it for multipart
 overhead — and note that limit is global, because Next.js has no per-route one:
-the commerce actions are the only Server Actions in the application today, and
-what actually bounds an upload is `MAX_DELIVERABLE_BYTES`. A platform with a
+it is also the ceiling on the Digital Cart's own Server Functions, which carry a
+handful of identifiers and come nowhere near it, so what actually bounds an
+upload is `MAX_DELIVERABLE_BYTES`. A platform with a
 smaller request limit of its own (Vercel's serverless functions cap request
 bodies well below this) needs the upload to go directly to storage against a
 signed upload URL before a large ebook can be uploaded there. Final Paid Deliverables are an external launch input in any case
@@ -646,6 +719,10 @@ tests/e2e/
 ├── boutique.spec.ts                  family filters, crawlable product pages,
 │                                     draft exclusion, forthcoming and archived
 │                                     states, published price changes, redirects
+├── digital-cart.spec.ts              adding, removing, one copy each, the cookie
+│                                     and its thirty days, tampered identifiers,
+│                                     withdrawn products, accepted price changes,
+│                                     the drawer on a phone, no service offers
 ├── services.spec.ts                  canonical packs and prices, the prefilled
 │                                     WhatsApp message, the hosted Discovery
 │                                     Call, the comparison, no service commerce
@@ -665,6 +742,7 @@ tests/e2e/
 └── support/
     ├── managed-content.ts            editorial actions, over HTTP
     ├── commerce.ts                   staff, their authenticators, their actions
+    ├── digital-cart.ts               arriving with a cart, and reading it back
     └── sample-content.ts             stand-in projects and products
 ```
 
@@ -673,6 +751,13 @@ a Commerce Operator would, through the back office itself — signing in with a
 password and a code their authenticator really produces, uploading through the
 real form. `/api/test/commerce` exists only to return the data plane to its
 seeded state between scenarios, which is the one thing no operator can do.
+
+The Digital Cart is the one place a test writes state directly, and both reasons
+are themselves under test: a cart that survives a closed browser for thirty days
+cannot be demonstrated by clicking, and a cookie a visitor has edited is exactly
+the input reconciliation has to be safe against. `support/digital-cart.ts` spells
+the stored format out by hand rather than importing it, so changing how a cart is
+kept has to be a deliberate change to that file too.
 
 Each hook responds 404 unless `WECREATE_TEST_HOOKS=1` **and** its own provider is
 the fixture, so neither can be reached on a deployment backed by a real Sanity or

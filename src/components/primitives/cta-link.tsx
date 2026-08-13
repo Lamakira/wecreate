@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { ACTION_SIZES, type ActionSize } from "@/components/primitives/action";
 import type { CallToAction } from "@/managed-content/types";
 
 /** A destination outside WeCreate's own origin. */
@@ -31,20 +32,11 @@ const VARIANTS = {
     "inline-block border-b border-wc-muted pb-[5px] text-micro tracking-24 uppercase transition-colors duration-300 hover:border-wc-white",
 } as const;
 
-const SIZES = {
-  /** A button standing on its own in a section. */
-  default:
-    "inline-block whitespace-nowrap px-7 py-[17px] text-button font-semibold tracking-18 uppercase",
-  /** One of a stack filling the foot of a card, at the card's smaller type. */
-  block:
-    "block w-full px-5 py-[15px] text-center text-micro font-semibold tracking-18 uppercase",
-} as const;
-
 interface CtaLinkProps {
   cta: CallToAction;
   variant: keyof typeof VARIANTS;
   /** Ignored by `underline`, which carries its own box. */
-  size?: keyof typeof SIZES;
+  size?: ActionSize;
   /**
    * Appended to the accessible name and hidden visually. What distinguishes
    * one "Demander un devis" from the nine others on the same page.
@@ -66,7 +58,7 @@ export function CtaLink({
   className,
 }: CtaLinkProps) {
   const classes = [
-    variant === "underline" ? "" : SIZES[size],
+    variant === "underline" ? "" : ACTION_SIZES[size],
     VARIANTS[variant],
     className ?? "",
   ]
