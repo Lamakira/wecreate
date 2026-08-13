@@ -1,6 +1,150 @@
 import type { NextConfig } from "next";
 
+/**
+ * The Content-Security-Policy the public site is served with.
+ *
+ * **Why there is no nonce.** The strict form of this policy names a fresh
+ * random nonce per request and trusts only the scripts carrying it. Next.js is
+ * explicit that generating one "must use dynamic rendering", and dynamic
+ * rendering is exactly what ADR-0003 spends `cacheComponents` to avoid: a
+ * public page is a prerendered shell any cache may hand to any visitor. A nonce
+ * would make every marketing page render per request, trading a documented
+ * performance property for header strictness. So the policy below is static,
+ * and `script-src` has to admit the inline bootstrap Next.js emits — it still
+ * refuses script from any origin but this one, which is how an injected
+ * `<script src>` is stopped.
+ *
+ * What it therefore buys, in order of what actually matters here: `object-src`
+ * and `base-uri` close the two injection routes that survive an origin-limited
+ * `script-src`; `frame-ancestors` decides who may frame the site; `form-action`
+ * keeps a form from posting somewhere else; and the fetch directives pin the
+ * three external origins this application genuinely uses.
+ *
+ * Adding an external service means adding its origin here — see `README.md`,
+ * *Security headers*.
+ */
+const PUBLIC_CONTENT_SECURITY_POLICY = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  // Sanity's Presentation tool previews the real pages in an iframe, and it is
+  // served from `/studio` on this same origin. Nobody else may frame the site.
+  "frame-ancestors 'self'",
+  "form-action 'self'",
+  "script-src 'self' 'unsafe-inline'",
+  // Tailwind's utilities are a stylesheet, but the poster frame in
+  // `src/video-playback/video-player.tsx` and Mux's player element both set
+  // style attributes from JavaScript.
+  "style-src 'self' 'unsafe-inline'",
+  // Editorial images come from Sanity's asset CDN, video posters from Mux's.
+  //
+  // `*.mux.com` rather than the two hostnames the code names. A playback URL
+  // starts at `stream.mux.com`, but the manifest and segments are then served
+  // from whichever CDN edge Mux picked — `manifest-…-vop1.fastly.mux.com` and
+  // its siblings, chosen per request and not knowable from here. Naming only
+  // `stream.mux.com` leaves the poster showing and playback failing with a
+  // status-0 network error, which is exactly the silent failure this policy is
+  // most likely to cause.
+  "img-src 'self' data: blob: https://cdn.sanity.io https://*.mux.com",
+  // An adaptive stream, and the plain files development and the acceptance
+  // suite run on.
+  "media-src 'self' blob: https://*.mux.com",
+  // `*.litix.io` is Mux's playback telemetry, which the player sends on its own.
+  "connect-src 'self' https://cdn.sanity.io https://*.mux.com https://*.litix.io",
+  // `public/fonts`, and nowhere else. The site loads no hosted font service.
+  "font-src 'self'",
+  "frame-src 'self'",
+  "worker-src 'self' blob:",
+].join("; ");
+
+/**
+ * The same policy, relaxed for the Studio at `/studio`.
+ *
+ * The Studio is a vendor-built single-page application, not a page this
+ * repository renders: it evaluates code at runtime, talks to Sanity's API and
+ * its websocket, and handles asset uploads through blob URLs. None of that is
+ * true of the public site, so widening the public policy to cover it would
+ * weaken every marketing page for the sake of one authenticated admin surface.
+ *
+ * `frame-ancestors` stays `'self'` — this is the document that *does* the
+ * framing, not one that should be framed.
+ */
+const STUDIO_CONTENT_SECURITY_POLICY = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  "frame-ancestors 'self'",
+  "form-action 'self'",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https://*.sanity.io https://*.mux.com",
+  "media-src 'self' blob: https://*.sanity.io https://*.mux.com",
+  // Not `registry.npmjs.org`: the Studio polls it to check whether a newer
+  // `sanity` has been published, and that fetch already fails on its own — it
+  // is refused before the policy ever sees it, so allowing the origin adds
+  // reach without fixing anything.
+  "connect-src 'self' https://*.sanity.io wss://*.sanity.io https://*.mux.com https://*.litix.io",
+  "font-src 'self' data: https://*.sanity.io",
+  // The Presentation tool frames the public site, which is this same origin.
+  "frame-src 'self' blob:",
+  "worker-src 'self' blob:",
+].join("; ");
+
+/**
+ * Everything that is true of every response, whatever it serves.
+ *
+ * No `X-Frame-Options`: Next.js' own guidance is that `frame-ancestors`
+ * supersedes it, and the two saying the same thing in two syntaxes is one more
+ * place for them to disagree.
+ */
+const BASELINE_HEADERS = [
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  // Two years, matching what a preload submission would require, without the
+  // preload commitment itself. Ignored by browsers over plain HTTP, so local
+  // development and the acceptance suite are unaffected.
+  {
+    key: "Strict-Transport-Security",
+    value: "max-age=63072000; includeSubDomains",
+  },
+  // The site asks for none of these. `fullscreen` is the exception: the video
+  // player's own control needs it.
+  {
+    key: "Permissions-Policy",
+    value: "camera=(), microphone=(), geolocation=(), payment=(), fullscreen=(self)",
+  },
+];
+
 const nextConfig: NextConfig = {
+  /**
+   * Two rules, deliberately overlapping. Next.js applies every rule whose
+   * source matches and lets a later rule override an earlier one for the same
+   * header key, so `/studio` picks up the baseline from the first rule and
+   * replaces only its Content-Security-Policy.
+   */
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          ...BASELINE_HEADERS,
+          {
+            key: "Content-Security-Policy",
+            value: PUBLIC_CONTENT_SECURITY_POLICY,
+          },
+        ],
+      },
+      {
+        source: "/studio/:path*",
+        headers: [
+          {
+            key: "Content-Security-Policy",
+            value: STUDIO_CONTENT_SECURITY_POLICY,
+          },
+        ],
+      },
+    ];
+  },
   // Cache Components gives us the split ADR-0003 asks for: public pages render from a
   // prerendered, globally cacheable shell, and only explicitly uncached work reaches a
   // server at request time.

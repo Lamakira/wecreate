@@ -2,3 +2,23 @@ allowBuilds:
   esbuild: true
   sharp: true
   unrs-resolver: false
+
+# Transitive dependencies pinned forward past a published advisory, because the
+# package that pulls them in has not moved yet.
+#
+# All three arrive the same way — `sanity` -> `@sanity/cli` -> tooling — so none
+# of them is in anything this application serves. They are pinned anyway rather
+# than waived: `.github/workflows/audit.yml` fails on a high advisory, and an
+# audit that has to be argued with every time it runs is one nobody reads. Each
+# entry is a note to delete once the dependency above it catches up.
+#
+# The major-qualified keys matter. Only the flagged line is moved: `js-yaml@4`
+# and `undici@6` are resolved elsewhere in the tree and are not affected by
+# these advisories.
+overrides:
+  # GHSA-5p4m-2wfm-xmqj and the merge-key chain advisory: quadratic CPU
+  # consumption parsing hostile YAML. Reached through `@vercel/frameworks`.
+  js-yaml@3: ^3.15.1
+  # Cross-user information disclosure and a parse-time crash via degenerate
+  # private cache directives. Reached through `@module-federation/dts-plugin`.
+  undici@7: ^7.29.0

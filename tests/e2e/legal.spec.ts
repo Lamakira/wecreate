@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { getWithForgedHost } from "./support/forged-host";
 import { ManagedContent, enterPreview, leavePreview } from "./support/managed-content";
 import {
   approvedLegalDocuments,
@@ -400,6 +401,27 @@ test.describe("A changed legal address", () => {
 
     expect(response.status()).toBe(308);
     expect(response.headers()["location"]).toBe(MOVED);
+  });
+
+  test("builds the redirect from our own origin, not the caller's Host", async ({
+    baseURL,
+  }) => {
+    // Asserting a property, not reproducing a defect: under `next start`
+    // `request.nextUrl.origin` is the address the server bound to, so a forged
+    // `Host` never reached the redirect even when the proxy resolved against
+    // it. What this pins is that it stays that way — a permanent redirect is
+    // the last thing that should vary with a request header, because a shared
+    // cache may go on serving it to somebody who asked for the old address
+    // honestly.
+    const response = await getWithForgedHost(
+      baseURL!,
+      CGV,
+      "evil.example",
+    );
+
+    expect(response.status).toBe(308);
+    expect(response.location).not.toContain("evil.example");
+    expect(response.location).toContain(MOVED);
   });
 
   test("redirects a link to one named revision too", async ({ page }) => {

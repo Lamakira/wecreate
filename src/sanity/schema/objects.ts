@@ -30,6 +30,46 @@ export function visibilityField(): FieldDefinition {
   });
 }
 
+/**
+ * The destinations a link field will accept: a path on this site, an `https:`
+ * address, or a `mailto:`.
+ *
+ * These fields are plain strings rather than Sanity's `url` type because a
+ * relative path is the common case and `url` rejects one. That leaves the
+ * scheme unconstrained, which is worth closing at the point an editor types it.
+ *
+ * Not, to be clear, an XSS control — React refuses to render a `javascript:`
+ * href at all, rewriting it to a stub that throws, and browsers refuse
+ * top-level navigation to `data:`. This is the Studio telling an editor that a
+ * destination will not work *before* it reaches a page, rather than the page
+ * silently declining to follow it. The list is the one `isExternalHref` in
+ * `src/components/primitives/cta-link.tsx` knows how to render.
+ */
+const LINK_DESTINATION_PATTERN = /^(\/(?![/\\])[^\s\\]*|https:\/\/[^\s]+|mailto:[^\s]+)$/;
+
+function linkDestinationField(
+  name: string,
+  title: string,
+  description?: string,
+): FieldDefinition {
+  return defineField({
+    name,
+    title,
+    type: "string",
+    description,
+    validation: (rule) =>
+      rule
+        .required()
+        .regex(LINK_DESTINATION_PATTERN, {
+          name: "destination",
+          invert: false,
+        })
+        .error(
+          "Un chemin interne commençant par / (ex. /portfolio), une adresse https:// ou un lien mailto:.",
+        ),
+  });
+}
+
 export const callToAction = defineType({
   name: "callToAction",
   title: "Bouton",
@@ -41,14 +81,11 @@ export const callToAction = defineType({
       type: "string",
       validation: (rule) => rule.required(),
     }),
-    defineField({
-      name: "href",
-      title: "Destination",
-      type: "string",
-      description:
-        "Chemin interne (ex. /portfolio) ou adresse complète (ex. https://wa.me/…).",
-      validation: (rule) => rule.required(),
-    }),
+    linkDestinationField(
+      "href",
+      "Destination",
+      "Chemin interne (ex. /portfolio) ou adresse complète (ex. https://wa.me/…).",
+    ),
   ],
   preview: {
     select: { title: "label", subtitle: "href" },
@@ -138,12 +175,7 @@ export const navigationLink = defineType({
       type: "string",
       validation: (rule) => rule.required(),
     }),
-    defineField({
-      name: "href",
-      title: "Chemin",
-      type: "string",
-      validation: (rule) => rule.required(),
-    }),
+    linkDestinationField("href", "Chemin"),
   ],
   preview: { select: { title: "label", subtitle: "href" } },
 });
@@ -190,12 +222,7 @@ export const universeCard = defineType({
     }),
     defineField({ name: "description", title: "Description", type: "text", rows: 3 }),
     defineField({ name: "linkLabel", title: "Libellé du lien", type: "string" }),
-    defineField({
-      name: "href",
-      title: "Destination",
-      type: "string",
-      validation: (rule) => rule.required(),
-    }),
+    linkDestinationField("href", "Destination"),
     defineField({ name: "media", title: "Visuel", type: "mediaFrame" }),
   ],
   preview: { select: { title: "title", subtitle: "kicker" } },
