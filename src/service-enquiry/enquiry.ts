@@ -37,31 +37,8 @@ export function serviceOfferLabel(packName: string, universe: string): string {
   return `${packName} — ${universe}`;
 }
 
-/**
- * The message that opens the conversation, from the editor's template.
- *
- * `%s` is the offer, matching the `%s` convention Managed Content already uses
- * for SEO title templates. A template that has lost its placeholder still sends
- * the offer rather than silently dropping it: a visitor who presses a pack's
- * button must never land in an empty chat.
+/*
+ * How a prefilled message and its address are actually built is
+ * `src/lib/whatsapp.ts`, shared with the Boutique's product questions. What is a
+ * Service Enquiry and what is not stays here.
  */
-export function serviceEnquiryMessage(template: string, offer: string): string {
-  return template.includes("%s")
-    ? template.replaceAll("%s", offer)
-    : `${template} ${offer}`.trim();
-}
-
-/**
- * A WhatsApp address carrying a prefilled message.
- *
- * Percent-encoded rather than built through `URLSearchParams`, which encodes a
- * space as `+`. WhatsApp's own links use `%20`, and a message full of plus
- * signs is what a visitor would otherwise have to delete before writing.
- */
-export function whatsAppEnquiryUrl(
-  whatsappUrl: string,
-  message: string,
-): string {
-  const separator = whatsappUrl.includes("?") ? "&" : "?";
-  return `${whatsappUrl}${separator}text=${encodeURIComponent(message)}`;
-}

@@ -10,9 +10,12 @@ import { mergeContent, type DeepPartial } from "../merge";
 import type { ManagedContentProvider } from "../provider";
 import type {
   AboutContent,
+  BoutiqueContent,
   Capability,
   CapabilityColumn,
   ContactContent,
+  DigitalProduct,
+  DigitalProductFamily,
   HomePage,
   LegalDocument,
   LegalDocumentKind,
@@ -31,7 +34,11 @@ import type {
   SiteSettings,
   SpokenContentSupport,
 } from "../types";
-import { LEGAL_DOCUMENT_KINDS, PORTFOLIO_UNIVERSES } from "../types";
+import {
+  DIGITAL_PRODUCT_FAMILIES,
+  LEGAL_DOCUMENT_KINDS,
+  PORTFOLIO_UNIVERSES,
+} from "../types";
 import { SITE_CONTENT_QUERY } from "./query";
 
 /**
@@ -56,11 +63,18 @@ type SanityLegalDocument = DeepPartial<Omit<LegalDocument, "kind">> & {
   documentId?: string | null;
 };
 
+/** A product document, with the cover under the name the query gives it. */
+type SanityDigitalProduct = DeepPartial<Omit<DigitalProduct, "cover">> & {
+  cover?: DeepPartial<MediaFrameContent> | null;
+};
+
 interface SanityContentResult {
   settings?: DeepPartial<SiteSettings> | null;
   homePage?: DeepPartial<HomePage> | null;
   portfolioPage?: DeepPartial<Omit<PortfolioContent, "projects">> | null;
   portfolioProjects?: Array<SanityProject | null> | null;
+  boutiquePage?: DeepPartial<Omit<BoutiqueContent, "products">> | null;
+  digitalProducts?: Array<SanityDigitalProduct | null> | null;
   servicesPage?: DeepPartial<ServicesContent> | null;
   aboutPage?: DeepPartial<AboutContent> | null;
   contactPage?: DeepPartial<ContactContent> | null;
@@ -111,6 +125,79 @@ function toPortfolioProject(document: SanityProject): PortfolioProject {
     hasPublicationPermission: document.hasPublicationPermission === true,
     spokenContent: (document.spokenContent ?? "none") as SpokenContentSupport,
     transcript: document.transcript ?? null,
+  };
+}
+
+/** An editor's choice, or nothing — never a family the application invented. */
+function toFamily(value: string | null | undefined): DigitalProductFamily | null {
+  return DIGITAL_PRODUCT_FAMILIES.find((family) => family === value) ?? null;
+}
+
+/**
+ * One Digital Product, in the application's own vocabulary.
+ *
+ * Every field falls back to something empty rather than to something invented,
+ * for the reason a Portfolio Project does: an incomplete product has to stay
+ * recognisably incomplete, because that is what the purchase rule reads to
+ * decide it may not be sold. The two flags fall back to `false` in the direction
+ * that keeps money off the table — an unreadable *En vente* is not a sale.
+ *
+ * A family an editor has not chosen arrives as `null` rather than as a guess, in
+ * the way a Portfolio Project's universe does: a product filed into the wrong
+ * family is worse than one visibly still being written, and the purchase rule
+ * refuses it either way while telling the editor which box is empty.
+ */
+function toDigitalProduct(document: SanityDigitalProduct): DigitalProduct {
+  return {
+    // Sanity prefixes an unpublished document's id with `drafts.`; stripping it
+    // keeps one product one identity across both perspectives.
+    id: (document.id ?? "").replace(/^drafts\./, ""),
+    sku: document.sku ?? "",
+    family: toFamily(document.family),
+    slug: document.slug ?? "",
+    previousSlugs: document.previousSlugs ?? [],
+    title: document.title ?? "",
+    format: document.format ?? "",
+    summary: document.summary ?? "",
+    description: document.description ?? "",
+    inclusions: document.inclusions ?? [],
+    priceXof: document.priceXof ?? 0,
+    cover: {
+      ratio: document.cover?.ratio ?? "4 / 3",
+      placeholderLabel: document.cover?.placeholderLabel ?? "",
+      imageUrl: document.cover?.imageUrl ?? null,
+      alternativeText: document.cover?.alternativeText ?? "",
+    },
+    isFeatured: document.isFeatured === true,
+    isPurchaseEnabled: document.isPurchaseEnabled === true,
+    isArchived: document.isArchived === true,
+  };
+}
+
+/**
+ * The Boutique, normalised.
+ *
+ * The products are whatever the dataset holds, and nothing is filled in from the
+ * bundled catalogue: the six shipped products are a starting point for a fresh
+ * checkout, not a floor a configured project falls back through. A Sanity
+ * project whose editor has deleted a product means to have deleted it, and a
+ * Boutique that quietly restored it would be selling something WeCreate had
+ * withdrawn.
+ */
+function toBoutique(
+  page: DeepPartial<Omit<BoutiqueContent, "products">> | null | undefined,
+  products: Array<SanityDigitalProduct | null> | null | undefined,
+): BoutiqueContent {
+  const merged = mergeContent(DEFAULT_SITE_CONTENT.boutique, {
+    ...page,
+    products: undefined,
+  });
+
+  return {
+    ...merged,
+    products: (products ?? [])
+      .filter((document): document is SanityDigitalProduct => Boolean(document))
+      .map(toDigitalProduct),
   };
 }
 
@@ -396,15 +483,6 @@ export const sanityContentProvider: ManagedContentProvider = {
 
     return {
       ...content,
-      homePage: {
-        ...content.homePage,
-        // Digital Products (issue #7) are not modelled in Sanity yet. Until they
-        // are, this list stays empty rather than falling back to the bundled
-        // sample entries: WeCreate publishes only real, approved work, so an
-        // unfinished section shows its empty state instead of fabricated
-        // products.
-        shopPreview: { ...content.homePage.shopPreview, products: [] },
-      },
       portfolio: {
         ...mergeContent(DEFAULT_SITE_CONTENT.portfolio, {
           ...result?.portfolioPage,
@@ -414,6 +492,7 @@ export const sanityContentProvider: ManagedContentProvider = {
           .filter((document): document is SanityProject => Boolean(document))
           .map(toPortfolioProject),
       },
+      boutique: toBoutique(result?.boutiquePage, result?.digitalProducts),
       services: toServices(result?.servicesPage),
       about: toAbout(result?.aboutPage),
       contact: toContact(result?.contactPage),

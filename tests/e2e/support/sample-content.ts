@@ -1,5 +1,5 @@
 import type {
-  DigitalProductCard,
+  DigitalProduct,
   LegalDocument,
   LegalDocumentKind,
   LegalRevision,
@@ -8,16 +8,23 @@ import type {
 } from "../../../src/managed-content/types";
 
 /**
- * Stand-in Portfolio Projects and Digital Products, for the tests that need a
- * populated site.
+ * Stand-in content for the tests that need a populated site, or a product in a
+ * state the shipped catalogue is not in.
  *
- * They live here rather than in `src/` on purpose. WeCreate publishes only real,
- * approved work, so nothing that could be mistaken for a portfolio entry ships
- * in application source where a misconfigured deployment might serve it. Tests
- * seed these through the Managed Content hook, exactly as an editor would.
+ * The Portfolio Projects live here rather than in `src/` on purpose. WeCreate
+ * publishes only real, approved work, so nothing that could be mistaken for a
+ * portfolio entry ships in application source where a misconfigured deployment
+ * might serve it. Tests seed these through the Managed Content hook, exactly as
+ * an editor would.
  *
- * The mixed 9:16 and 16:9 ratios, the project copy and the whole-XOF prices come
- * from the approved design handoff and issue #1's canonical catalogue.
+ * Digital Products are the opposite case and ship in `src/`: the six are
+ * WeCreate's own products, named and priced by the project brief, and issue #1
+ * asks for them as content that cannot be sold. What is here is a seventh, for
+ * the states the shipped six are deliberately not in — archived, renamed, on
+ * sale.
+ *
+ * The mixed 9:16 and 16:9 ratios and the project copy come from the approved
+ * design handoff.
  */
 
 /**
@@ -220,50 +227,42 @@ export function seventhProject(
   };
 }
 
-export const SAMPLE_DIGITAL_PRODUCTS: DigitalProductCard[] = [
-  {
-    id: "color-grading-signature",
-    title: "Color Grading Signature",
-    badge: "PDF",
-    description: "L'étalonnage cinéma de WeCreate, décomposé étape par étape.",
-    priceXof: 15000,
-    href: "/boutique",
-    media: {
-      ratio: "4 / 3",
-      placeholderLabel: "couverture ebook",
-      imageUrl: null,
-      alternativeText: "",
-    },
-  },
-  {
-    id: "pack-lut-signature",
-    title: "Pack LUT Signature WeCreate",
-    badge: "Téléchargement",
-    description: "Notre étalonnage maison, en 10 LUTs .cube.",
-    priceXof: 20000,
-    href: "/boutique",
-    media: {
+/**
+ * A seventh Digital Product, beside the six WeCreate ships.
+ *
+ * Complete as it stands apart from the two things no editor can supply — an
+ * approved licence and an activated Paid Deliverable Version — so `overrides` is
+ * what a test wants different about it, written the way the test reads: pass
+ * `{ isArchived: true }` and it is a product withdrawn from sale.
+ */
+export function sampleProduct(
+  overrides: Partial<DigitalProduct> = {},
+): DigitalProduct {
+  return {
+    id: "lut-04",
+    sku: "LUT-04",
+    family: "luts",
+    slug: "contre-jour-dore",
+    previousSlugs: [],
+    title: "Contre-jour doré",
+    format: "Fichiers .cube",
+    summary: "La lumière de fin de journée, tenue sans brûler les hautes lumières.",
+    description:
+      "Quatre variations calibrées sur les carnations d'Afrique de l'Ouest, en log et en Rec.709.",
+    inclusions: ["4 LUTs .cube", "Version log et Rec.709", "Notes d'exposition"],
+    priceXof: 14000,
+    cover: {
       ratio: "4 / 3",
       placeholderLabel: "aperçu LUT",
-      imageUrl: null,
-      alternativeText: "",
+      imageUrl: SAMPLE_POSTER,
+      alternativeText: "Aperçu de l'étalonnage appliqué à un plan de coucher de soleil.",
     },
-  },
-  {
-    id: "manuel-createur-mobile",
-    title: "Le Manuel du Créateur Mobile",
-    badge: "PDF",
-    description: "Tourner en qualité pro avec un smartphone.",
-    priceXof: 10000,
-    href: "/boutique",
-    media: {
-      ratio: "4 / 3",
-      placeholderLabel: "couverture ebook",
-      imageUrl: null,
-      alternativeText: "",
-    },
-  },
-];
+    isFeatured: false,
+    isPurchaseEnabled: true,
+    isArchived: false,
+    ...overrides,
+  };
+}
 
 /**
  * The five legal documents, as WeCreate would have them once its counsel has

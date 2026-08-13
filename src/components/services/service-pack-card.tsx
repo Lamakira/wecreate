@@ -1,10 +1,9 @@
 import { CtaLink } from "@/components/primitives/cta-link";
 import { formatXof } from "@/lib/format";
+import { prefilledMessage, whatsAppMessageUrl } from "@/lib/whatsapp";
 import type { ServicePack } from "@/managed-content/types";
 import {
-  serviceEnquiryMessage,
   serviceOfferLabel,
-  whatsAppEnquiryUrl,
   type ServiceEnquiryContext,
 } from "@/service-enquiry/enquiry";
 
@@ -33,9 +32,9 @@ export function ServicePackCard({
   serviceEnquiry: { enquiry, contact, onRequestLabel },
 }: ServicePackCardProps) {
   const offer = serviceOfferLabel(pack.name, universeTitle);
-  const whatsappHref = whatsAppEnquiryUrl(
+  const whatsappHref = whatsAppMessageUrl(
     contact.whatsappUrl,
-    serviceEnquiryMessage(enquiry.whatsappMessageTemplate, offer),
+    prefilledMessage(enquiry.whatsappMessageTemplate, offer),
   );
 
   return (

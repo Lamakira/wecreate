@@ -2,10 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { PNG } from "pngjs";
 
 import { ManagedContent } from "./support/managed-content";
-import {
-  SAMPLE_DIGITAL_PRODUCTS,
-  SAMPLE_PORTFOLIO_PROJECTS,
-} from "./support/sample-content";
+import { SAMPLE_PORTFOLIO_PROJECTS } from "./support/sample-content";
 
 /**
  * Text contrast, measured rather than assumed.
@@ -147,9 +144,6 @@ test.describe("Text contrast", () => {
     await content.reset();
     await content.editDraft({
       portfolio: { projects: SAMPLE_PORTFOLIO_PROJECTS },
-      homePage: {
-        shopPreview: { products: SAMPLE_DIGITAL_PRODUCTS },
-      },
     });
     await content.publish();
   });
@@ -194,6 +188,27 @@ test.describe("Text contrast", () => {
     expect(texts.length).toBeGreaterThan(30);
 
     expectMeetsAa(texts);
+  });
+
+  test("the Boutique meets WCAG AA, on the white band it runs on", async ({
+    page,
+  }) => {
+    // The Boutique is the site's one wholly light page: filters, cards, prices
+    // and availability all sit on white, which is the ground `wc-muted-2` was
+    // corrected for and cannot serve. The product page carries the same greys
+    // again beside the licence and support blocks.
+    await page.goto("/boutique");
+    await page.waitForTimeout(800);
+
+    expectMeetsAa(await collectText(page));
+
+    await page.goto("/boutique/color-grading-signature");
+    await page.waitForTimeout(800);
+
+    const product = await collectText(page);
+    expect(product.length).toBeGreaterThan(15);
+
+    expectMeetsAa(product);
   });
 
   test("Contact meets WCAG AA", async ({ page }) => {

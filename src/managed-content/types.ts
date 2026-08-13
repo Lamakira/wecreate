@@ -209,29 +209,16 @@ export interface ProofContent extends SectionVisibility {
 }
 
 /**
- * The homepage's view of a Digital Product.
+ * The Boutique's teaser on the homepage.
  *
- * Issue #7 owns the Digital Product document type and issue #9 owns adding one
- * to the Digital Cart. Until then this is a read-only teaser: it links to the
- * Boutique and never offers a purchase action, because no product is
- * purchase-enabled before the Commerce Launch Gate.
+ * It holds no products of its own: the cards are the Digital Products an editor
+ * has marked featured, exactly as *Travaux récents* is the first few Portfolio
+ * Projects. A product is written once and appears in both places.
  */
-export interface DigitalProductCard {
-  id: string;
-  title: string;
-  badge: string;
-  description: string;
-  /** Whole XOF amount. WeCreate never charges fractional currency units. */
-  priceXof: number;
-  href: string;
-  media: MediaFrameContent;
-}
-
 export interface ShopPreviewContent extends SectionVisibility {
   title: string;
   link: CallToAction;
   linkLabel: string;
-  products: DigitalProductCard[];
   emptyStateText: string;
 }
 
@@ -471,6 +458,141 @@ export interface PortfolioContent {
 }
 
 /**
+ * The two families the Boutique sells, and the filters it offers.
+ *
+ * A fixed vocabulary, like `PORTFOLIO_UNIVERSES` and for a stronger reason: the
+ * design prototype had a third tab, *Packs Services*, selling service packs
+ * through the same cart. Issue #1 removed it — a service offer can never enter
+ * the Digital Cart (ADR-0006) — so a family an editor could invent would be the
+ * one way that tab could come back.
+ *
+ * The array is the source and the union is derived from it, so the presentation
+ * order and the type cannot drift apart.
+ */
+export const DIGITAL_PRODUCT_FAMILIES = ["ebooks", "luts"] as const;
+
+export type DigitalProductFamily = (typeof DIGITAL_PRODUCT_FAMILIES)[number];
+
+/**
+ * A Digital Product: an ebook, guide, LUT or preset paid for in full online and
+ * delivered automatically once payment is confirmed.
+ *
+ * Everything here is public and editorial. What is deliberately absent is the
+ * thing a buyer actually receives: the Paid Deliverable is a private file in the
+ * commerce system, and Managed Content never holds it, names its storage or
+ * knows how to reach it (issue #1). What crosses that line is one stable
+ * identity — the `sku` — which is what an Order Snapshot records and what a
+ * Paid Deliverable Version is activated against (issue #8).
+ *
+ * Three separate decisions decide whether a visitor may buy, and none of them
+ * implies another. Publishing the document makes the page public. `isPurchaseEnabled`
+ * is WeCreate's intent to sell it. And an active Paid Deliverable Version, which
+ * lives outside this model entirely, is what makes the sale deliverable.
+ */
+export interface DigitalProduct {
+  /**
+   * Stable identity. Survives a retitling, a change of address and archiving —
+   * an Order Access grant issued years ago still resolves through it.
+   */
+  id: string;
+  /**
+   * The immutable commercial identity an Order Snapshot records, e.g. `EBK-01`.
+   * Distinct from `id` because it is WeCreate's own reference, written once and
+   * quoted in a receipt, rather than a content-provider document id.
+   */
+  sku: string;
+  /** Null until an editor has chosen one; a product without it cannot be sold. */
+  family: DigitalProductFamily | null;
+  /** The product's own URL segment under `/boutique`. */
+  slug: string;
+  /** Addresses this product has had, so an old link keeps arriving. */
+  previousSlugs: string[];
+  title: string;
+  /**
+   * What the file is, e.g. `PDF`. Shown as the card's badge — the design
+   * handoff's one flash of inverted colour in the Boutique.
+   */
+  format: string;
+  /** One line, on the card and as the lede of the product's own page. */
+  summary: string;
+  /** The fuller description, below the lede. Empty until an editor writes it. */
+  description: string;
+  /** What the buyer receives. A product may not be sold without it. */
+  inclusions: string[];
+  /**
+   * Whole XOF, and positive before the product may be sold. WeCreate never
+   * charges a fraction of a franc.
+   */
+  priceXof: number;
+  /** The cover. A labelled placeholder frame until a real one exists. */
+  cover: MediaFrameContent;
+  /** Shown in the homepage's *La boutique* teaser. */
+  isFeatured: boolean;
+  /**
+   * WeCreate's intent to sell this product. Separate from publishing it, which
+   * is what makes the page public: a product page can exist, and say *bientôt
+   * disponible*, long before there is anything to sell.
+   */
+  isPurchaseEnabled: boolean;
+  /**
+   * Withdrawn from discovery and from new sales, without being deleted.
+   *
+   * Deleting a product would break every historical reference to it — an Order
+   * Snapshot, an Order Access grant, a receipt. An archived product keeps its
+   * identity and its page; it leaves the Boutique, the sitemap and search.
+   */
+  isArchived: boolean;
+}
+
+/** What buying a Digital Product allows, and where the terms are written. */
+export interface BoutiqueLicenceContent {
+  kicker: string;
+  note: string;
+  linkLabel: string;
+}
+
+/**
+ * How a visitor asks a question about a product.
+ *
+ * WhatsApp first, the administrative address second — the same two channels
+ * Contact offers, because they are the same channels. This is support, not a
+ * Service Enquiry: nothing here is about commissioning a film.
+ */
+export interface BoutiqueSupportContent {
+  kicker: string;
+  note: string;
+  whatsappLabel: string;
+  /** `%s` is replaced with the product's title. */
+  whatsappMessageTemplate: string;
+  emailLabel: string;
+}
+
+/**
+ * The Boutique, and the Digital Products it lists.
+ *
+ * The products are a collection an editor grows, like Portfolio Projects and
+ * unlike every other content type here, which is why they sit beside the page's
+ * own copy rather than inside a section of it.
+ */
+export interface BoutiqueContent {
+  seo: PageSeo;
+  kicker: string;
+  headline: SplitHeadline;
+  intro: string;
+  /** Label of the filter that clears the others, e.g. `Tous`. */
+  allFamiliesLabel: string;
+  emptyStateText: string;
+  /** The card's link into the product's own page. */
+  detailLinkLabel: string;
+  /** The way back, from a product to the list. */
+  backLabel: string;
+  inclusionsKicker: string;
+  licence: BoutiqueLicenceContent;
+  support: BoutiqueSupportContent;
+  products: DigitalProduct[];
+}
+
+/**
  * One commercial offer inside a service universe.
  *
  * A pack is priced, described and contactable — never purchasable. Nothing here
@@ -691,6 +813,7 @@ export interface SiteContent {
   settings: SiteSettings;
   homePage: HomePage;
   portfolio: PortfolioContent;
+  boutique: BoutiqueContent;
   services: ServicesContent;
   about: AboutContent;
   contact: ContactContent;

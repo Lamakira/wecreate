@@ -14,6 +14,10 @@ const MEDIA_FRAME =
 const POSTER_FRAME =
   '{ratio, placeholderLabel, alternativeText, "imageUrl": image.asset->url + "?w=1600&auto=format"}';
 
+/** A product cover, asked for at the largest size the Boutique renders it. */
+const COVER_FRAME =
+  '{ratio, placeholderLabel, alternativeText, "imageUrl": image.asset->url + "?w=1200&auto=format"}';
+
 /**
  * The video association, in the application's vocabulary rather than Mux's.
  *
@@ -102,6 +106,36 @@ export const SITE_CONTENT_QUERY = defineQuery(`{
       primaryCta${CALL_TO_ACTION},
       secondaryCta${CALL_TO_ACTION}
     }
+  },
+  "boutiquePage": *[_type == "boutiquePage"][0]{
+    seo{title, description, "openGraphImageUrl": openGraphImage.asset->url},
+    kicker,
+    headline${SPLIT_HEADLINE},
+    intro,
+    allFamiliesLabel,
+    emptyStateText,
+    detailLinkLabel,
+    backLabel,
+    inclusionsKicker,
+    licence{kicker, note, linkLabel},
+    support{kicker, note, whatsappLabel, whatsappMessageTemplate, emailLabel}
+  },
+  "digitalProducts": *[_type == "digitalProduct"] | order(sku asc){
+    "id": _id,
+    sku,
+    family,
+    "slug": slug.current,
+    previousSlugs,
+    title,
+    format,
+    summary,
+    description,
+    inclusions,
+    priceXof,
+    cover${COVER_FRAME},
+    isFeatured,
+    isPurchaseEnabled,
+    isArchived
   },
   "servicesPage": *[_type == "servicesPage"][0]{
     seo{title, description, "openGraphImageUrl": openGraphImage.asset->url},

@@ -1,6 +1,7 @@
 import type { SchemaTypeDefinition } from "sanity";
 
 import { aboutPage } from "./about-page";
+import { boutiquePage, digitalProduct } from "./boutique";
 import { contactPage } from "./contact-page";
 import { homePage } from "./home-page";
 import { legalDocument, legalRevision, legalSection } from "./legal";
@@ -26,6 +27,7 @@ export const SINGLETON_TYPES = [
   "siteSettings",
   "homePage",
   "portfolioPage",
+  "boutiquePage",
   "servicesPage",
   "aboutPage",
   "contactPage",
@@ -37,6 +39,8 @@ export const schemaTypes: SchemaTypeDefinition[] = [
   homePage,
   portfolioPage,
   portfolioProject,
+  boutiquePage,
+  digitalProduct,
   servicesPage,
   serviceUniverse,
   servicePack,

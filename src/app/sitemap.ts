@@ -1,26 +1,32 @@
 import type { MetadataRoute } from "next";
 
 import {
+  readBoutique,
   readEffectiveLegalTerms,
   readPortfolio,
   readSiteSettings,
 } from "@/managed-content";
+import { productPath } from "@/managed-content/digital-products";
 import { isIndexablePath, siteUrl } from "@/site-config";
 
 /**
  * The crawlable public routes, taken from the navigation an editor maintains
  * so the sitemap cannot drift from the site's own menu, plus one entry per
- * published Portfolio Project and per legal document in force.
+ * published Portfolio Project, per Digital Product on offer and per legal
+ * document in force.
  *
  * The projects come through the same publication gate as the pages themselves,
- * so an unfinished or unauthorised one is never advertised to a crawler.
+ * so an unfinished or unauthorised one is never advertised to a crawler. The
+ * products come through the same archive rule as the Boutique, so a product
+ * WeCreate has withdrawn keeps its page for the orders that reference it without
+ * being advertised to anyone about to buy.
  *
- * Later tickets add their routes (Digital Product detail pages) as those
- * content types arrive.
+ * Later tickets add their routes as those surfaces arrive.
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const settings = await readSiteSettings();
   const { projects } = await readPortfolio();
+  const { products } = await readBoutique();
   const legalTerms = await readEffectiveLegalTerms();
   const origin = siteUrl();
 
@@ -39,6 +45,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...projects.map((project) => ({
       url: new URL(`/portfolio/${project.slug}`, origin).toString(),
       changeFrequency: "yearly" as const,
+      priority: 0.6,
+    })),
+    ...products.map((product) => ({
+      url: new URL(productPath(product.slug), origin).toString(),
+      changeFrequency: "monthly" as const,
       priority: 0.6,
     })),
     // Approved text only. A placeholder legal page is readable — the site has

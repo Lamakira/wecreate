@@ -83,16 +83,13 @@ test.describe("The homepage before any real work is published", () => {
     page,
   }) => {
     // The shipped state, and the state a freshly configured Sanity project
-    // starts in: the editorial chrome exists, but no Portfolio Project or
-    // Digital Product has been approved yet. WeCreate never shows placeholder
-    // work as if it were real, so the sections state the truth instead.
+    // starts in: the editorial chrome exists, but no client has approved a
+    // Portfolio Project yet. WeCreate never shows placeholder work as if it were
+    // real, so the section states the truth instead.
     await page.goto("/");
 
     await expect(page.getByTestId("recent-work-empty")).toHaveText(
       "Les projets publiés apparaîtront ici dès leur mise en ligne.",
-    );
-    await expect(page.getByTestId("shop-preview-empty")).toHaveText(
-      "Les produits numériques apparaîtront ici dès leur mise en vente.",
     );
 
     // The routes into the rest of the site survive the empty state.
@@ -100,6 +97,28 @@ test.describe("The homepage before any real work is published", () => {
       page.getByRole("link", { name: "Tout le portfolio" }),
     ).toBeVisible();
     await expect(page.getByRole("link", { name: "Tout voir" })).toBeVisible();
+  });
+
+  test("says plainly when the Boutique has nothing to show", async ({
+    page,
+  }) => {
+    // Unlike the portfolio this is not the shipped state — the six Digital
+    // Products are WeCreate's own and ship as content. It is where an editor
+    // ends up who has archived them, or who has not marked any as featured.
+    await content.editDraft({ boutique: { products: [] } });
+    await content.publish();
+
+    await page.goto("/");
+    await expect(page.getByTestId("shop-preview-empty")).toHaveText(
+      "Les produits numériques apparaîtront ici dès leur mise en vente.",
+    );
+    await expect(page.getByRole("link", { name: "Tout voir" })).toBeVisible();
+
+    await page.goto("/boutique");
+    await expect(page.getByTestId("boutique-empty")).toHaveText(
+      "Les produits numériques apparaîtront ici dès leur mise en vente.",
+    );
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 });
 

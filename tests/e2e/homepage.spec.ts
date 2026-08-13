@@ -1,27 +1,23 @@
 import { expect, test } from "@playwright/test";
 
 import { ManagedContent } from "./support/managed-content";
-import {
-  SAMPLE_DIGITAL_PRODUCTS,
-  SAMPLE_PORTFOLIO_PROJECTS,
-} from "./support/sample-content";
+import { SAMPLE_PORTFOLIO_PROJECTS } from "./support/sample-content";
 
 let content: ManagedContent;
 
 test.beforeEach(async ({ request }) => {
   content = new ManagedContent(request);
   await content.reset();
-  // No Portfolio Project or Digital Product ships in application source, so a
-  // populated homepage is something a test publishes, exactly as an editor
-  // would. `resilience.spec.ts` covers the unpopulated state.
+  // No Portfolio Project ships in application source, so a populated reel is
+  // something a test publishes, exactly as an editor would. It is not its own
+  // list either: *Travaux récents* is the first few Portfolio Projects, so
+  // publishing the portfolio is what fills it. `resilience.spec.ts` covers the
+  // unpopulated state.
   //
-  // The reel is not its own list: *Travaux récents* is the first few Portfolio
-  // Projects, so publishing the portfolio is what fills it.
+  // Nothing seeds the Boutique teaser: the six Digital Products are WeCreate's
+  // own and ship as content, and the teaser shows the ones marked featured.
   await content.editDraft({
     portfolio: { projects: SAMPLE_PORTFOLIO_PROJECTS },
-    homePage: {
-      shopPreview: { products: SAMPLE_DIGITAL_PRODUCTS },
-    },
   });
   await content.publish();
 });
@@ -122,7 +118,7 @@ test.describe("Homepage", () => {
     ).toHaveCount(0);
     await expect(
       section.getByRole("link", { name: "Color Grading Signature — Voir le détail" }),
-    ).toHaveAttribute("href", "/boutique");
+    ).toHaveAttribute("href", "/boutique/color-grading-signature");
   });
 
   test("closes with the brand quote and a route into a conversation", async ({

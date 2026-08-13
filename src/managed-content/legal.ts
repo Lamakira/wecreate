@@ -132,50 +132,11 @@ export function findRevision(
   return document.revisions.find((revision) => revision.id === revisionId);
 }
 
-/** The document that currently lives at this address. */
-export function findLegalDocument(
-  documents: LegalDocument[],
-  slug: string,
-): LegalDocument | undefined {
-  return documents.find((document) => document.slug === slug);
-}
-
-/**
- * Every address that has been abandoned, and where it now points.
- *
- * Publishing a changed slug does not abandon the old one: a link somebody saved
- * or a crawler indexed has to keep arriving at the same document (issue #1).
- *
- * Two entries never make it in. An address that is some document's *own* slug
- * stays that document's, so reusing an old address can never shadow a live
- * page; and the first claim on an address wins, so two documents listing the
- * same former slug cannot make the destination depend on document order.
+/*
+ * Finding the document at an address, and following one it has left behind, are
+ * `addresses.ts`: a legal document and a Digital Product answer that question
+ * identically, because the same requirement in issue #1 produced both.
  */
-export function legalSlugRedirects(
-  documents: LegalDocument[],
-): Record<string, string> {
-  const live = new Set(documents.map((document) => document.slug));
-  const redirects: Record<string, string> = {};
-
-  for (const document of documents) {
-    for (const previous of document.previousSlugs) {
-      if (live.has(previous) || previous in redirects) {
-        continue;
-      }
-      redirects[previous] = document.slug;
-    }
-  }
-
-  return redirects;
-}
-
-/** The address a prior published address now points at, if any. */
-export function findLegalSlugRedirect(
-  documents: LegalDocument[],
-  slug: string,
-): string | undefined {
-  return legalSlugRedirects(documents)[slug];
-}
 
 /** One document in force, as everything outside Managed Content refers to it. */
 export interface EffectiveLegalRevision {

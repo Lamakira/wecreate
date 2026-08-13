@@ -43,8 +43,8 @@ function legalDocuments(S: StructureBuilder) {
  *
  * The pages are singletons, so they are listed as documents to open rather than
  * folders to create things in — there is no "new page" path in the sidebar at
- * all. Portfolio Projects are the one exception, and the only collection here:
- * WeCreate grows them.
+ * all. Portfolio Projects and Digital Products are the exceptions, and the only
+ * collections here: WeCreate grows both.
  */
 export const structure: StructureResolver = (S) =>
   S.list()
@@ -67,6 +67,20 @@ export const structure: StructureResolver = (S) =>
         .id("portfolioPage")
         .child(
           S.document().schemaType("portfolioPage").documentId("portfolioPage"),
+        ),
+      S.listItem()
+        .title("Produits numériques")
+        .id("digitalProducts")
+        .child(
+          S.documentTypeList("digitalProduct")
+            .title("Produits numériques")
+            .defaultOrdering([{ field: "sku", direction: "asc" }]),
+        ),
+      S.listItem()
+        .title("Page boutique")
+        .id("boutiquePage")
+        .child(
+          S.document().schemaType("boutiquePage").documentId("boutiquePage"),
         ),
       S.listItem()
         .title("Page services")
