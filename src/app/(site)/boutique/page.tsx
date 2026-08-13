@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { draftMode } from "next/headers";
 
+import { readPurchaseContext } from "@/commerce";
 import { BoutiqueCatalogue } from "@/components/boutique/boutique-catalogue";
 import { readBoutique } from "@/managed-content";
-import { readPurchaseContext } from "@/paid-deliverables/versions";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { seo } = await readBoutique();

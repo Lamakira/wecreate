@@ -37,7 +37,7 @@ export function isIndexable(): boolean {
  * Order Access surfaces here as they build them, rather than this file guessing
  * their URLs in advance.
  */
-export const NON_INDEXABLE_PATHS = ["/studio", "/api"] as const;
+export const NON_INDEXABLE_PATHS = ["/studio", "/commerce", "/api"] as const;
 
 /** Whether a path may appear in search results and in the sitemap. */
 export function isIndexablePath(path: string): boolean {
@@ -80,5 +80,20 @@ export function areTestHooksEnabled(): boolean {
   return (
     process.env.WECREATE_TEST_HOOKS === "1" &&
     process.env.WECREATE_CONTENT_PROVIDER === "fixture"
+  );
+}
+
+/**
+ * The same switch for the commerce data plane, asked of its own provider.
+ *
+ * Separate from the content one because the two providers are selected
+ * separately: a run could be on fixture content and a real Supabase project,
+ * and a hook that reset WeCreate's Paid Deliverables because the *content* was
+ * fake would be a catastrophe.
+ */
+export function areCommerceTestHooksEnabled(): boolean {
+  return (
+    process.env.WECREATE_TEST_HOOKS === "1" &&
+    process.env.WECREATE_COMMERCE_PROVIDER === "fixture"
   );
 }

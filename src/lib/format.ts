@@ -61,6 +61,47 @@ export function formatEffectiveDate(isoDate: string): string {
 }
 
 /**
+ * A file size, written the way French writes one: `12 o`, `340 ko`, `2,4 Mo`.
+ *
+ * Hand-rolled like the two above, and binary rather than decimal because that
+ * is what an operating system tells the Commerce Operator the same file is.
+ */
+export function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} o`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} ko`;
+  return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} Mo`;
+}
+
+/** Benin is UTC+1 all year: no daylight saving to move a recorded moment. */
+const WECREATE_UTC_OFFSET_MINUTES = 60;
+
+/**
+ * A recorded moment, written the way WeCreate reads one: `13 août 2026 à 09:41`.
+ *
+ * Always in WeCreate's own time, whichever region the server runs in, because
+ * an audit entry saying *who did what, when* is read by the person who did it.
+ * Hand-rolled for the reason the two formatters above are: `Intl` output moves
+ * with the runtime's ICU version, and a timestamp in an audit trail is evidence.
+ */
+export function formatMoment(isoTimestamp: string): string {
+  const parsed = new Date(isoTimestamp);
+  if (Number.isNaN(parsed.getTime())) {
+    return isoTimestamp;
+  }
+
+  const local = new Date(
+    parsed.getTime() + WECREATE_UTC_OFFSET_MINUTES * 60 * 1000,
+  );
+  const day = local.getUTCDate();
+  const monthName = MONTHS_FR[local.getUTCMonth()];
+  const time = `${String(local.getUTCHours()).padStart(2, "0")}:${String(
+    local.getUTCMinutes(),
+  ).padStart(2, "0")}`;
+
+  return `${day === 1 ? "1er" : day} ${monthName} ${local.getUTCFullYear()} à ${time}`;
+}
+
+/**
  * The `01`, `02`, `03` the design prints beside a step, derived from where the
  * step sits rather than stored with it.
  *

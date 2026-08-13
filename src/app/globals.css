@@ -267,6 +267,25 @@
     font-family: inherit;
   }
 
+  /* Tailwind v4's preflight gives buttons `cursor: default`, which reads as
+   * "not interactive" on every control this site has — the family filters, the
+   * cart, the menu toggle, every form in the back office. Links already get a
+   * pointer, and a button doing the same kind of work should not look inert.
+   * Set once here rather than remembered per component. */
+  button:not(:disabled),
+  summary {
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+
+  /* A submission in flight is not refused, it is under way. */
+  button[aria-busy="true"]:disabled {
+    cursor: progress;
+  }
+
   :focus-visible {
     outline: 2px solid var(--color-wc-white);
     outline-offset: 3px;

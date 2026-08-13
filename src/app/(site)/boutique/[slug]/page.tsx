@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { draftMode } from "next/headers";
 import { notFound, permanentRedirect } from "next/navigation";
 
+import { readPurchaseContext } from "@/commerce";
 import { ProductView } from "@/components/boutique/product-view";
 import {
   readBoutique,
@@ -14,7 +15,6 @@ import {
   DIGITAL_PRODUCT_LICENCE_KIND,
   productPath,
 } from "@/managed-content/digital-products";
-import { readPurchaseContext } from "@/paid-deliverables/versions";
 import { keepOutOfSearchResults } from "@/site-config";
 
 /**

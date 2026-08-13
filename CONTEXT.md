@@ -41,8 +41,8 @@ A customer's time-limited ability to open a paid digital order and request expir
 _Avoid_: Customer account, permanent download URL
 
 **Commerce Operator**:
-An authorized WeCreate staff member who reviews Digital Product orders, resolves fulfillment failures, and reissues Order Access. This role does not edit payment history.
-_Avoid_: Customer, content editor, site administrator
+An authorized WeCreate staff member who uploads and activates Paid Deliverable Versions, reviews Digital Product orders, resolves fulfillment failures, and reissues Order Access. Each holds an individual account and acts under it; the role does not edit payment history.
+_Avoid_: Customer, content editor, site administrator, shared admin account
 
 **Paid Deliverable**:
 A private file purchased as a Digital Product and made accessible only through valid Order Access.
@@ -63,6 +63,10 @@ _Avoid_: Development completion, staging readiness, site launch
 **Custom Quote**:
 A service offer whose scope or price intentionally differs from a published service pack and is explicitly approved as such.
 _Avoid_: Edited pack price, discount, service pack
+
+**Commerce Audit Entry**:
+The append-only record of one action a Commerce Operator took: who, when, which product, and safe before/after metadata. It is never rewritten or deleted, and never carries a secret, a token, or the address of a stored file.
+_Avoid_: Log line, activity feed, change history
 
 **Paid Deliverable Version**:
 The immutable revision of a Paid Deliverable referenced by an Order Snapshot. Replacing a product file creates a new version rather than changing previous purchases.
