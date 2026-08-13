@@ -1,6 +1,9 @@
 import type {
   AboutContent,
+  BoutiqueContent,
   ContactContent,
+  DigitalProduct,
+  DigitalProductFamily,
   LegalDocument,
   ServicesContent,
   SiteContent,
@@ -444,6 +447,171 @@ const SERVICES_CONTENT: ServicesContent = {
  * handoff's labelled grey frame at 4:5 — visibly a slot awaiting a photograph
  * rather than a photograph.
  */
+/**
+ * One Digital Product as the project brief states it, and nothing more.
+ *
+ * Every product ships `isPurchaseEnabled: false`. Issue #1 is explicit: the six
+ * products and their prices are proposals until WeCreate validates them, so they
+ * enter as content that cannot be sold. Nothing in this repository may flip that
+ * — and even flipping it would not be enough, because the licence is still
+ * provisional text and no Paid Deliverable Version exists (issue #8).
+ *
+ * What is *absent* matters as much. The design prototype prints page counts,
+ * study counts and bundled extras for each of these — "92 pages PDF", "14 études
+ * avant / après", "1 LUT offerte". The brief states none of it, and issue #1
+ * makes the brief authoritative for commercial content, so `inclusions` ships
+ * empty rather than guessed: a page count invented here is a promise WeCreate
+ * never made to a buyer who paid for it. It is Managed Content, so filling it in
+ * is an edit in the Studio, not a code change. Until then no product may be
+ * sold, which is exactly what an unstated inclusion should cost.
+ *
+ * Covers are the same story — the brief asks for clean placeholders until the
+ * real ones exist, and the `cover` frame reserves 4:3 so the real image drops in
+ * without moving the page.
+ */
+function digitalProduct(brief: {
+  sku: string;
+  family: DigitalProductFamily;
+  slug: string;
+  title: string;
+  format: string;
+  summary: string;
+  priceXof: number;
+  isFeatured?: boolean;
+}): DigitalProduct {
+  return {
+    id: brief.sku.toLowerCase(),
+    sku: brief.sku,
+    family: brief.family,
+    slug: brief.slug,
+    previousSlugs: [],
+    title: brief.title,
+    format: brief.format,
+    summary: brief.summary,
+    description: "",
+    inclusions: [],
+    priceXof: brief.priceXof,
+    cover: {
+      ratio: "4 / 3",
+      placeholderLabel:
+        brief.family === "ebooks" ? "couverture ebook" : "aperçu LUT",
+      imageUrl: null,
+      alternativeText: "",
+    },
+    isFeatured: brief.isFeatured === true,
+    isPurchaseEnabled: false,
+    isArchived: false,
+  };
+}
+
+/**
+ * The Boutique: WeCreate's own tools, sold as downloads.
+ *
+ * Two families and exactly two. The design prototype's third tab — *Packs
+ * Services*, which put a 350,000 F service pack in the same cart as a 15,000 F
+ * ebook — is gone: a service offer ends in a conversation, never in a
+ * transaction (ADR-0006), and issue #1 removed the tab outright.
+ *
+ * The six products, their SKUs, their prices and their one-line descriptions are
+ * the brief's §6.1 and §6.2 verbatim. The prototype disagrees on three of the
+ * prices (25,000 / 18,000 / 18,000 against the brief's 20,000 / 12,000 / 12,000)
+ * and on a title; the brief wins, as it does on the Services page.
+ */
+const BOUTIQUE_CONTENT: BoutiqueContent = {
+  seo: {
+    title: "Boutique",
+    description:
+      "Les ebooks, guides, LUTs et presets de WeCreate : l'étalonnage signature et la méthode du studio, en téléchargement, payables en FCFA.",
+    openGraphImageUrl: null,
+  },
+  kicker: "Boutique · Paiement en FCFA",
+  headline: { lead: "Nos ", emphasis: "outils", trail: ", entre vos mains." },
+  intro:
+    "Ebooks, guides et LUTs signature. Ce qu'on utilise pour fabriquer nos images, en téléchargement immédiat après paiement.",
+  allFamiliesLabel: "Tous",
+  emptyStateText:
+    "Les produits numériques apparaîtront ici dès leur mise en vente.",
+  detailLinkLabel: "Voir le détail",
+  backLabel: "Retour à la boutique",
+  inclusionsKicker: "Ce qui est inclus",
+  licence: {
+    kicker: "Licence",
+    note: "Chaque produit est vendu sous la licence des produits numériques WeCreate : elle décrit ce que vous pouvez en faire, et ce que vous ne pouvez pas.",
+    linkLabel: "Lire la licence",
+  },
+  support: {
+    kicker: "Une question ?",
+    note: "Écrivez-nous avant d'acheter : nous répondons sur le produit lui-même, son format et ce qu'il contient. Aucun devis de prestation n'est traité ici.",
+    whatsappLabel: "Poser une question sur WhatsApp",
+    whatsappMessageTemplate:
+      "Bonjour WeCreate, j'ai une question sur le produit : %s.",
+    emailLabel: "Écrire par e-mail",
+  },
+  products: [
+    digitalProduct({
+      sku: "EBK-01",
+      family: "ebooks",
+      slug: "color-grading-signature",
+      title: "Color Grading Signature",
+      format: "PDF",
+      summary:
+        "La méthode d'étalonnage cinéma signature WeCreate (DaVinci Resolve) : roues, courbes, teal/orange, peaux, LUTs.",
+      priceXof: 15000,
+      isFeatured: true,
+    }),
+    digitalProduct({
+      sku: "EBK-02",
+      family: "ebooks",
+      slug: "signature-cinema",
+      title: "Signature Cinéma",
+      format: "PDF",
+      summary:
+        "Le guide complet de la vidéo cinématographique : intention, découpage, lumière, mouvement, montage.",
+      priceXof: 15000,
+    }),
+    digitalProduct({
+      sku: "EBK-03",
+      family: "ebooks",
+      slug: "manuel-du-createur-mobile",
+      title: "Le Manuel du Créateur Mobile",
+      format: "PDF",
+      summary:
+        "Tourner en qualité pro avec un smartphone : réglages, cadrage, lumière, stabilisation, export.",
+      priceXof: 10000,
+      isFeatured: true,
+    }),
+    digitalProduct({
+      sku: "LUT-01",
+      family: "luts",
+      slug: "pack-lut-signature-wecreate",
+      title: "Pack LUT Signature WeCreate",
+      format: "Fichiers .cube",
+      summary:
+        "Le pack d'étalonnage signature (plusieurs LUTs cinéma prêtes à l'emploi).",
+      priceXof: 20000,
+      isFeatured: true,
+    }),
+    digitalProduct({
+      sku: "LUT-02",
+      family: "luts",
+      slug: "teal-et-orange-cinema",
+      title: "Teal & Orange Cinéma",
+      format: "Fichiers .cube",
+      summary: "La teinte cinéma classique, contraste peaux/ambiances.",
+      priceXof: 12000,
+    }),
+    digitalProduct({
+      sku: "LUT-03",
+      family: "luts",
+      slug: "ambiances-nostalgie-luxe-froid",
+      title: "Ambiances — Nostalgie / Luxe / Froid",
+      format: "Fichiers .cube",
+      summary: "3 ambiances signatures pour vlogs et pubs.",
+      priceXof: 12000,
+    }),
+  ],
+};
+
 const ABOUT_CONTENT: AboutContent = {
   seo: {
     title: "À propos",
@@ -1048,7 +1216,6 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
       title: "La boutique",
       link: { label: "Tout voir", href: "/boutique" },
       linkLabel: "Voir le détail",
-      products: [],
       emptyStateText:
         "Les produits numériques apparaîtront ici dès leur mise en vente.",
     },
@@ -1086,6 +1253,7 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
       "Les projets publiés apparaîtront ici dès leur mise en ligne.",
     projects: [],
   },
+  boutique: BOUTIQUE_CONTENT,
   services: SERVICES_CONTENT,
   about: ABOUT_CONTENT,
   contact: CONTACT_CONTENT,

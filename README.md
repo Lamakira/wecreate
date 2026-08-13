@@ -76,8 +76,11 @@ src/managed-content/
 ├── provider.ts          the interface, and which implementation is in use
 ├── index.ts             the cached, draft-aware read API pages call
 ├── portfolio.ts         when a Portfolio Project may be published, and its poster
+├── digital-products.ts  when a Digital Product may be sold, and its families
 ├── legal.ts             which legal revision is in force, and what a checkout
 │                        may do with it
+├── addresses.ts         finding what lives at a slug, and following one that
+│                        has moved — shared by the two collections that move
 ├── default-content.ts   the canonical starting content
 ├── sanity/              the Sanity implementation
 └── fixture/             the deterministic implementation used by tests and by
@@ -106,14 +109,17 @@ whether each is shown; they cannot add, remove, reorder or nest them. That line
 is what keeps the approved design and its accessibility guarantees intact
 (ADR-0001), and it is enforced by the schema in `src/sanity/schema/`.
 
-*Travaux récents* is not a list of its own: it is the first six published
-Portfolio Projects, so a project is written once and appears in both places.
-*La boutique* displays its empty state until Digital Products (issue #7) exist as
-a content type. No sample entry ships in `src/` for either under any provider:
-WeCreate publishes only real, approved work, and content that could be mistaken
-for a portfolio entry must not be reachable through a misconfigured deployment.
-Tests that need a populated site seed their own from
-`tests/e2e/support/sample-content.ts`.
+Neither of the two list sections owns its list. *Travaux récents* is the first
+six published Portfolio Projects, and *La boutique* is the first three Digital
+Products an editor marked featured, so each is written once and appears in both
+places.
+
+No sample Portfolio Project ships in `src/` under any provider: WeCreate
+publishes only real, approved work, and content that could be mistaken for a
+portfolio entry must not be reachable through a misconfigured deployment. Tests
+that need a populated portfolio seed their own from
+`tests/e2e/support/sample-content.ts`. Digital Products are the opposite case and
+do ship — see below.
 
 ## Portfolio Projects and video
 
@@ -165,6 +171,71 @@ streams a static shell before the slug is resolved, so the status is already
 committed by then; a real 404 would mean resolving every slug in a proxy, which
 puts a content read on every request into the portfolio (ADR-0003). See
 `src/app/(site)/not-found.tsx`.
+
+## The Boutique and Digital Products
+
+`/boutique` is the site's one light page — the design handoff's own choice for
+it — and it sells exactly two families: *Ebooks & Guides* and *LUTs & Presets*.
+The prototype's third tab, *Packs Services*, put a 350,000 F service pack in the
+same cart as a 15,000 F ebook; issue #1 removed it, and a service offer can never
+enter the Digital Cart at all (ADR-0006). `/boutique/[slug]` is one product on a
+page of its own, which is where a shared link, a crawler, a receipt and a visitor
+without JavaScript arrive.
+
+**The six products ship in `src/`, and none of them can be sold.** They are
+WeCreate's own tools, named, described and priced by the project brief (§6.1 and
+§6.2) — unlike a Portfolio Project, there is no client to approve them and
+nothing here could be mistaken for someone else's work. Issue #1 asks for exactly
+this: the catalogue as content that is not purchase-enabled until WeCreate
+validates its prices and launch assets.
+
+What is *absent* from them matters as much. The prototype prints page counts,
+study counts and bundled extras — "92 pages PDF", "1 LUT offerte". The brief
+states none of it, so `inclusions` ships empty rather than guessed, the same way
+the services comparison leaves out rows the brief never gave values for.
+
+**Selling is three decisions in two systems, and no one of them is enough:**
+
+```
+publier la fiche      Sanity's own publish. Makes the page public.
+En vente              WeCreate's intent to sell — `isPurchaseEnabled`.
+un fichier activé     an active Paid Deliverable Version, in the commerce
+                      system, which Managed Content never sees (issue #8).
+```
+
+`purchaseRequirements()` in `src/managed-content/digital-products.ts` is the
+rule, and it also demands a price in whole francs, a cover, a description, the
+inclusions, and the *Licence des produits numériques* in force as **approved**
+text rather than the placeholder that ships. `src/paid-deliverables/versions.ts`
+is the commerce half of the answer; today it reports that nothing is activated,
+because nothing is. Every product therefore reads *Bientôt disponible*, and in
+preview each one lists what it is still missing — including the two things no
+editor can fix, so they know who to ask.
+
+A visitor is told one of three things: *Disponible*, *Bientôt disponible*, or
+*Plus disponible*. The third is archiving, and it is not deletion: an
+`isArchived` product leaves the Boutique, the homepage teaser, the sitemap and
+search, and keeps its identity and its page, because an Order Snapshot, an Order
+Access grant and a receipt all point at it. There is no *Ajouter au panier*
+anywhere — the Digital Cart arrives with issue #9, and a buy button that could
+not take money would be worse than none.
+
+**Sanity holds the shop, never the goods.** The `digitalProduct` document type
+has covers, words, a price, availability flags and a SKU, and no file field at
+all: a Paid Deliverable is a private object in the commerce system, uploaded and
+versioned by a Commerce Operator. The SKU is the one identity the two systems
+share — it is what an Order Snapshot records and what a version is activated
+against — so ADR-0001 keeps it outside editorial control, and the Studio enforces
+that rather than asking: it refuses to publish a SKU that has changed since it
+was published, or one another product already carries.
+
+**A changed slug keeps its old address**, exactly as a legal document's does —
+literally so, since `src/managed-content/addresses.ts` and
+`src/sanity/schema/addresses.ts` are what both collections use.
+`previousSlugs` is the record, the Studio refuses to publish a changed address
+until the one being left behind is in it, and `src/proxy.ts` turns that record
+into a real 308 for both sections before anything renders. See *Legal documents*
+below for why it has to run there.
 
 ## Services and Service Enquiries
 
@@ -330,8 +401,9 @@ anything renders, including for a link to one named revision. It has to run ther
 with a dynamic segment streams its shell before the slug is resolved, so by the
 time the page knows the address has moved the status is already committed and
 `permanentRedirect()` can only insert a client-side redirect — which the page
-still does, as a fallback. The proxy reads `/api/legal/redirects`, a cached map
-of five documents' former addresses, and its matcher touches no other route.
+still does, as a fallback. The proxy reads `/api/legal/redirects` — and
+`/api/boutique/redirects` for a Digital Product — cached maps of former
+addresses, and its matcher touches no other route.
 `src/app/(site)/not-found.tsx` explains why the portfolio deliberately does not
 do the same.
 
@@ -386,7 +458,8 @@ path (ADR-0003). A publish therefore has to invalidate that cache:
 
 1. In the Sanity project, add a webhook to `POST {origin}/api/revalidate`, with
    a secret, firing on create/update/delete of `siteSettings`, `homePage`,
-   `portfolioPage`, `portfolioProject`, `servicesPage`, `aboutPage`,
+   `portfolioPage`, `portfolioProject`, `boutiquePage`, `digitalProduct`,
+   `servicesPage`, `aboutPage`,
    `contactPage` and `legalDocument`.
 2. Set the same value as `SANITY_WEBHOOK_SECRET`. The signature is verified
    against the raw request body.
@@ -414,6 +487,9 @@ tests/e2e/
 ├── homepage.spec.ts                  the approved design and its content
 ├── portfolio.spec.ts                 filters, counts, the project dialog and its
 │                                     keyboard, playback fallback, publication
+├── boutique.spec.ts                  family filters, crawlable product pages,
+│                                     draft exclusion, forthcoming and archived
+│                                     states, published price changes, redirects
 ├── services.spec.ts                  canonical packs and prices, the prefilled
 │                                     WhatsApp message, the hosted Discovery
 │                                     Call, the comparison, no service commerce
@@ -512,7 +588,12 @@ Production purchasing stays disabled until the Commerce Launch Gate is signed
 off — see issue #1. Nothing in this repository may switch FedaPay to live; that
 is a deliberate, named decision by WeCreate.
 
-One part of that gate is already enforced in code: every legal document ships as
-provisional text, so `readEffectiveLegalTerms().checkout` reports `blocked` and
-names what is still waiting for WeCreate's own text until an editor publishes an
-approved revision of each. See *Legal documents* above.
+Two parts of that gate are already enforced in code, and they reinforce each
+other. Every legal document ships as provisional text, so
+`readEffectiveLegalTerms().checkout` reports `blocked` and names what is still
+waiting for WeCreate's own text until an editor publishes an approved revision of
+each. And every Digital Product ships without purchase enabled, without a cover,
+without its inclusions and without an activated Paid Deliverable Version, so
+`purchaseRequirements()` refuses all six — including on the strength of that same
+unapproved licence. See *Legal documents* and *The Boutique and Digital Products*
+above.

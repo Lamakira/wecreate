@@ -1,10 +1,10 @@
 "use client";
 
-import type { DigitalProductCard } from "@/managed-content/types";
+import type { DigitalProduct } from "@/managed-content/types";
 
 /** One line of the Digital Cart. Quantity is always one per licensing model. */
 export interface DigitalCartLine {
-  product: Pick<DigitalProductCard, "id" | "title" | "priceXof">;
+  product: Pick<DigitalProduct, "id" | "sku" | "title" | "priceXof">;
 }
 
 export interface DigitalCartView {

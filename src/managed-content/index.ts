@@ -3,11 +3,10 @@ import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import { draftMode } from "next/headers";
 
+import { findAtSlug, findSlugRedirect, slugRedirects } from "./addresses";
+import { isDiscoverable } from "./digital-products";
 import {
   effectiveLegalTerms,
-  findLegalDocument,
-  findLegalSlugRedirect,
-  legalSlugRedirects,
   legalToday,
   revisionHistory,
   type EffectiveLegalTerms,
@@ -16,7 +15,9 @@ import { isPublishable } from "./portfolio";
 import { getManagedContentProvider } from "./provider";
 import type {
   AboutContent,
+  BoutiqueContent,
   ContactContent,
+  DigitalProduct,
   HomePage,
   LegalDocument,
   LegalRevision,
@@ -131,6 +132,67 @@ export async function readPortfolioProject(
 }
 
 /**
+ * The Boutique, with archived products already gone.
+ *
+ * Archiving is not a flag the page is left to remember: a withdrawn product is
+ * absent from the list, so nothing counts it, links to it, lists it in the
+ * sitemap or shows it in the homepage teaser. Its page and its identity survive
+ * — `readDigitalProduct()` still resolves it — because an Order Snapshot, an
+ * Order Access grant and a receipt all point at it.
+ *
+ * In preview the products are exactly what the editor has, archived ones
+ * included, so they can see what they have withdrawn.
+ */
+export async function readBoutique(): Promise<BoutiqueContent> {
+  const { isEnabled } = await draftMode();
+  const boutique = (await readSiteContent()).boutique;
+
+  return isEnabled
+    ? boutique
+    : { ...boutique, products: boutique.products.filter(isDiscoverable) };
+}
+
+/**
+ * One Digital Product by slug, archived ones included.
+ *
+ * Deliberately not `readBoutique()`'s filtered list: a withdrawn product has to
+ * keep answering at its own address, or every link in a past receipt breaks.
+ * What it does not keep is a place in the Boutique, in search or in the
+ * sitemap, and the page says out loud that it is no longer sold.
+ */
+export async function readDigitalProduct(
+  slug: string,
+): Promise<DigitalProduct | undefined> {
+  return findAtSlug((await readSiteContent()).boutique.products, slug);
+}
+
+/**
+ * The address a product's prior published address now points at.
+ *
+ * Only consulted once `readDigitalProduct()` has found nothing, so a slug that
+ * has become another product's own address is served rather than redirected.
+ */
+export async function readDigitalProductSlugRedirect(
+  slug: string,
+): Promise<string | undefined> {
+  return findSlugRedirect((await readSiteContent()).boutique.products, slug);
+}
+
+/**
+ * Every abandoned product address and where it now points, as one object.
+ *
+ * Read by `/api/boutique/redirects`, which is how `src/proxy.ts` turns a former
+ * address into a real 308 before the page starts rendering. Published content
+ * only — the proxy carries no preview session, and a draft slug is not an
+ * address anyone has ever been able to link to.
+ */
+export async function readDigitalProductSlugRedirects(): Promise<
+  Record<string, string>
+> {
+  return slugRedirects((await readSiteContent()).boutique.products);
+}
+
+/**
  * Today, as the effective-date rule sees it.
  *
  * Cached because Cache Components refuses a moving clock in a prerender, and
@@ -165,7 +227,7 @@ export async function readLegalDocuments(): Promise<LegalDocument[]> {
 export async function readLegalDocument(
   slug: string,
 ): Promise<LegalDocument | undefined> {
-  return findLegalDocument(await readLegalDocuments(), slug);
+  return findAtSlug(await readLegalDocuments(), slug);
 }
 
 /**
@@ -216,7 +278,7 @@ export async function readLegalDocumentInForce(
 export async function readLegalSlugRedirect(
   slug: string,
 ): Promise<string | undefined> {
-  return findLegalSlugRedirect(await readLegalDocuments(), slug);
+  return findSlugRedirect(await readLegalDocuments(), slug);
 }
 
 /**
@@ -230,7 +292,7 @@ export async function readLegalSlugRedirect(
 export async function readLegalSlugRedirects(): Promise<
   Record<string, string>
 > {
-  return legalSlugRedirects(await readLegalDocuments());
+  return slugRedirects(await readLegalDocuments());
 }
 
 /**

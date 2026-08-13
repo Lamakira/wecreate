@@ -1,9 +1,6 @@
-import { defineField, defineType, type CustomValidator } from "sanity";
+import { defineField, defineType } from "sanity";
 
-import { apiVersion } from "../env";
-
-/** What Sanity hands a custom validation rule, named rather than re-declared. */
-type ValidationContext = Parameters<CustomValidator>[1];
+import { previousSlugsField, readPublishedDocument } from "./addresses";
 
 /**
  * WeCreate's legal documents: CGV, livraison et remboursement, licence,
@@ -18,30 +15,6 @@ type ValidationContext = Parameters<CustomValidator>[1];
  * What an editor owns is each document's words, its address and its history.
  * What they do not own is the set, or the past: a revision is append-only.
  */
-
-/**
- * The published version of the document being edited, or `undefined` while it
- * has never been published.
- *
- * Every rule below compares the draft against what is already live, because
- * that is what past orders and existing links depend on. The projection is the
- * caller's, so each rule reads only the fields it judges.
- */
-async function readPublishedDocument<T>(
-  context: ValidationContext,
-  projection: string,
-): Promise<T | undefined> {
-  const publishedId = (context.document?._id ?? "").replace(/^drafts\./, "");
-  if (!publishedId) {
-    return undefined;
-  }
-
-  const published = await context
-    .getClient({ apiVersion })
-    .fetch<T | null>(`*[_id == $id][0]${projection}`, { id: publishedId });
-
-  return published ?? undefined;
-}
 
 /** A revision as Sanity stores it, before the application's own shape. */
 interface StoredRevision {
@@ -202,42 +175,12 @@ export const legalDocument = defineType({
       description: "Le document est publié sur /legal/…",
       validation: (rule) => rule.required(),
     }),
-    defineField({
-      name: "previousSlugs",
-      title: "Adresses précédentes",
-      type: "array",
-      of: [{ type: "string" }],
-      group: "identity",
-      description:
+    {
+      ...previousSlugsField(
         "Les liens déjà partagés et déjà indexés continuent d'arriver sur le document. Changez l'adresse ci-dessus et l'ancienne est exigée ici avant publication.",
-      validation: (rule) =>
-        rule.custom(async (previous, context) => {
-          const abandoned = (previous as string[] | undefined) ?? [];
-          const current = (
-            context.document?.slug as { current?: string } | undefined
-          )?.current;
-
-          if (current && abandoned.includes(current)) {
-            return "L'adresse actuelle ne peut pas figurer parmi les adresses précédentes.";
-          }
-
-          // Issue #1: "publishing a changed slug creates a permanent redirect
-          // from the prior canonical URL." An editor is not asked to remember —
-          // the publish is refused until the address they are leaving behind is
-          // recorded, so the redirect is part of changing the address rather
-          // than a chore beside it.
-          const published = await readPublishedDocument<{
-            slug?: { current?: string };
-          }>(context, "{slug}");
-
-          const wasAt = published?.slug?.current;
-          if (wasAt && wasAt !== current && !abandoned.includes(wasAt)) {
-            return `L'adresse publiée est « ${wasAt} ». Ajoutez-la ici avant de publier la nouvelle, sinon les liens existants ne mènent plus nulle part.`;
-          }
-
-          return true;
-        }),
-    }),
+      ),
+      group: "identity",
+    },
 
     defineField({
       name: "revisions",
