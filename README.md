@@ -44,6 +44,7 @@ Useful scripts:
 | `pnpm test:e2e`     | The acceptance suite (builds, starts, drives it)     |
 | `pnpm test:e2e:ui`  | The same suite in Playwright's UI mode               |
 | `pnpm test:contract`| The provider-contract smoke suite; skips with no credentials |
+| `pnpm capture:fedapay`| Capture one FedaPay sandbox webhook delivery for that suite |
 
 ## Environment
 
@@ -486,12 +487,46 @@ Gate's own irreversible decision — see *Before this goes live*.
    secret does not match. Then run one sandbox payment through `/commande` and
    watch `/commande/retour` move to *Paiement approuvé* on its own.
 
-Capturing one of those deliveries — the exact `X-FEDAPAY-SIGNATURE` header and
-the raw body, as `{ "signature": "…", "body": "…" }` — lets the contract suite
-prove the adapter reads FedaPay's real signature scheme and its real event
-shape. Point `FEDAPAY_WEBHOOK_DELIVERY` at the file and run `pnpm test:contract`.
+#### Capturing a delivery for the contract suite
+
+The contract suite is the only thing in this repository that can prove the
+adapter reads FedaPay's real signature scheme and its real event shape — the
+acceptance suite runs a fixture that signs its own way on purpose, so it cannot.
+The suite cannot provoke a webhook either: a webhook goes to a public address.
+So it runs against a delivery you capture once, here:
+
+1. `pnpm capture:fedapay` — a bare HTTP server on port 4488 that writes the next
+   delivery to `.wecreate/fedapay-delivery.json`, which is gitignored.
+2. Expose it: `ngrok http 4488`, or any tunnel that gives an `https://` address.
+3. Add a **second** sandbox webhook endpoint in *Workbench → Webhooks* pointing
+   at that address, subscribed to the same four events, and reveal its secret.
+   It is its own endpoint with its own secret — a capture only ever verifies
+   against the secret of the endpoint that sent it, so keep the two together.
+4. Make one sandbox payment. `transaction.approved` is the capture worth having;
+   `transaction.created` parses too and proves less.
+5. Run the suite:
+
+   ```bash
+   FEDAPAY_SECRET_KEY=sk_sandbox_… \
+   FEDAPAY_WEBHOOK_SECRET=wh_sandbox_… \
+   FEDAPAY_WEBHOOK_DELIVERY=$PWD/.wecreate/fedapay-delivery.json \
+   pnpm test:contract
+   ```
+
+6. Delete the temporary endpoint in FedaPay. The tunnel address dies with the
+   tunnel, and the endpoint would go on collecting failed deliveries.
+
+**Never copy the body out of the dashboard.** The signature is over the exact
+bytes FedaPay sent; a body that has been pretty-printed, re-indented or passed
+through `JSON.parse` is a different body and will not verify however correct the
+adapter is. That is what the capture script is for, and it never parses the body
+on the way to disk.
+
+**Capture from the sandbox only.** A live delivery carries a real buyer's
+contact details and this writes them to disk in the clear.
+
 Capture a fresh one whenever FedaPay changes its API version: it is the only
-thing in this repository that can catch that scheme moving before a buyer does.
+thing here that can catch that scheme moving before a buyer does.
 
 ## The commerce data plane
 
