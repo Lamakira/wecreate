@@ -4,7 +4,11 @@ import type { ReactNode } from "react";
 import { readOrderByReference } from "@/checkout";
 import { PAYMENT_RETURN_COPY } from "@/checkout/messages";
 import { readOrderInProgress } from "@/checkout/session";
-import { PAYMENT_STATE_LABELS } from "@/commerce/orders";
+import {
+  FULFILLMENT_STATE_LABELS,
+  PAYMENT_STATE_LABELS,
+  PAYMENT_STATE_MARKS,
+} from "@/commerce/orders";
 import {
   BoutiqueLink,
   CheckoutSplit,
@@ -15,6 +19,7 @@ import {
   OrderTicket,
   orderTicketLines,
 } from "@/components/checkout/order-ticket";
+import { PaymentVerification } from "@/components/checkout/payment-verification";
 import { keepOutOfSearchResults } from "@/site-config";
 
 export const metadata: Metadata = {
@@ -32,13 +37,20 @@ export const instant = false;
  * status, an approval somebody typed into the address bar — is not merely
  * distrusted, it is never looked at. What it reports is what the commerce data
  * plane has recorded for the order this browser is carrying, and the only thing
- * that can move a Payment State is a verified webhook, which issue #11 builds.
+ * that put it there is a verified webhook (`/api/paiement/fedapay`).
  *
- * So today it says *Vérification du paiement* and keeps saying it. That is the
- * true answer while nothing has confirmed the payment, and issue #1 is explicit
- * that a browser returning from a payment page is not evidence of one: the page
- * leads with reassurance, says the buyer may close it, and offers no premature
- * success language and no second payment.
+ * So the four surfaces below are all the *same* surface: a heading, the two
+ * states the server has observed, and whatever the buyer can do about it. While
+ * nothing has confirmed the payment it says *Vérification du paiement*, offers
+ * no second payment, and says out loud that the page may be closed —
+ * verification and, later, delivery continue without it. When a webhook has
+ * decided the matter it says which way, in words and structure rather than in a
+ * colour, and points at the one thing left to do.
+ *
+ * Payment and delivery are printed as two separate facts on purpose (ADR-0005).
+ * An approved payment whose delivery has not started is the ordinary state of a
+ * fresh order and the only one WeCreate can currently reach — saying so is
+ * honest, and promising an email no system yet sends would not be.
  */
 export default async function PaymentReturnRoute() {
   const reference = await readOrderInProgress();
@@ -58,6 +70,9 @@ export default async function PaymentReturnRoute() {
     );
   }
 
+  const copy = PAYMENT_RETURN_COPY[order.paymentState];
+  const awaiting = order.paymentState === "pending";
+
   return (
     <CheckoutSplit
       ticket={
@@ -71,37 +86,71 @@ export default async function PaymentReturnRoute() {
     >
       <CheckoutStage
         kicker={`Commande ${order.reference} · Retour FedaPay`}
-        heading={PAYMENT_RETURN_COPY[order.paymentState].heading}
-        lede={PAYMENT_RETURN_COPY[order.paymentState].lede}
+        heading={copy.heading}
+        lede={copy.lede}
       >
         <dl className="m-0 grid gap-5 sm:grid-cols-2">
           <Fact label="Paiement">
+            {/*
+              Decoration for a reader scanning the page, and hidden from
+              assistive technology: the label beside it carries the meaning, so
+              nothing is lost by not seeing the mark (issue #1).
+            */}
+            <span
+              data-testid="payment-state-mark"
+              aria-hidden="true"
+              className="mr-2 text-wc-muted-on-light"
+            >
+              {PAYMENT_STATE_MARKS[order.paymentState]}
+            </span>
             <span data-testid="order-payment-state">
               {PAYMENT_STATE_LABELS[order.paymentState]}
             </span>
           </Fact>
           <Fact label="Livraison">
-            <span data-testid="order-delivery">
-              Vers {order.buyerEmailHint}
+            <span data-testid="order-fulfillment">
+              {FULFILLMENT_STATE_LABELS[order.fulfillmentState]}
             </span>
+          </Fact>
+          <Fact label="Email de livraison">
+            <span data-testid="order-delivery">{order.buyerEmailHint}</span>
           </Fact>
         </dl>
 
-        {order.paymentState === "pending" ? (
-          <p className="m-0 mt-8 text-body-lg font-light text-wc-ink">
-            <strong className="font-semibold">
-              Vous pouvez fermer cette page.
-            </strong>{" "}
-            La vérification continue sans elle. Dès que le paiement est
-            confirmé, le reçu et vos téléchargements partent vers{" "}
-            {order.buyerEmailHint}.
-          </p>
+        {awaiting ? (
+          <>
+            {/*
+              Issue #11 asks this surface to say that processing continues
+              without the page, and it does — without promising the automatic
+              delivery that does not exist until issue #12. "Nous vous écrivons"
+              is what WeCreate can do today and what the approved surface says
+              too, so a buyer reads the same commitment on both.
+            */}
+            <p className="m-0 mt-8 text-body-lg font-light text-wc-ink">
+              <strong className="font-semibold">
+                Vous pouvez fermer cette page.
+              </strong>{" "}
+              La vérification continue sans elle : elle ne dépend ni de cette
+              fenêtre ni de votre connexion. Dès que le paiement est confirmé,
+              nous vous écrivons à {order.buyerEmailHint}.
+            </p>
+            <PaymentVerification />
+          </>
         ) : (
-          <p className="m-0 mt-8 text-body-lg font-light text-wc-ink">
-            Votre commande reste enregistrée sous la référence{" "}
-            {order.reference}. Écrivez-nous avec cette référence si vous avez
-            besoin d&apos;aide.
-          </p>
+          <>
+            {/*
+              The reference is not repeated here: the ticket prints it and the
+              kicker above names it, and a third copy on one screen is noise
+              rather than emphasis.
+            */}
+            <p
+              data-testid="payment-next-step"
+              className="m-0 mt-8 text-body-lg font-light text-wc-ink"
+            >
+              {copy.nextStep}
+            </p>
+            <BoutiqueLink />
+          </>
         )}
       </CheckoutStage>
     </CheckoutSplit>

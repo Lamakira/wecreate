@@ -25,6 +25,22 @@ import type { OperatorCredentials } from "../types";
 /** The private bucket Paid Deliverables are stored in. */
 export const DELIVERABLES_BUCKET = "paid-deliverables";
 
+/**
+ * The secret that lets this deployment record a payment event.
+ *
+ * Recording one is the only thing in the data plane that can approve an order,
+ * and it is addressed by the *provider's* transaction id — a small integer,
+ * unlike the fifty-bit reference everything else here is bounded by. So
+ * `commerce_record_payment_event` demands this on top of the anonymous key, and
+ * a leaked anonymous key on its own approves nothing. See the migration.
+ *
+ * Empty when unconfigured, and Postgres refuses an empty one: the failure is a
+ * payment that stays pending, never one that is approved by accident.
+ */
+export function paymentEventSecret(): string {
+  return process.env.WECREATE_PAYMENT_EVENT_SECRET ?? "";
+}
+
 function required(name: string): string {
   const value = process.env[name];
   if (!value) {

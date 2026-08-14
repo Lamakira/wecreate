@@ -137,6 +137,63 @@ export type FulfillmentState =
   | "failed";
 
 /**
+ * Where an order stands, and nothing else about it.
+ *
+ * The whole of what the public order-state boundary reads. It carries no
+ * reference, no total, no product and no address — not even the masked one —
+ * because a browser polling for a confirmation needs two words, and a surface
+ * that returns more is a way to read an order (issue #1).
+ *
+ * There is no "unknown" here. An order the data plane cannot answer for is
+ * absent rather than uncertain; saying so is the HTTP boundary's job, and its
+ * own answer is in `src/app/(site)/commande/etat/route.ts`.
+ */
+export interface OrderState {
+  payment: PaymentState;
+  fulfillment: FulfillmentState;
+}
+
+/**
+ * What one recorded event was allowed to do when it arrived.
+ *
+ * Stored on the event itself, so a late or contradictory delivery leaves a
+ * trail that explains itself rather than disappearing:
+ *
+ * - `applied`: it decided the Payment State.
+ * - `unchanged`: it said nothing new — a transaction the provider has only just
+ *   created, or a second event agreeing with the first.
+ * - `superseded`: it arrived after the state was already decided. Payment truth
+ *   settles once (ADR-0005), so this is kept for reconciliation rather than
+ *   acted on.
+ */
+export type PaymentEventEffect = "applied" | "unchanged" | "superseded";
+
+/**
+ * What recording one verified provider event came to.
+ *
+ * The three effects above, plus the two answers that are about the *delivery*
+ * rather than the event — neither of which is ever written down, because in
+ * both cases there is nothing new to write:
+ *
+ * - `duplicate`: this exact event was already recorded. Nothing happened twice.
+ * - `unmatched`: no order here was paid through that transaction — another
+ *   environment's webhook, or one pointed at the wrong deployment.
+ *
+ * Every one of them is a success as far as the provider is concerned: the event
+ * was received and will not be redelivered.
+ */
+export type PaymentEventDisposition =
+  | PaymentEventEffect
+  | "duplicate"
+  | "unmatched";
+
+export interface PaymentEventRecord {
+  disposition: PaymentEventDisposition;
+  /** Where the Payment State stands afterwards, when an order was found. */
+  paymentState: PaymentState | null;
+}
+
+/**
  * One Digital Product as an order recorded it, and never again.
  *
  * Every value is the answer WeCreate's own systems gave at the moment the order

@@ -10,6 +10,7 @@ import type {
   OrderSnapshotLine,
   PaidDeliverableVersion,
   PaymentAttempt,
+  PaymentEventEffect,
   PaymentState,
 } from "../types";
 import { FIXTURE_STAFF, type FixtureStaffAccount } from "./staff";
@@ -68,6 +69,27 @@ export interface StoredOrder {
   attempts: PaymentAttempt[];
 }
 
+/**
+ * One event a payment provider delivered, kept exactly as it was read.
+ *
+ * Append-only and never edited, which is what `commerce.payment_events` is in
+ * Postgres. `effect` records what the event was allowed to do at the moment it
+ * arrived, so a late or contradictory delivery leaves a trail that explains
+ * itself rather than disappearing.
+ */
+export interface StoredPaymentEvent {
+  id: string;
+  orderReference: string;
+  provider: PaymentAttempt["provider"];
+  providerEventId: string;
+  providerEventType: string;
+  providerTransactionId: string;
+  occurredAt: string;
+  receivedAt: string;
+  outcome: PaymentState;
+  effect: PaymentEventEffect;
+}
+
 export interface CommerceFixtureDataset {
   staff: StoredStaff[];
   sessions: StoredSession[];
@@ -76,6 +98,7 @@ export interface CommerceFixtureDataset {
   active: Record<string, string>;
   audit: CommerceAuditEntry[];
   orders: StoredOrder[];
+  paymentEvents: StoredPaymentEvent[];
 }
 
 function datasetPath(): string {
@@ -108,6 +131,7 @@ function initialDataset(): CommerceFixtureDataset {
     active: {},
     audit: [],
     orders: [],
+    paymentEvents: [],
   };
 }
 
@@ -131,6 +155,7 @@ export async function readCommerceFixture(): Promise<CommerceFixtureDataset> {
       active: stored.active ?? {},
       audit: stored.audit ?? [],
       orders: stored.orders ?? [],
+      paymentEvents: stored.paymentEvents ?? [],
     };
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {

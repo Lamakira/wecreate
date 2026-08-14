@@ -1,5 +1,7 @@
 import { randomBytes, randomUUID } from "node:crypto";
 
+import type { PaymentEvent } from "@/payments/types";
+
 import {
   COMMERCE_OPERATOR_ROLE,
   administersCommerce,
@@ -10,7 +12,7 @@ import {
   deliverableObjectPath,
   nextVersionNumber,
 } from "../paid-deliverables";
-import { isPayable, maskEmail } from "../orders";
+import { isPayable, maskEmail, paymentEventEffect } from "../orders";
 import type {
   ActivationOutcome,
   CommerceProvider,
@@ -29,9 +31,11 @@ import type {
   CommerceOperator,
   OperatorCredentials,
   OrderSnapshot,
+  OrderState,
   PaidDeliverable,
   PaidDeliverableVersion,
   PaymentAttempt,
+  PaymentEventRecord,
 } from "../types";
 import {
   readCommerceFixture,
@@ -459,9 +463,70 @@ export const fixtureCommerceProvider: CommerceProvider = {
     await writeCommerceFixture(dataset);
   },
 
+  async recordPaymentEvent(event: PaymentEvent): Promise<PaymentEventRecord> {
+    const dataset = await readCommerceFixture();
+
+    // Which order was paid through that transaction. The provider's identity
+    // was recorded on the attempt when the payment page was opened, and it is
+    // the only thing tying a delivery to an order — a reference never travels
+    // to the provider, so nothing a webhook carries could name one.
+    const order = dataset.orders.find((one) =>
+      one.attempts.some(
+        (attempt) => attempt.providerTransactionId === event.providerTransactionId,
+      ),
+    );
+    if (!order) {
+      return { disposition: "unmatched", paymentState: null };
+    }
+
+    // Already recorded. Acknowledged, and nothing happens a second time —
+    // which is the whole of what makes a provider's retries safe.
+    const seen = dataset.paymentEvents.some(
+      (one) =>
+        one.provider === event.provider &&
+        one.providerEventId === event.providerEventId,
+    );
+    if (seen) {
+      return { disposition: "duplicate", paymentState: order.paymentState };
+    }
+
+    const effect = paymentEventEffect(order.paymentState, event.outcome);
+    dataset.paymentEvents = [
+      ...dataset.paymentEvents,
+      {
+        id: randomUUID(),
+        orderReference: order.reference,
+        provider: event.provider,
+        providerEventId: event.providerEventId,
+        providerEventType: event.providerEventType,
+        providerTransactionId: event.providerTransactionId,
+        occurredAt: event.occurredAt,
+        receivedAt: new Date().toISOString(),
+        outcome: event.outcome,
+        effect,
+      },
+    ];
+    if (effect === "applied") {
+      order.paymentState = event.outcome;
+    }
+    await writeCommerceFixture(dataset);
+
+    return { disposition: effect, paymentState: order.paymentState };
+  },
+
   async readOrder(reference: string): Promise<OrderSnapshot | undefined> {
     const dataset = await readCommerceFixture();
     const order = dataset.orders.find((one) => one.reference === reference);
     return order ? toOrderSnapshot(order) : undefined;
+  },
+
+  async readOrderState(reference: string): Promise<OrderState | undefined> {
+    const dataset = await readCommerceFixture();
+    const order = dataset.orders.find((one) => one.reference === reference);
+    // Two fields, read out of the record rather than projected from a snapshot,
+    // so this cannot grow a third by accident. Postgres answers the same way.
+    return order
+      ? { payment: order.paymentState, fulfillment: order.fulfillmentState }
+      : undefined;
   },
 };

@@ -57,12 +57,14 @@ it belongs to.
    Sanity project, dataset and read token when that is Sanity.
 3. **Video platform** — Mux's environment key, for anonymous aggregate playback
    measurement. Mux's API token is not here: the Studio keeps it in the dataset.
-4. **Commerce data plane** — which one this process talks to, and the Supabase
-   project and anonymous key when that is Supabase. There is no service role
-   key: see *The commerce data plane* below.
-5. **Payments** — which provider takes the money, FedaPay's secret key, and
-   which of its two environments this deployment uses. Sandbox unless something
-   explicitly names the live one.
+4. **Commerce data plane** — which one this process talks to, the Supabase
+   project and anonymous key when that is Supabase, and the secret that lets
+   this deployment record a payment event. There is no service role key: see
+   *The commerce data plane* below.
+5. **Payments** — which provider takes the money, FedaPay's secret key, the
+   endpoint secret its webhooks are signed with, and which of its two
+   environments this deployment uses. Sandbox unless something explicitly names
+   the live one.
 6. **Preview and revalidation secrets** — who may open a preview session and who
    may drop the content cache.
 7. **Acceptance-test hooks** — set by `playwright.config.ts`, never by hand.
@@ -335,9 +337,10 @@ src/checkout/
 └── messages.ts   what the checkout says when a submission is not a payment
 
 src/payments/
-├── types.ts           a hosted payment, and the one way it can fail
+├── types.ts           a hosted payment, a delivered event, and how each fails
 ├── provider.ts        the interface, and which implementation is in use
 ├── fedapay/provider.ts  FedaPay over REST — the only module that knows it
+├── fedapay/webhook.ts   its signature scheme, and how its events read
 └── fixture/provider.ts  the deterministic one the acceptance suite runs against
 ```
 
@@ -381,9 +384,71 @@ in between.
 **`/commande/retour` cannot approve anything.** It declares no `searchParams` at
 all, so a provider's callback values and a forged `?status=approved` are not
 merely distrusted — they are never read. It prints what the data plane has
-recorded, which today is *Vérification du paiement* and the reassurance that the
-page may be closed. Moving a Payment State needs a verified webhook, and that is
-issue #11's.
+recorded, and the only thing that can put a decision there is a verified
+webhook.
+
+**`POST /api/paiement/fedapay` is that webhook, and the one caller in this
+application whose word moves a Payment State.** The order of what it does is the
+security of the surface: a deployment with no payment provider answers 404; the
+body is bounded at 64 KB before it is read; the *raw* body is verified against
+`X-FEDAPAY-SIGNATURE` before anything is parsed; and every verified delivery
+gets the same `{ "received": true }` whatever it turned out to mean, so the
+difference between "that transaction is one of ours" and "it is not" is not
+something a prober can read off a status code. Verification itself is the
+provider's and lives in its adapter — the route knows that events are signed and
+nothing about how (ADR-0008). Without `FEDAPAY_WEBHOOK_SECRET` nothing verifies,
+which leaves every order pending: the safe failure, and one to notice before
+going live.
+
+**Events are the record; the Payment State is a conclusion drawn from them.**
+Every verified delivery is written to `commerce.payment_events` with FedaPay's
+own identity and timestamp on it, and nothing edits or deletes one.
+`(provider, provider_event_id)` is unique, so a redelivery is recognised and
+acknowledged without anything happening twice — which is what makes a provider's
+retries safe, and what the fulfillment issue #12 builds will hang off. What an
+event is then allowed to do is one rule in two places, `paymentEventEffect()` in
+`src/commerce/orders.ts` and `commerce.payment_event_effect` in Postgres, and
+Postgres is not taking the application's word for the signature either: it is
+the only function granted to `anon` that can approve a payment, and it is
+addressed by FedaPay's transaction id rather than by an unguessable reference,
+so it demands `WECREATE_PAYMENT_EVENT_SECRET` before it reads a row. A leaked
+anonymous key approves nothing. The rule itself:
+`transaction.created` announces a transaction and changes nothing, a pending
+order takes the first outcome that reaches it, and an event arriving after that
+is recorded and ignored. Nothing may unsay that a buyer paid, and a provider
+retrying out of order must not be able to (ADR-0005). An event for a transaction
+this deployment never opened is acknowledged and dropped — that is another
+environment's webhook, not an error.
+
+**`GET /commande/etat` is what the buyer's page polls, and it answers two
+words.** It lives under `/commande` rather than `/api` because that is where the
+order cookie is scoped: the order is the one this browser is carrying, never one
+a caller names, so no reference reaches an access log, a referrer or a browser
+history. It returns a Payment State and a Fulfillment State and there is nowhere
+in it for a third field to appear — not the reference, not the total, not the
+masked address. A browser with no order, an order nobody here knows and an
+unreachable data plane all answer `unknown`, which the page treats as "keep
+waiting" and never as a failure.
+
+**The waiting itself is the only client-side code on the checkout.**
+`PaymentVerification` asks that endpoint on a growing delay — two seconds out to
+twenty, then it stops and says so — and refreshes the route when the answer
+changes rather than rendering the new state itself. A hidden tab and an offline
+browser schedule nothing at all; the browser's own `online` and
+`visibilitychange` events restart it, which is faster than any interval. A
+request that failed or timed out is never evidence: the page keeps saying
+*Vérification du paiement*, and a dropped connection is said out loud as a
+dropped connection. Issue #1 is explicit that connectivity uncertainty must
+never become a failed payment.
+
+The four states are told apart by their heading, their structure and what a
+buyer can do next — never by a colour, and the mark beside each (`✓`, `×`, `…`)
+is `aria-hidden` decoration with the word beside it. None of them offers a
+second payment. **Approved says the money arrived and stops there**: sending the
+receipt and opening the downloads is fulfillment, it is tracked separately, and
+it does not exist yet (issue #12). A page announcing an email no system will
+send would be the one lie this whole surface is built to avoid, which is why the
+Fulfillment State is printed as its own fact reading *Préparation à venir*.
 
 The buyer's contact details are recorded with the order and are deliberately
 absent from what the boundary reads back: an order is addressed by its reference
@@ -397,11 +462,36 @@ Both `/commande` and `/commande/retour` are out of search results on every
 deployment, as every transaction surface on this site is.
 
 **FedaPay is two REST calls and no SDK** — create the transaction, ask for its
-payment token, send the buyer to the URL it answers with. `FEDAPAY_SECRET_KEY`
-is server-only and there is no `NEXT_PUBLIC_FEDAPAY_*` anything, because no
+payment token, send the buyer to the URL it answers with — plus one signature to
+verify on the way back in. `FEDAPAY_SECRET_KEY` and `FEDAPAY_WEBHOOK_SECRET` are
+both server-only and there is no `NEXT_PUBLIC_FEDAPAY_*` anything, because no
 browser here ever holds a payment credential. `FEDAPAY_ENVIRONMENT` selects
 sandbox or live and defaults to sandbox; switching it is the Commerce Launch
 Gate's own irreversible decision — see *Before this goes live*.
+
+### Setting up FedaPay
+
+1. Create a FedaPay account and work in its **sandbox** until the Commerce
+   Launch Gate says otherwise. Put the sandbox secret API key in
+   `FEDAPAY_SECRET_KEY`; leave `FEDAPAY_ENVIRONMENT` unset.
+2. In *Workbench → Webhooks*, add an endpoint at
+   `POST {origin}/api/paiement/fedapay` subscribed to the transaction events —
+   `transaction.approved`, `transaction.canceled`, `transaction.declined` and
+   `transaction.created`. Anything else it sends is acknowledged and ignored.
+3. Reveal that endpoint's secret and set it as `FEDAPAY_WEBHOOK_SECRET`. It is
+   generated per endpoint and per environment: sandbox and live never share one,
+   and neither do staging and production.
+4. Prove it end to end before trusting it. Send a test delivery from FedaPay's
+   webhook tooling and check the endpoint answers `200`; a `401` means the
+   secret does not match. Then run one sandbox payment through `/commande` and
+   watch `/commande/retour` move to *Paiement approuvé* on its own.
+
+Capturing one of those deliveries — the exact `X-FEDAPAY-SIGNATURE` header and
+the raw body, as `{ "signature": "…", "body": "…" }` — lets the contract suite
+prove the adapter reads FedaPay's real signature scheme and its real event
+shape. Point `FEDAPAY_WEBHOOK_DELIVERY` at the file and run `pnpm test:contract`.
+Capture a fresh one whenever FedaPay changes its API version: it is the only
+thing in this repository that can catch that scheme moving before a buyer does.
 
 ## The commerce data plane
 
@@ -413,10 +503,11 @@ through one boundary of the same shape Managed Content has (ADR-0008):
 ```
 src/commerce/
 ├── types.ts             Paid Deliverable Version, Commerce Operator, audit
-│                        entry, Order Snapshot, Payment State
+│                        entry, Order Snapshot, Payment State, order state
 ├── provider.ts          the interface, and which data plane is in use
 ├── paid-deliverables.ts what may be uploaded, and where its bytes are addressed
-├── orders.ts            how an order is named, how long it may still be paid
+├── orders.ts            how an order is named, how long it may still be paid,
+│                        and what a verified event does to its Payment State
 ├── operators.ts         who may see and change commerce data
 ├── session.ts           the operator's session, in an http-only cookie
 ├── actions.ts           everything an operator can do, as form submissions
@@ -473,15 +564,20 @@ that nothing may be sold: a product WeCreate cannot confirm a file for reads
 *bientôt disponible* rather than taking money for something it may not be able
 to deliver.
 
-**Orders live here too, and are the one thing a guest may write.** The four
-functions guest checkout calls carry no session, because a buyer has none — the
-same posture as the public read above, and bounded the same way: an order is
-addressed by a reference with fifty bits of randomness in it, reading one
-returns no contact details beyond a masked address, and none of them can approve
-a payment. Triggers make the lines and the accepted revisions unwritable, refuse
-any update that would change what an order contains or who it is for, and let a
-Payment State leave `pending` exactly once — so no application bug and no
-support action can unsay that a buyer paid (ADR-0005).
+**Orders live here too, and are the one thing a guest may write.** The order
+functions carry no session, because a buyer has none — and neither has a payment
+provider posting a webhook. Same posture as the public read above, and bounded
+the same way: an order is addressed by a reference with fifty bits of randomness
+in it, and reading one returns no contact details beyond a masked address. The
+one function that can approve a payment is the exception to the whole posture —
+it is addressed by the provider's transaction id, which is a small integer — so
+it is the only one that is not granted on the strength of the anonymous key
+alone: it demands `WECREATE_PAYMENT_EVENT_SECRET` before it reads a row.
+Triggers make the lines, the accepted
+revisions and the payment events unwritable, refuse any update that would change
+what an order contains or who it is for, and let a Payment State leave `pending`
+exactly once — so no application bug and no support action can unsay that a
+buyer paid (ADR-0005).
 
 **Postgres enforces the same rules, against requests that never render a page.**
 `supabase/migrations/` is the record. The tables live in a `commerce` schema that
@@ -763,19 +859,37 @@ state, not a broken one — and it is the state a fresh checkout should be in.
 1. Create a project at [supabase.com](https://supabase.com) in the **Paris**
    region (ADR-0003), plus a separate project per non-production environment.
    Staging and production never share a project, a bucket or a key.
-2. Apply [`supabase/migrations/`](./supabase/migrations) — `supabase db push`,
-   or the SQL editor for a one-off. It creates the `commerce` schema, the
-   private `paid-deliverables` bucket, the policies and the five functions the
-   application calls. Leave `commerce` out of the project's exposed schemas: the
-   functions in `public` are the whole surface, on purpose.
+2. Apply [`supabase/migrations/`](./supabase/migrations) in filename order —
+   `supabase db push`, or the SQL editor for a one-off. They create the
+   `commerce` schema, the private `paid-deliverables` bucket, the policies and
+   the functions the application calls. Leave `commerce` out of the project's
+   exposed schemas: the functions in `public` are the whole surface, on purpose.
 3. Put the project URL and the **anon** key in `.env.local` (`SUPABASE_URL`,
    `SUPABASE_ANON_KEY`). Both are server-only. Do not add the service role key
    to this application — nothing here uses one, and adding it would let a leaked
    environment read every order WeCreate will ever take.
-4. In *Authentication → Providers*, leave email sign-up **disabled**: WeCreate
+4. Generate a secret of WeCreate's own for this environment, put it in
+   `WECREATE_PAYMENT_EVENT_SECRET`, and store its digest:
+
+   ```sql
+   insert into commerce.payment_event_authorisation (secret_digest)
+   values (encode(sha256(convert_to('<the secret>', 'UTF8')), 'hex'))
+   on conflict (id) do update
+      set secret_digest = excluded.secret_digest, updated_at = now();
+   ```
+
+   This is what stands between a leaked anonymous key and an approved order.
+   Every other function granted to `anon` either writes something nobody has
+   paid for or is addressed by a fifty-bit reference;
+   `commerce_record_payment_event` can approve a payment and is addressed by
+   FedaPay's transaction id, which is a small integer a caller could walk. With
+   this in place, calling it directly is no easier than forging a signed webhook.
+   Until it is in place, every payment stays pending — which is the safe failure,
+   and one to notice before real buyers arrive.
+5. In *Authentication → Providers*, leave email sign-up **disabled**: WeCreate
    creates staff accounts itself, one per person, and there is no self-service
    registration for a commerce back office.
-5. Create one account per member of staff, and give the ones who administer
+6. Create one account per member of staff, and give the ones who administer
    commerce the role the policies ask for:
 
    ```sql
@@ -789,7 +903,7 @@ state, not a broken one — and it is the state a fresh checkout should be in.
    A Content Editor does not get it, even when the same person also edits
    content. Roles live in `app_metadata` rather than `user_metadata` because a
    signed-in user can edit the latter.
-6. Each staff member signs in at `/commerce`, is sent to `/commerce/securite`,
+7. Each staff member signs in at `/commerce`, is sent to `/commerce/securite`,
    and enrols their authenticator. Ask everyone to enrol a **second** one on
    another device straight away: without a backup factor, a lost phone locks
    that person out, and the answer to that must never be a shared account.
@@ -829,6 +943,12 @@ tests/e2e/
 │                                     an immutable snapshot, a provider that
 │                                     cannot be reached, a return that approves
 │                                     nothing
+├── payment-webhook.spec.ts           signed events approving, refusing and
+│                                     cancelling; forged, unsigned, malformed,
+│                                     oversized and unknown deliveries; retries
+│                                     and out-of-order events; the order-state
+│                                     boundary and what it will not say; polling,
+│                                     going offline, and closing the page
 ├── services.spec.ts                  canonical packs and prices, the prefilled
 │                                     WhatsApp message, the hosted Discovery
 │                                     Call, the comparison, no service commerce
@@ -851,6 +971,8 @@ tests/e2e/
     ├── digital-cart.ts               arriving with a cart, and reading it back
     ├── checkout.ts                   filling the guest form, and answering the
     │                                 payment provider's hosted page
+    ├── payment-events.ts             signing and delivering provider events,
+    │                                 and asking where an order stands
     └── sample-content.ts             stand-in projects and products
 ```
 
@@ -867,6 +989,16 @@ the input reconciliation has to be safe against. `support/digital-cart.ts` spell
 the stored format out by hand rather than importing it, so changing how a cart is
 kept has to be a deliberate change to that file too.
 
+Payment events arrive the way issue #1 asks for — through Playwright's HTTP
+request context, as real signed POSTs to the real endpoint of the real build.
+The fixture payment provider signs them with its own scheme rather than an
+imitation of FedaPay's, so a wrong reading of FedaPay's cannot pass the suite by
+agreeing with itself; `support/payment-events.ts` spells that scheme out by hand
+for the same reason `support/digital-cart.ts` spells out the cart cookie. Bodies
+are sent as bytes, because a signature is over bytes and Playwright re-serialises
+a string that is not already valid JSON — which would quietly turn every
+malformed-delivery scenario into a test of nothing.
+
 Each hook responds 404 unless `WECREATE_TEST_HOOKS=1` **and** its own provider is
 the fixture, so neither can be reached on a deployment backed by a real Sanity or
 Supabase project. The fixture data plane ships published staff credentials, which
@@ -880,10 +1012,13 @@ Browsers are installed once with `pnpm exec playwright install chromium`.
 
 **One suite is deliberately not part of it.** `pnpm test:contract` runs
 `tests/contract/` against a real vendor sandbox, with its own configuration, no
-browser and no server. It checks the two things a fake cannot: that the request
-the FedaPay adapter sends is one FedaPay accepts, and that the answer still has
-a payment page in it. It skips itself when `FEDAPAY_SECRET_KEY` is absent, which
-is every run that has not deliberately been given sandbox credentials, and
+browser and no server. It checks what a fake cannot: that the request the
+FedaPay adapter sends is one FedaPay accepts, that the answer still has a payment
+page in it, and that a delivery FedaPay really signed verifies and parses. Its
+two halves are gated separately, because they need different things —
+`FEDAPAY_SECRET_KEY` for the first, `FEDAPAY_WEBHOOK_SECRET` and a captured
+`FEDAPAY_WEBHOOK_DELIVERY` for the second — and each skips itself when its own
+is absent, which is every run that has not deliberately been given them. It
 refuses to run at all against the live API. It supplements the acceptance suite
 and never replaces it (issue #1).
 
@@ -1030,6 +1165,17 @@ deployment with no `FEDAPAY_SECRET_KEY` has no payment provider, which is its
 own refusal: there is no fallback, and no fake that could stand in for one. See
 *Legal documents*, *The Boutique and Digital Products*, *Guest checkout* and
 *The commerce data plane* above.
+
+**The two webhook secrets fail quietly, so check them by hand.** Every other gap
+above stops a purchase before it starts. A missing `FEDAPAY_WEBHOOK_SECRET` or a
+missing `commerce.payment_event_authorisation` row does not: the checkout works,
+the buyer pays on FedaPay's page, and the confirmation is then refused — by the
+endpoint in the first case, by Postgres in the second — leaving a real payment
+sitting at *Vérification du paiement* for ever. That is the safe failure and it
+is still a failure. Send a test delivery from FedaPay's webhook tooling and
+confirm the endpoint answers `200`, then run one sandbox payment end to end,
+before the first real buyer, on every environment, and again each time the
+endpoint's URL or either secret changes.
 
 Staff MFA is one of the gate's own prerequisites, and it is enforced rather than
 documented: there is no path into `/commerce` that does not pass through an
