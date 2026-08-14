@@ -9,8 +9,15 @@ import { areCommerceTestHooksEnabled } from "@/site-config";
  *
  * The acceptance suite does everything else through the back office itself —
  * signing in, uploading, activating — because those are the behaviours under
- * test. What it cannot do through the back office is return the data plane to
- * its seeded state between scenarios, which is all this endpoint offers.
+ * test. Two things no actor can do are all this endpoint offers: returning the
+ * data plane to its seeded state between scenarios, and moving time.
+ *
+ * **Time is here because three of the rules are measured in it.** An Order
+ * Snapshot may be paid for twenty-four hours, Order Access lasts thirty days,
+ * and a generated file address dies after fifteen minutes (issue #1). None can
+ * be reached by waiting, and each is a rule the application applies rather than
+ * a value it stores — so what is aged is the stored data, and what is asserted
+ * is still what the application concludes.
  *
  * It is inert unless BOTH `WECREATE_TEST_HOOKS=1` and
  * `WECREATE_COMMERCE_PROVIDER=fixture` are set, and answers 404 rather than 403
@@ -18,7 +25,9 @@ import { areCommerceTestHooksEnabled } from "@/site-config";
  * advertise that the route exists at all.
  */
 
-type TestCommerceRequest = { action: "reset" };
+type TestCommerceRequest =
+  | { action: "reset" }
+  | { action: "age"; seconds: number };
 
 export async function POST(request: NextRequest): Promise<Response> {
   if (!areCommerceTestHooksEnabled()) {
@@ -26,6 +35,13 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
 
   const body = (await request.json()) as TestCommerceRequest;
+
+  if (body.action === "age") {
+    const { ageCommerceFixture } = await import("@/commerce/fixture/store");
+    await ageCommerceFixture(Number(body.seconds) || 0);
+    return NextResponse.json({ ok: true, action: body.action });
+  }
+
   if (body.action !== "reset") {
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   }

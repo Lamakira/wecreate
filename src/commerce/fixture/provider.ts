@@ -12,9 +12,15 @@ import {
   deliverableObjectPath,
   nextVersionNumber,
 } from "../paid-deliverables";
+import {
+  accessExpiryFrom,
+  isAccessLive,
+  liveLinkSeconds,
+} from "../order-access";
 import { isPayable, maskEmail, paymentEventEffect } from "../orders";
 import type {
   ActivationOutcome,
+  BeginFulfillmentOutcome,
   CommerceProvider,
   CreateOrderOutcome,
   CreateOrderRequest,
@@ -22,6 +28,7 @@ import type {
   DeliverableUploadRequest,
   EnrolmentTicket,
   OpenAttemptOutcome,
+  OpenDownloadOutcome,
   PaymentAttemptOutcome,
   SignInOutcome,
   VerificationOutcome,
@@ -30,6 +37,7 @@ import type {
   CommerceAuditEntry,
   CommerceOperator,
   OperatorCredentials,
+  OrderAccess,
   OrderSnapshot,
   OrderState,
   PaidDeliverable,
@@ -39,10 +47,12 @@ import type {
 } from "../types";
 import {
   readCommerceFixture,
+  signPrivateAddress,
   storeDeliverableBytes,
   writeCommerceFixture,
   type CommerceFixtureDataset,
   type StoredOrder,
+  type StoredOrderAccess,
   type StoredSession,
   type StoredStaff,
 } from "./store";
@@ -146,6 +156,57 @@ function toOrderSnapshot(order: StoredOrder): OrderSnapshot {
     fulfillmentState: order.fulfillmentState,
     attempts: order.attempts,
   };
+}
+
+/** What one order's buyer may still open, assembled from its stored grants. */
+function toOrderAccess(
+  dataset: CommerceFixtureDataset,
+  held: StoredOrderAccess,
+): OrderAccess {
+  const order = dataset.orders.find(
+    (one) => one.reference === held.orderReference,
+  );
+  const grants = dataset.grants.filter(
+    (grant) => grant.orderReference === held.orderReference,
+  );
+
+  return {
+    reference: held.orderReference,
+    expiresAt: held.expiresAt,
+    // Walked from the Order Snapshot's own lines, which gives two things at
+    // once: the title and the version come from the purchase rather than from a
+    // copy that could drift, and the rows read in the order the ticket beside
+    // them does. `commerce.access_json` joins the same way.
+    grants: (order?.lines ?? []).flatMap((line) => {
+      const grant = grants.find((one) => one.sku === line.sku);
+      return grant
+        ? [
+            {
+              sku: line.sku,
+              title: line.title,
+              paidDeliverableVersion: line.paidDeliverableVersion,
+              downloadsAllowed: grant.downloadsAllowed,
+              downloadsRemaining: grant.downloadsAllowed - grant.downloadsUsed,
+            },
+          ]
+        : [];
+    }),
+  };
+}
+
+/**
+ * The same, found by the order it belongs to.
+ *
+ * `undefined` when nothing has been granted — a payment that was never approved
+ * and one whose delivery has not been claimed yet both look like this, and the
+ * pages treat them the same way: there is nothing to show.
+ */
+function findOrderAccess(
+  dataset: CommerceFixtureDataset,
+  reference: string,
+): OrderAccess | undefined {
+  const held = dataset.access.find((one) => one.orderReference === reference);
+  return held ? toOrderAccess(dataset, held) : undefined;
 }
 
 function newAttempt(provider: PaymentAttempt["provider"]): PaymentAttempt {
@@ -476,7 +537,7 @@ export const fixtureCommerceProvider: CommerceProvider = {
       ),
     );
     if (!order) {
-      return { disposition: "unmatched", paymentState: null };
+      return { disposition: "unmatched", paymentState: null, orderReference: null };
     }
 
     // Already recorded. Acknowledged, and nothing happens a second time —
@@ -487,7 +548,11 @@ export const fixtureCommerceProvider: CommerceProvider = {
         one.providerEventId === event.providerEventId,
     );
     if (seen) {
-      return { disposition: "duplicate", paymentState: order.paymentState };
+      return {
+        disposition: "duplicate",
+        paymentState: order.paymentState,
+        orderReference: order.reference,
+      };
     }
 
     const effect = paymentEventEffect(order.paymentState, event.outcome);
@@ -511,7 +576,11 @@ export const fixtureCommerceProvider: CommerceProvider = {
     }
     await writeCommerceFixture(dataset);
 
-    return { disposition: effect, paymentState: order.paymentState };
+    return {
+      disposition: effect,
+      paymentState: order.paymentState,
+      orderReference: order.reference,
+    };
   },
 
   async readOrder(reference: string): Promise<OrderSnapshot | undefined> {
@@ -528,5 +597,151 @@ export const fixtureCommerceProvider: CommerceProvider = {
     return order
       ? { payment: order.paymentState, fulfillment: order.fulfillmentState }
       : undefined;
+  },
+
+  async beginFulfillment(request): Promise<BeginFulfillmentOutcome> {
+    const dataset = await readCommerceFixture();
+    const order = dataset.orders.find(
+      (one) => one.reference === request.reference,
+    );
+    // The claim, and everything it refuses: an order nobody paid for, and a
+    // delivery already claimed by somebody else or already finished. Postgres
+    // refuses the same, in a transaction, which is what makes the second caller
+    // lose.
+    if (
+      !order ||
+      order.paymentState !== "approved" ||
+      order.fulfillmentState !== "not_started"
+    ) {
+      return { status: "refused" };
+    }
+    order.fulfillmentState = "processing";
+
+    // One per line. The claim above is what makes this run once, so there is
+    // nothing here to confirm or to skip.
+    dataset.grants = [
+      ...dataset.grants,
+      ...order.lines.map((line) => ({
+        orderReference: order.reference,
+        sku: line.sku,
+        downloadsAllowed: request.downloadsAllowed,
+        downloadsUsed: 0,
+        linkExpiresAt: null,
+      })),
+    ];
+
+    // Measured from the approval rather than from now: however long this
+    // delivery took to start, a buyer's thirty days are thirty days from the
+    // moment their money arrived (issue #1). The first event that decided the
+    // Payment State is where that moment is recorded.
+    const approved = dataset.paymentEvents.find(
+      (event) =>
+        event.orderReference === order.reference &&
+        event.effect === "applied" &&
+        event.outcome === "approved",
+    );
+    const held: StoredOrderAccess = {
+      orderReference: order.reference,
+      tokenDigest: request.tokenDigest,
+      issuedAt: new Date().toISOString(),
+      expiresAt: accessExpiryFrom(
+        new Date(approved?.receivedAt ?? Date.now()),
+        request.accessDays,
+      ),
+    };
+    dataset.access = [...dataset.access, held];
+    await writeCommerceFixture(dataset);
+
+    return {
+      status: "claimed",
+      order: toOrderSnapshot(order),
+      access: toOrderAccess(dataset, held),
+      deliverTo: order.buyer.email,
+    };
+  },
+
+  async settleFulfillment(reference, state): Promise<void> {
+    const dataset = await readCommerceFixture();
+    const order = dataset.orders.find((one) => one.reference === reference);
+    // Only what this caller claimed. A settlement for an order somebody else is
+    // delivering, or one already settled, is not this caller's to write.
+    if (!order || order.fulfillmentState !== "processing") {
+      return;
+    }
+
+    order.fulfillmentState = state;
+    await writeCommerceFixture(dataset);
+  },
+
+  async readOrderAccessByToken(tokenDigest): Promise<OrderAccess | undefined> {
+    const dataset = await readCommerceFixture();
+    const held = dataset.access.find((one) => one.tokenDigest === tokenDigest);
+    if (!held) return undefined;
+
+    const access = toOrderAccess(dataset, held);
+    // Expired reads as unknown, exactly as a token nobody was ever given does.
+    return isAccessLive(access) ? access : undefined;
+  },
+
+  async readOrderAccess(reference): Promise<OrderAccess | undefined> {
+    const access = findOrderAccess(await readCommerceFixture(), reference);
+    // The same rule the token read applies, so a page cannot offer rows for
+    // something the download boundary would refuse.
+    return access && isAccessLive(access) ? access : undefined;
+  },
+
+  async openDownload({ tokenDigest, sku, linkSeconds }): Promise<OpenDownloadOutcome> {
+    const dataset = await readCommerceFixture();
+    const held = dataset.access.find((one) => one.tokenDigest === tokenDigest);
+    if (!held || !isAccessLive(toOrderAccess(dataset, held))) {
+      return { status: "refused", reason: "unknownAccess" };
+    }
+
+    const grant = dataset.grants.find(
+      (one) => one.orderReference === held.orderReference && one.sku === sku,
+    );
+    // Which version this order bought, which is what its own line records —
+    // never the one activated today, which may be a file nobody here paid for.
+    const line = dataset.orders
+      .find((one) => one.reference === held.orderReference)
+      ?.lines.find((one) => one.sku === sku);
+    if (!grant || !line) {
+      return { status: "refused", reason: "unknownProduct" };
+    }
+
+    const liveSeconds = liveLinkSeconds(grant.linkExpiresAt);
+    const reusing = liveSeconds > 0;
+    if (!reusing && grant.downloadsUsed >= grant.downloadsAllowed) {
+      return { status: "refused", reason: "exhausted" };
+    }
+
+    const version = dataset.versions.find(
+      (one) => one.id === line.paidDeliverableVersionId,
+    );
+    const url =
+      version &&
+      (await signPrivateAddress(
+        deliverableObjectPath(version.sku, version.checksum, version.fileName),
+        reusing ? liveSeconds : linkSeconds,
+      ));
+    // Nothing has been spent at this point, which is the whole reason the
+    // address is produced before the download is counted.
+    if (!url) {
+      return { status: "refused", reason: "unavailable" };
+    }
+
+    if (!reusing) {
+      grant.downloadsUsed += 1;
+      grant.linkExpiresAt = new Date(
+        Date.now() + linkSeconds * 1000,
+      ).toISOString();
+    }
+    await writeCommerceFixture(dataset);
+
+    return {
+      status: "opened",
+      url,
+      downloadsRemaining: grant.downloadsAllowed - grant.downloadsUsed,
+    };
   },
 };

@@ -6,6 +6,7 @@ import type {
   CommerceAuditEntry,
   CommerceOperator,
   OperatorCredentials,
+  OrderAccess,
   OrderSnapshot,
   OrderState,
   PaidDeliverable,
@@ -175,7 +176,151 @@ export interface CommerceProvider {
    * it would still have read the order. See `OrderState`.
    */
   readOrderState(reference: string): Promise<OrderState | undefined>;
+
+  /**
+   * Claim one approved order for delivery, and make its grants.
+   *
+   * The whole of what makes fulfillment happen once. Claiming and granting are
+   * one call because they are one transaction, and the claim is what a second
+   * caller loses: a Fulfillment State moves out of `not_started` exactly once,
+   * so a redelivered webhook, a retried request and two processes racing each
+   * other produce one set of grants and one receipt between them.
+   *
+   * It creates one grant per Order Snapshot line, against the Paid Deliverable
+   * Version that line recorded — never the one activated today. Only the digest
+   * of the emailed token is stored; the token itself never reaches this
+   * boundary and could not be recovered from what does.
+   *
+   * There is no way back in. A delivery that failed stays failed until an
+   * operator retries it, and that is issue #15's — along with reissuing a
+   * token, which is the other reason this would ever run twice.
+   */
+  beginFulfillment(
+    request: BeginFulfillmentRequest,
+  ): Promise<BeginFulfillmentOutcome>;
+
+  /**
+   * Record how the delivery went.
+   *
+   * It moves a Fulfillment State and touches nothing else — least of all a
+   * Payment State. A receipt that could not be sent and a file that could not
+   * be prepared must never be able to unsay that a buyer paid (ADR-0005).
+   */
+  settleFulfillment(reference: string, state: FulfillmentOutcome): Promise<void>;
+
+  /**
+   * What the holder of this token may still open, or nothing.
+   *
+   * Addressed by the digest rather than by the token, so nothing that could
+   * open an order is ever written to a log, a query or a database. Expired
+   * access answers `undefined` exactly as an unknown token does: a caller
+   * learns whether it may proceed and never why not, which is what keeps
+   * guessing a token from being a way to discover that one existed.
+   */
+  readOrderAccessByToken(tokenDigest: string): Promise<OrderAccess | undefined>;
+
+  /**
+   * The same, for a browser holding the order rather than the token.
+   *
+   * What the paid checkout view prints: which files, until when, how many
+   * downloads are left. It shows and never opens — the token in the buyer's
+   * email is what authorises a download, and a page reached with the order
+   * cookie deliberately cannot stand in for it.
+   *
+   * Access that has run out answers `undefined` here too. The two reads apply
+   * one rule between them, so a page cannot end up offering rows for something
+   * the download boundary would refuse.
+   */
+  readOrderAccess(reference: string): Promise<OrderAccess | undefined>;
+
+  /**
+   * Hand over a temporary private address for one purchased file.
+   *
+   * The one place a storage address crosses this boundary, and it crosses it to
+   * be redirected to. It is not returned to be rendered, stored or logged: it
+   * is the file, for the next few minutes, to whoever holds it.
+   *
+   * Three things happen inside, in this order, and the order is the rule issue
+   * #1 asks for. The access, the grant and the allowance are checked; *then* an
+   * address is produced; *then* a download is spent. So a store that did not
+   * answer costs a buyer nothing, and a buyer asking again while their last
+   * address is still good is spending the same download rather than another —
+   * which is what makes a fifteen-minute address safe to hand out.
+   */
+  openDownload(request: OpenDownloadRequest): Promise<OpenDownloadOutcome>;
 }
+
+export interface BeginFulfillmentRequest {
+  reference: string;
+  /** SHA-256 of the token the buyer is about to be emailed, hexadecimal. */
+  tokenDigest: string;
+  /**
+   * How long the buyer may come back for.
+   *
+   * A duration rather than a moment, because issue #1 measures it from the
+   * *approval* and only the data plane knows when that was: the caller here is
+   * running some time after it, and however short that gap is, a moment
+   * computed on this side would be a deadline decided by how quickly a mail
+   * provider answered.
+   */
+  accessDays: number;
+  /** Successful downloads each grant starts with. */
+  downloadsAllowed: number;
+}
+
+/**
+ * Two answers, and no third.
+ *
+ * `refused` is every reason there is nothing to do: no such order, a payment
+ * that was not approved, and — the one that matters — a delivery another caller
+ * already claimed. They are one answer because the caller does the same thing
+ * with all of them, which is nothing.
+ */
+export type BeginFulfillmentOutcome =
+  | {
+      status: "claimed";
+      order: OrderSnapshot;
+      access: OrderAccess;
+      /**
+       * Where the receipt goes.
+       *
+       * The one contact detail this boundary ever hands back, and only here:
+       * a delivery has to know its address, and nothing else does. It is
+       * bounded by the same credential that can approve a payment rather than
+       * by an order reference — see `beginFulfillment`.
+       */
+      deliverTo: string;
+    }
+  | { status: "refused" };
+
+/** How a delivery ended. Neither value may touch a Payment State. */
+export type FulfillmentOutcome = "delivered" | "failed";
+
+export interface OpenDownloadRequest {
+  /** SHA-256 of the token the buyer arrived with, hexadecimal. */
+  tokenDigest: string;
+  /** Which of the order's Digital Products they asked for. */
+  sku: string;
+  /** How long the address handed back may be used for. */
+  linkSeconds: number;
+}
+
+/**
+ * Why a buyer was not handed a file.
+ *
+ * Four reasons, and the surface that reports them says less than this does: an
+ * expired token and one that was never issued are the same `unknownAccess`, so
+ * a caller working through guesses learns nothing from the answer.
+ */
+export type DownloadRefusal =
+  | "unknownAccess"
+  | "unknownProduct"
+  | "exhausted"
+  | "unavailable";
+
+export type OpenDownloadOutcome =
+  | { status: "opened"; url: string; downloadsRemaining: number }
+  | { status: "refused"; reason: DownloadRefusal };
 
 /** One line of an order, as the application resolved it before writing it. */
 export interface OrderLineRequest {

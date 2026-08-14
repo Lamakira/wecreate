@@ -90,6 +90,49 @@ export interface StoredPaymentEvent {
   effect: PaymentEventEffect;
 }
 
+/**
+ * One order's Order Access: the digest of the token it was emailed, and when it
+ * stops working.
+ *
+ * The token itself is nowhere here, which is the whole point — this file is the
+ * fixture's database, and a database that held the credential would be a
+ * database whose leak is the credential (issue #1).
+ */
+export interface StoredOrderAccess {
+  orderReference: string;
+  /** SHA-256 of the emailed token, hexadecimal. */
+  tokenDigest: string;
+  issuedAt: string;
+  /** Thirty days after the payment was approved, not after this was written. */
+  expiresAt: string;
+}
+
+/**
+ * One purchased Digital Product a buyer may still open.
+ *
+ * Keyed to the order and the SKU rather than to the access token, so reissuing
+ * a token leaves the allowance where it was. It carries an allowance and
+ * nothing else: the title, the version and the file behind it are read back
+ * from the Order Snapshot line, exactly as `commerce.access_json` joins them —
+ * a grant that kept its own copy could drift from the purchase it belongs to.
+ *
+ * `linkExpiresAt` is the address last handed over: while it is still good,
+ * asking again is the same download rather than another one, which is what
+ * keeps a fifteen-minute address from costing a buyer part of what they paid
+ * for.
+ *
+ * Postgres keeps the same two counters and refuses to let the used one pass the
+ * allowed one. A JSON file cannot refuse anything, so what stands in for that
+ * here is that only `openDownload` ever writes them.
+ */
+export interface StoredGrant {
+  orderReference: string;
+  sku: string;
+  downloadsAllowed: number;
+  downloadsUsed: number;
+  linkExpiresAt: string | null;
+}
+
 export interface CommerceFixtureDataset {
   staff: StoredStaff[];
   sessions: StoredSession[];
@@ -99,6 +142,8 @@ export interface CommerceFixtureDataset {
   audit: CommerceAuditEntry[];
   orders: StoredOrder[];
   paymentEvents: StoredPaymentEvent[];
+  access: StoredOrderAccess[];
+  grants: StoredGrant[];
 }
 
 function datasetPath(): string {
@@ -132,6 +177,8 @@ function initialDataset(): CommerceFixtureDataset {
     audit: [],
     orders: [],
     paymentEvents: [],
+    access: [],
+    grants: [],
   };
 }
 
@@ -156,6 +203,8 @@ export async function readCommerceFixture(): Promise<CommerceFixtureDataset> {
       audit: stored.audit ?? [],
       orders: stored.orders ?? [],
       paymentEvents: stored.paymentEvents ?? [],
+      access: stored.access ?? [],
+      grants: stored.grants ?? [],
     };
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
@@ -182,6 +231,99 @@ export async function writeCommerceFixture(
     "utf8",
   );
   await rename(/* turbopackIgnore: true */ temporary, file);
+}
+
+/**
+ * Where this fixture pretends its private files are served from.
+ *
+ * Deliberately not a resolvable host, and deliberately not WeCreate's own
+ * origin: what a buyer is handed has to be somewhere else, exactly as a real
+ * Supabase address is, or a test could pass against an application that quietly
+ * served a Paid Deliverable itself. The acceptance suite answers it in the
+ * browser and checks the address without a request leaving the machine.
+ */
+export const PRIVATE_STORE_ORIGIN = "https://stockage.wecreate.test";
+
+/**
+ * What this fixture signs a temporary address with.
+ *
+ * A stand-in for the token Supabase puts on a signed URL, and it does the same
+ * job: the expiry is signed along with the object, so an address cannot be
+ * extended by editing it. `tests/e2e/support/order-access.ts` spells the scheme
+ * out by hand rather than importing this, for the reason the payment fixture's
+ * signature is spelled out there — a helper sharing this code would agree with
+ * a link that never expired.
+ */
+const PRIVATE_STORE_SECRET = "fixture-private-storage";
+
+/**
+ * A temporary address for one stored object, or `undefined` when there is
+ * nothing there.
+ *
+ * Answering `undefined` for a missing object is what Supabase's own signing
+ * does, and it is the difference between "this buyer may not have it" and
+ * "WeCreate cannot currently produce it" — the second must not spend one of
+ * their downloads.
+ */
+export async function signPrivateAddress(
+  objectPath: string,
+  seconds: number,
+): Promise<string | undefined> {
+  const { access } = await import("node:fs/promises");
+  try {
+    await access(
+      /* turbopackIgnore: true */ path.join(deliverablesDirectory(), objectPath),
+    );
+  } catch {
+    return undefined;
+  }
+
+  const { createHmac } = await import("node:crypto");
+  const expires = Math.floor(Date.now() / 1000) + seconds;
+  const signature = createHmac("sha256", PRIVATE_STORE_SECRET)
+    .update(`${objectPath}:${expires}`, "utf8")
+    .digest("hex");
+
+  return `${PRIVATE_STORE_ORIGIN}/paid-deliverables/${objectPath}?expire=${expires}&signature=${signature}`;
+}
+
+/**
+ * Move every recorded moment this many seconds into the past.
+ *
+ * The acceptance suite's only clock, and it exists because three of the rules
+ * issue #1 asks for are measured in time nobody can wait out: a twenty-four
+ * hour Order Snapshot window, thirty days of Order Access, and a
+ * fifteen-minute file address. Ageing what is stored rather than the server's
+ * clock keeps every assertion about what the *application* concludes from a
+ * moment, which is the thing under test.
+ *
+ * Only the fixture has it. Nothing in `src/` outside this file calls it, and
+ * the hook that does is inert unless the data plane is this one.
+ */
+export async function ageCommerceFixture(seconds: number): Promise<void> {
+  const shift = (moment: string): string =>
+    new Date(Date.parse(moment) - seconds * 1000).toISOString();
+
+  const dataset = await readCommerceFixture();
+  dataset.orders = dataset.orders.map((order) => ({
+    ...order,
+    createdAt: shift(order.createdAt),
+    attempts: order.attempts.map((attempt) => ({
+      ...attempt,
+      createdAt: shift(attempt.createdAt),
+    })),
+  }));
+  dataset.access = dataset.access.map((one) => ({
+    ...one,
+    issuedAt: shift(one.issuedAt),
+    expiresAt: shift(one.expiresAt),
+  }));
+  dataset.grants = dataset.grants.map((grant) => ({
+    ...grant,
+    linkExpiresAt: grant.linkExpiresAt ? shift(grant.linkExpiresAt) : null,
+  }));
+
+  await writeCommerceFixture(dataset);
 }
 
 /** Return the data plane to its seeded state. Sessions and files both go. */

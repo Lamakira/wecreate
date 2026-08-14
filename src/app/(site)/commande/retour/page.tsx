@@ -15,11 +15,15 @@ import {
   CheckoutStage,
   CheckoutSurface,
 } from "@/components/checkout/checkout-layout";
+import { OrderAccessRows } from "@/components/checkout/order-access-rows";
 import {
   OrderTicket,
   orderTicketLines,
 } from "@/components/checkout/order-ticket";
 import { PaymentVerification } from "@/components/checkout/payment-verification";
+import { readAccessForOrder } from "@/fulfillment";
+import { fulfillmentRecovery } from "@/fulfillment/messages";
+import { readSiteSettings } from "@/managed-content";
 import { keepOutOfSearchResults } from "@/site-config";
 
 export const metadata: Metadata = {
@@ -47,14 +51,22 @@ export const instant = false;
  * decided the matter it says which way, in words and structure rather than in a
  * colour, and points at the one thing left to do.
  *
- * Payment and delivery are printed as two separate facts on purpose (ADR-0005).
- * An approved payment whose delivery has not started is the ordinary state of a
- * fresh order and the only one WeCreate can currently reach — saying so is
- * honest, and promising an email no system yet sends would not be.
+ * Payment and delivery are printed as two separate facts on purpose (ADR-0005),
+ * and the second is what decides everything under the first. An approved
+ * payment whose receipt went out lists what was bought and where the files open
+ * from; one whose receipt did not still lists what was bought — the grants are
+ * made before the message is attempted, so the buyer owns it either way — and
+ * adds one way to be helped. Neither offers a second payment.
  */
 export default async function PaymentReturnRoute() {
   const reference = await readOrderInProgress();
   const order = reference ? await readOrderByReference(reference) : undefined;
+  // Read whatever the delivery produced, whether it finished or not: the grants
+  // are made before the receipt is attempted, so a buyer whose email never
+  // arrived still owns what they paid for and this page can say so.
+  const access = order?.paymentState === "approved" && reference
+    ? await readAccessForOrder(reference)
+    : undefined;
 
   if (!order) {
     return (
@@ -72,6 +84,9 @@ export default async function PaymentReturnRoute() {
 
   const copy = PAYMENT_RETURN_COPY[order.paymentState];
   const awaiting = order.paymentState === "pending";
+  // WeCreate's own administrative address, written once in Managed Content and
+  // read here as the header, the footer and the receipt read it.
+  const supportEmail = (await readSiteSettings()).contact.email;
 
   return (
     <CheckoutSplit
@@ -121,10 +136,10 @@ export default async function PaymentReturnRoute() {
           <>
             {/*
               Issue #11 asks this surface to say that processing continues
-              without the page, and it does — without promising the automatic
-              delivery that does not exist until issue #12. "Nous vous écrivons"
-              is what WeCreate can do today and what the approved surface says
-              too, so a buyer reads the same commitment on both.
+              without the page, and it does: verification and, once a payment is
+              confirmed, delivery both happen server-side. Closing the page
+              costs the buyer nothing, and the message they are promised is one
+              a system really sends.
             */}
             <p className="m-0 mt-8 text-body-lg font-light text-wc-ink">
               <strong className="font-semibold">
@@ -149,6 +164,35 @@ export default async function PaymentReturnRoute() {
             >
               {copy.nextStep}
             </p>
+
+            {/*
+              Shown and not opened. The token in the buyer's email is what
+              authorises a download, and a page reached with the order cookie
+              deliberately cannot stand in for it — so these rows carry no
+              control, and what is said under them depends on whether the
+              message carrying that token actually went out.
+            */}
+            {access ? (
+              <OrderAccessRows access={access} downloadable={false} />
+            ) : null}
+
+            {access && order.fulfillmentState === "delivered" ? (
+              <p className="m-0 mt-6 text-body-sm font-light text-wc-muted-on-light">
+                Vos fichiers s&apos;ouvrent depuis le lien personnel envoyé à{" "}
+                {order.buyerEmailHint}.
+              </p>
+            ) : null}
+
+            {order.fulfillmentState === "failed" ? (
+              <p
+                data-testid="fulfillment-recovery"
+                role="status"
+                className="m-0 mt-8 border border-wc-line-light px-5 py-4 text-body font-light text-wc-ink"
+              >
+                {fulfillmentRecovery(order.reference, supportEmail)}
+              </p>
+            ) : null}
+
             <BoutiqueLink />
           </>
         )}

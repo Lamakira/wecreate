@@ -23,6 +23,35 @@ import type { NextConfig } from "next";
  * Adding an external service means adding its origin here — see `README.md`,
  * *Security headers*.
  */
+/**
+ * Where this deployment's private files are handed over.
+ *
+ * `form-action` has to name it: pressing *Télécharger* on the Order Access page
+ * is a form submission that answers with a redirect to a temporary address in
+ * the commerce data plane's own storage, and browsers have never agreed on
+ * whether `form-action` follows a redirect — the same disagreement FedaPay is
+ * named for below.
+ *
+ * Derived from the data plane's own configuration rather than written out, so a
+ * project moved to another Supabase host cannot leave this behind. `undefined`
+ * on a deployment with no data plane, which is also one where nothing can be
+ * bought and no file can be handed over.
+ */
+function privateStoreOrigin(): string | undefined {
+  if (process.env.WECREATE_COMMERCE_PROVIDER === "fixture") {
+    // The acceptance suite's private store, and the one origin here that is not
+    // read from a deployment's own configuration. It is written out rather than
+    // imported because this file is a build-time config and the fixture is a
+    // server module: `PRIVATE_STORE_ORIGIN` in `src/commerce/fixture/store.ts`
+    // is the value it has to agree with, and a run where it does not fails
+    // immediately with a blocked download rather than quietly.
+    return "https://stockage.wecreate.test";
+  }
+  return process.env.SUPABASE_URL
+    ? new URL(process.env.SUPABASE_URL).origin
+    : undefined;
+}
+
 const PUBLIC_CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
   "base-uri 'self'",
@@ -37,7 +66,9 @@ const PUBLIC_CONTENT_SECURITY_POLICY = [
   // a form still cannot post anywhere else — and the alternative is the exact
   // silent failure this file warns about: a buyer whose payment page never
   // opens, with only a console violation to say why.
-  "form-action 'self' https://*.fedapay.com",
+  ["form-action 'self' https://*.fedapay.com", privateStoreOrigin()]
+    .filter(Boolean)
+    .join(" "),
   "script-src 'self' 'unsafe-inline'",
   // Tailwind's utilities are a stylesheet, but the poster frame in
   // `src/video-playback/video-player.tsx` and Mux's player element both set

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getCommerceProvider } from "@/commerce/provider";
+import { deliverApprovedOrder } from "@/fulfillment";
 import { getPaymentProvider } from "@/payments/provider";
 
 /**
@@ -20,7 +21,13 @@ import { getPaymentProvider } from "@/payments/provider";
  *    bytes, so re-serialising a parsed body and checking that would be checking
  *    something other than what was sent. Nothing is interpreted until the
  *    provider is proved to have sent it.
- * 4. **What comes back says as little as possible.** Every verified delivery
+ * 4. **The first effective approval delivers the order.** Recording the event
+ *    and delivering what it paid for are two steps rather than one, because
+ *    they are two facts an order tracks separately (ADR-0005): the delivery is
+ *    claimed in the data plane, so a redelivered webhook cannot make a second
+ *    one, and it cannot fail this request — a receipt that did not go out
+ *    leaves an approved payment approved.
+ * 5. **What comes back says as little as possible.** Every verified delivery
  *    gets the same acknowledgement whatever it turned out to mean, because the
  *    difference between "that transaction is one of ours" and "it is not" is
  *    something a prober would like to know and a provider does not need to.
@@ -104,6 +111,24 @@ export async function POST(request: NextRequest): Promise<Response> {
     console.info(
       `Payment event ${reading.event.providerEventType} for transaction ${reading.event.providerTransactionId}: ${record.disposition}.`,
     );
+
+    // The first effective approval, and the only thing that starts a delivery.
+    // A duplicate, a late one and one that changed nothing all fall outside
+    // this: an order is delivered once (issue #1). The claim inside
+    // `deliverApprovedOrder` is what makes that true even when two of these
+    // requests arrive at once — this test only keeps the ordinary case from
+    // asking.
+    if (
+      record.disposition === "applied" &&
+      record.paymentState === "approved" &&
+      record.orderReference
+    ) {
+      // Awaited rather than left running: a serverless invocation ends when
+      // this handler answers, and work still in flight is work that never
+      // happened. Delivery cannot fail this response — see
+      // `deliverApprovedOrder`, which never throws.
+      await deliverApprovedOrder(record.orderReference);
+    }
   } catch (error) {
     console.error("Recording a payment event failed.", error);
     // The provider will try again, which is the correct outcome: an event this

@@ -68,7 +68,8 @@ const MAX_EMAIL_LENGTH = 254;
  *
  * Deliberately not an attempt at RFC 5322: the addresses that pattern accepts
  * and this one does not are addresses nobody has, and the only real proof an
- * email works is sending to it — which is what the receipt does (issue #12).
+ * email works is sending to it — which is what the receipt does, and why a
+ * delivery that could not be sent is a Fulfillment State a buyer is shown.
  */
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/;
 

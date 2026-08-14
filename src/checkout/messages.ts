@@ -47,12 +47,13 @@ export function checkoutMessage(key: CheckoutMessageKey | null): string | null {
  * on its own (issue #1). None of them offers a second payment: WeCreate cannot
  * charge twice for one Order Snapshot, and an order that settled is settled.
  *
- * **`approved` promises nothing WeCreate cannot currently do.** It says the
- * money arrived, which is true and verified, and stops there. Sending the
- * receipt and opening the downloads is fulfillment, it is tracked separately
- * (ADR-0005) and it does not exist yet — issue #12 builds it. A page that
- * announced an email no system will send would be the one lie this whole slice
- * is built to avoid.
+ * **`approved` says what happened to the money and nothing about the
+ * delivery.** The two are tracked separately (ADR-0005), and on this page they
+ * are printed separately: the sentence below settles the payment, and what
+ * follows it — the rows of what was bought, where the files open from, or a way
+ * to be helped — is decided by the Fulfillment State beside it. A page that
+ * announced an email which failed to send would be the one lie this whole
+ * surface is built to avoid.
  */
 export interface PaymentReturnCopy {
   heading: string;
@@ -75,7 +76,7 @@ export const PAYMENT_RETURN_COPY: Record<PaymentState, PaymentReturnCopy> = {
     heading: "Paiement approuvé.",
     lede: "FedaPay a confirmé votre paiement et votre commande est enregistrée à ce titre. Notez sa référence : c'est elle qui l'identifie partout.",
     nextStep:
-      "Nous préparons la suite et vous écrivons à l'adresse de livraison. Si vous avez la moindre question d'ici là, écrivez-nous avec cette référence.",
+      "Le paiement est terminé : il n'y a rien d'autre à régler pour cette commande.",
   },
   failed: {
     heading: "Paiement non abouti.",

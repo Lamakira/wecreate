@@ -84,21 +84,48 @@ const WECREATE_UTC_OFFSET_MINUTES = 60;
  * with the runtime's ICU version, and a timestamp in an audit trail is evidence.
  */
 export function formatMoment(isoTimestamp: string): string {
-  const parsed = new Date(isoTimestamp);
-  if (Number.isNaN(parsed.getTime())) {
-    return isoTimestamp;
-  }
+  const local = wecreateTime(isoTimestamp);
+  if (!local) return isoTimestamp;
 
-  const local = new Date(
-    parsed.getTime() + WECREATE_UTC_OFFSET_MINUTES * 60 * 1000,
-  );
-  const day = local.getUTCDate();
-  const monthName = MONTHS_FR[local.getUTCMonth()];
   const time = `${String(local.getUTCHours()).padStart(2, "0")}:${String(
     local.getUTCMinutes(),
   ).padStart(2, "0")}`;
 
-  return `${day === 1 ? "1er" : day} ${monthName} ${local.getUTCFullYear()} à ${time}`;
+  return `${writtenDay(local)} à ${time}`;
+}
+
+/**
+ * The same moment without the clock: `13 août 2026`.
+ *
+ * For a deadline a buyer plans around rather than a record of when something
+ * happened — Order Access runs out at a moment, and printing `à 09:41` beside
+ * it would invite somebody to work to the minute on a date thirty days away.
+ * WeCreate's own time again, for the reason `formatMoment` uses it.
+ *
+ * Built from the same parts rather than by trimming the other one's output: a
+ * date that silently became a timestamp because a separator moved would be a
+ * deadline nobody notices is wrong.
+ */
+export function formatDay(isoTimestamp: string): string {
+  const local = wecreateTime(isoTimestamp);
+  return local ? writtenDay(local) : isoTimestamp;
+}
+
+/**
+ * One moment shifted into WeCreate's own time, so every field below can be read
+ * off it in UTC. `undefined` for a value that is not a moment at all, which the
+ * two callers return untouched rather than guessing at.
+ */
+function wecreateTime(isoTimestamp: string): Date | undefined {
+  const parsed = new Date(isoTimestamp);
+  if (Number.isNaN(parsed.getTime())) return undefined;
+
+  return new Date(parsed.getTime() + WECREATE_UTC_OFFSET_MINUTES * 60 * 1000);
+}
+
+function writtenDay(local: Date): string {
+  const day = local.getUTCDate();
+  return `${day === 1 ? "1er" : day} ${MONTHS_FR[local.getUTCMonth()]} ${local.getUTCFullYear()}`;
 }
 
 /**

@@ -6,11 +6,14 @@ import { COMMERCE_OPERATOR_ROLE } from "../operators";
 import { deliverableObjectPath } from "../paid-deliverables";
 import type {
   ActivationOutcome,
+  BeginFulfillmentOutcome,
   CommerceProvider,
   CreateOrderOutcome,
   CreateVersionOutcome,
+  DownloadRefusal,
   EnrolmentTicket,
   OpenAttemptOutcome,
+  OpenDownloadOutcome,
   PaymentAttemptOutcome,
   SignInOutcome,
   VerificationOutcome,
@@ -18,6 +21,7 @@ import type {
 import type {
   CommerceAuditEntry,
   CommerceOperator,
+  OrderAccess,
   OrderSnapshot,
   OrderState,
   PaidDeliverable,
@@ -176,6 +180,32 @@ function toOrder(row: OrderRow): OrderSnapshot {
       effectiveFrom: accepted.effective_from,
     })),
     attempts: (row.attempts ?? []).map(toAttempt),
+  };
+}
+
+interface AccessRow {
+  reference: string;
+  expires_at: string;
+  grants: Array<{
+    sku: string;
+    title: string;
+    paid_deliverable_version: number;
+    downloads_allowed: number;
+    downloads_remaining: number;
+  }>;
+}
+
+function toAccess(row: AccessRow): OrderAccess {
+  return {
+    reference: row.reference,
+    expiresAt: row.expires_at,
+    grants: (row.grants ?? []).map((grant) => ({
+      sku: grant.sku,
+      title: grant.title,
+      paidDeliverableVersion: grant.paid_deliverable_version,
+      downloadsAllowed: grant.downloads_allowed,
+      downloadsRemaining: grant.downloads_remaining,
+    })),
   };
 }
 
@@ -462,6 +492,7 @@ export const supabaseCommerceProvider: CommerceProvider = {
     const answer = await call<{
       disposition: PaymentEventRecord["disposition"];
       payment_state: OrderSnapshot["paymentState"] | null;
+      order_reference: string | null;
     }>(anonymousCommerceClient(), "commerce_record_payment_event", {
       // Proved before Postgres reads a row. The anonymous key alone approves
       // nothing here — see `paymentEventSecret()`.
@@ -477,6 +508,7 @@ export const supabaseCommerceProvider: CommerceProvider = {
     return {
       disposition: answer.disposition,
       paymentState: answer.payment_state,
+      orderReference: answer.order_reference ?? null,
     };
   },
 
@@ -500,5 +532,109 @@ export const supabaseCommerceProvider: CommerceProvider = {
     return row
       ? { payment: row.payment_state, fulfillment: row.fulfillment_state }
       : undefined;
+  },
+
+  async beginFulfillment(request): Promise<BeginFulfillmentOutcome> {
+    const answer = await call<{
+      order: OrderRow;
+      access: AccessRow;
+      deliver_to: string;
+    } | null>(anonymousCommerceClient(), "commerce_begin_fulfillment", {
+      // The two functions that write a delivery demand it, for the reason
+      // `commerce_record_payment_event` does: they are reached from the webhook
+      // path, where there is no session and never will be.
+      p_secret: paymentEventSecret(),
+      p_reference: request.reference,
+      p_token_digest: request.tokenDigest,
+      p_access_days: request.accessDays,
+      p_downloads_allowed: request.downloadsAllowed,
+    });
+
+    return answer
+      ? {
+          status: "claimed",
+          order: toOrder(answer.order),
+          access: toAccess(answer.access),
+          deliverTo: answer.deliver_to,
+        }
+      : { status: "refused" };
+  },
+
+  async settleFulfillment(reference, state): Promise<void> {
+    await call<boolean>(
+      anonymousCommerceClient(),
+      "commerce_settle_fulfillment",
+      { p_secret: paymentEventSecret(), p_reference: reference, p_state: state },
+    );
+  },
+
+  async readOrderAccessByToken(tokenDigest): Promise<OrderAccess | undefined> {
+    const row = await call<AccessRow | null>(
+      anonymousCommerceClient(),
+      "commerce_order_access",
+      { p_token_digest: tokenDigest },
+    );
+    return row ? toAccess(row) : undefined;
+  },
+
+  async readOrderAccess(reference): Promise<OrderAccess | undefined> {
+    const row = await call<AccessRow | null>(
+      anonymousCommerceClient(),
+      "commerce_order_access_by_reference",
+      { p_reference: reference },
+    );
+    return row ? toAccess(row) : undefined;
+  },
+
+  async openDownload({ tokenDigest, sku, linkSeconds }): Promise<OpenDownloadOutcome> {
+    const supabase = anonymousCommerceClient();
+
+    // Read and refuse first. Nothing has been spent yet, which is what lets the
+    // two failures below cost a buyer nothing.
+    const target = await call<
+      | { status: "found"; object_path: string; live_seconds: number }
+      | { status: "refused"; reason: DownloadRefusal }
+    >(supabase, "commerce_download_target", {
+      p_token_digest: tokenDigest,
+      p_sku: sku,
+    });
+    if (target.status === "refused") {
+      return { status: "refused", reason: target.reason };
+    }
+
+    // Signed for what is left of the address last handed over, when one is
+    // still running: extending it would mean a buyer who kept pressing never
+    // spent a second download.
+    const seconds = target.live_seconds > 0 ? target.live_seconds : linkSeconds;
+    const { data, error } = await supabase.storage
+      .from(DELIVERABLES_BUCKET)
+      .createSignedUrl(target.object_path, seconds, { download: true });
+    if (error || !data?.signedUrl) {
+      // The store did not answer, or has nothing there. Not the buyer's fault
+      // and not their download: they are told to try again, with all five.
+      console.error(`commerce: signing a private address failed — ${error?.message}`);
+      return { status: "refused", reason: "unavailable" };
+    }
+
+    const spent = await call<
+      | { status: "opened"; downloads_remaining: number }
+      | { status: "refused"; reason: DownloadRefusal }
+    >(supabase, "commerce_consume_download", {
+      p_token_digest: tokenDigest,
+      p_sku: sku,
+      p_link_seconds: linkSeconds,
+    });
+    // Lost a race with another request between the two calls. The address is
+    // dropped rather than handed over: an allowance nobody could spend is not
+    // one this buyer gets for free.
+    if (spent.status === "refused") {
+      return { status: "refused", reason: spent.reason };
+    }
+
+    return {
+      status: "opened",
+      url: data.signedUrl,
+      downloadsRemaining: spent.downloads_remaining,
+    };
   },
 };

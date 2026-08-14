@@ -101,10 +101,10 @@ export const PAYMENT_STATE_LABELS: Record<PaymentState, string> = {
  * The same for the other half of an order, which moves on its own (ADR-0005).
  *
  * `not_started` is written as *Préparation à venir* rather than as a failure or
- * a promise: an approved payment whose delivery has not begun is the ordinary
- * state of a fresh order, and today it is the only one WeCreate can reach —
- * fulfillment is issue #12's. Saying so plainly is the point. A buyer told
- * their files are on the way by a system that cannot send them has been lied to.
+ * a promise: an order that has not been paid for has nothing to deliver yet,
+ * and saying so plainly is the point. `failed` is *Livraison à reprendre* for
+ * the same reason — it is a thing WeCreate has to do again, not a thing the
+ * buyer has to do, and least of all a payment they have to make again.
  */
 export const FULFILLMENT_STATE_LABELS: Record<FulfillmentState, string> = {
   not_started: "Préparation à venir",
