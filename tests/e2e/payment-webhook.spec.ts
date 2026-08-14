@@ -98,11 +98,12 @@ test.describe("A verified event", () => {
 
     await expectHeading(page, "Paiement approuvé.");
     await expect(paymentState(page)).toHaveText("Paiement approuvé");
-    // Payment truth, and no promise of a delivery that has not happened: the
-    // order is confirmed as paid, and its Fulfillment State says the rest is
-    // still to come (ADR-0005).
+    // Two facts, printed separately (ADR-0005). What delivery then does with an
+    // approved payment — and what it says when it fails — is
+    // `order-access.spec.ts`; what matters here is that the two are tracked
+    // apart and that the payment is settled on its own.
     await expect(page.getByTestId("order-fulfillment")).toHaveText(
-      "Préparation à venir",
+      "Livraison envoyée",
     );
     // No second payment is offered on any settled surface.
     await expect(page.getByTestId("checkout-submit")).toHaveCount(0);
@@ -431,7 +432,7 @@ test.describe("The order-state boundary", () => {
 
     expect(await readOrderState(page)).toEqual({
       payment: "approved",
-      fulfillment: "not_started",
+      fulfillment: "delivered",
     });
   });
 

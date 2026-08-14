@@ -17,6 +17,7 @@ The canonical specification is GitHub issue #1. Domain vocabulary is defined in
 | Public video      | Mux, uploaded from the Studio                   |
 | Commerce          | Supabase, behind the back office at `/commerce` |
 | Payments          | FedaPay, on its own hosted page                 |
+| Transactional email | Resend, for receipts and Order Access         |
 | Acceptance tests  | Playwright, against the production build        |
 | Package manager   | pnpm                                            |
 
@@ -66,9 +67,11 @@ it belongs to.
    endpoint secret its webhooks are signed with, and which of its two
    environments this deployment uses. Sandbox unless something explicitly names
    the live one.
-6. **Preview and revalidation secrets** — who may open a preview session and who
+6. **Transactional email** — which provider carries a buyer's receipt, its key,
+   and the verified address that receipt comes from.
+7. **Preview and revalidation secrets** — who may open a preview session and who
    may drop the content cache.
-7. **Acceptance-test hooks** — set by `playwright.config.ts`, never by hand.
+8. **Acceptance-test hooks** — set by `playwright.config.ts`, never by hand.
 
 Secrets are server-only and live in the deployment platform's secret management.
 Anything named `NEXT_PUBLIC_*` is compiled into the browser bundle, so nothing
@@ -111,7 +114,8 @@ Two rules keep this useful:
 Every other integration has a boundary of the same shape. Mux is under
 `src/video-playback/`; see *Portfolio Projects and video* below. Supabase is
 under `src/commerce/`; see *The commerce data plane*. FedaPay is under
-`src/payments/`; see *Guest checkout*. Resend arrives the same way. Calendly is the
+`src/payments/`; see *Guest checkout*. Resend is under `src/email/`; see
+*Fulfillment and Order Access*. Calendly is the
 exception and never gets one: the site links to its hosted page and loads none
 of its code, so there is no vendor behind a boundary to hide (see *Services and
 Service Enquiries*).
@@ -406,7 +410,7 @@ Every verified delivery is written to `commerce.payment_events` with FedaPay's
 own identity and timestamp on it, and nothing edits or deletes one.
 `(provider, provider_event_id)` is unique, so a redelivery is recognised and
 acknowledged without anything happening twice — which is what makes a provider's
-retries safe, and what the fulfillment issue #12 builds will hang off. What an
+retries safe, and what fulfillment hangs off. What an
 event is then allowed to do is one rule in two places, `paymentEventEffect()` in
 `src/commerce/orders.ts` and `commerce.payment_event_effect` in Postgres, and
 Postgres is not taking the application's word for the signature either: it is
@@ -445,11 +449,11 @@ never become a failed payment.
 The four states are told apart by their heading, their structure and what a
 buyer can do next — never by a colour, and the mark beside each (`✓`, `×`, `…`)
 is `aria-hidden` decoration with the word beside it. None of them offers a
-second payment. **Approved says the money arrived and stops there**: sending the
-receipt and opening the downloads is fulfillment, it is tracked separately, and
-it does not exist yet (issue #12). A page announcing an email no system will
-send would be the one lie this whole surface is built to avoid, which is why the
-Fulfillment State is printed as its own fact reading *Préparation à venir*.
+second payment. **Approved says the money arrived and stops there**, and what
+follows it is decided by the Fulfillment State printed beside it: what was
+bought and where the files open from, or a way to be helped. Payment and
+delivery are two facts and this page prints two — see *Fulfillment and Order
+Access* below.
 
 The buyer's contact details are recorded with the order and are deliberately
 absent from what the boundary reads back: an order is addressed by its reference
@@ -527,6 +531,113 @@ contact details and this writes them to disk in the clear.
 
 Capture a fresh one whenever FedaPay changes its API version: it is the only
 thing here that can catch that scheme moving before a buyer does.
+
+## Fulfillment and Order Access
+
+What an approved payment turns into: a durable grant per purchased product, one
+receipt, and files the buyer can open for thirty days without an account.
+
+```
+src/fulfillment/
+├── token.ts     the credential a buyer is emailed, and the digest that is kept
+├── receipt.ts   what WeCreate writes to a buyer whose payment was approved
+├── session.ts   the http-only cookie the emailed address is exchanged for
+├── messages.ts  what the access surfaces say when something is refused
+└── index.ts     the workflow: claim, grant, send, settle — and the two reads
+
+src/email/
+├── types.ts             a transactional message, its idempotency key, and how
+│                        sending one fails
+├── provider.ts          the interface, and which implementation is in use
+├── resend/provider.ts   Resend over REST — the only module that knows it
+└── fixture/provider.ts  an outbox on disk, for the acceptance suite
+
+src/commerce/order-access.ts   thirty days, five downloads, fifteen minutes, and
+                               how all three are said in French
+```
+
+**Payment and delivery move independently, and delivery never leads** (ADR-0005).
+The webhook records the event first; only a *first effective approval* then
+starts a delivery, and the delivery cannot fail that request — a receipt that
+did not go out leaves an approved payment approved, and the buyer's page leads
+with *Paiement approuvé* whatever happened next.
+
+**One approval delivers once, and the data plane decides that rather than the
+application.** `commerce_begin_fulfillment` claims the order with its row
+locked: a Fulfillment State leaves `not_started` exactly once, so a redelivered
+webhook, a retried request and two processes racing produce one set of grants
+and one receipt between them. Idempotency that lived in one process would be one
+process's opinion.
+
+**The order of the steps is the guarantee.** The grants are made *inside* the
+claim and the receipt is attempted after, so a buyer whose email never went out
+still owns everything they paid for — which is why `/commande/retour` lists what
+was bought even when the Fulfillment State reads *Livraison à reprendre*, and
+adds one way to be helped rather than another way to pay.
+
+**A failed delivery stays failed, for now.** Nothing in this application can
+claim one a second time — Postgres refuses the transition, deliberately — so
+until the back office gains the retry and the access reissue that issue #15
+brings it, resolving one means writing to the buyer by hand with the reference
+their page is showing them. That is a small number of orders and a visible
+state, which is the right trade against a retry surface nobody has designed.
+
+**Only the digest of the token is stored.** The emailed address carries 256 bits
+from a cryptographic source; what the data plane holds is its SHA-256, and
+access is looked up by that. A leak of the database is not a leak of anybody's
+files, and no log, query or backup can contain a working credential. It is a
+plain digest rather than a password hash because the input is already 256 random
+bits: there is no dictionary to slow down.
+
+**The token stops travelling at the first page.** `/commande/acces/<token>`
+moves it into an http-only cookie scoped to `/commande/acces` and redirects to
+`/commande/acces`, so what the buyer then reads, reloads, bookmarks or shows
+somebody carries no credential and sends none in a referrer. An expired token, a
+replaced one and one nobody was ever given all produce the same page, which
+names no product and no order — working through guesses never reveals that an
+order exists. Rate limiting on that is issue #17's.
+
+**A grant belongs to an order line, not to a token.** So reissuing a token —
+a lost email, a corrected address (issue #15) — leaves the allowance where the
+buyer left it, and a grant keeps pointing at the Paid Deliverable Version its
+Order Snapshot recorded rather than at whatever is on sale today. Archiving the
+product changes nothing about it.
+
+**A download is counted when a file is handed over, not when a button is
+pressed.** Pressing *Télécharger* is a form `POST` — a `GET` could be prefetched,
+scanned or replayed out of history, and each of those would spend one of the
+five for the buyer. The route then reads and refuses, asks Storage for a
+fifteen-minute address, and only then spends a download, so a store that did not
+answer costs nothing. And while the last address is still good, asking again is
+the *same* download signed to die at the same moment: a normal delay must not
+cost part of what somebody paid for, and extending it instead would mean a buyer
+who kept pressing never spent a second one.
+
+**The signed address is never rendered.** It crosses the commerce boundary — the
+one exception to that boundary's rule — to be redirected to, and it is not
+printed, logged or stored. What the pages show is a title, a date and a count:
+no bucket, no token, no signature, no expiry in minutes.
+
+`/commande/acces` and the download are out of search results on every
+deployment, as every transaction surface here is.
+
+### Setting up Resend
+
+1. Create a Resend account and add WeCreate's domain, then complete its DNS
+   verification. A verified sender is one of the Commerce Launch Gate's own
+   prerequisites — until it is done, receipts either fail to send or land in
+   spam, and both are a buyer who did not get their files.
+2. Create an API key with permission to send, and put it in `RESEND_API_KEY`.
+   Staging and production get separate keys and separate senders.
+3. Set `RESEND_FROM_ADDRESS` to an address on that verified domain, in the form
+   `WeCreate <commandes@wecreate.bj>`.
+4. Prove it end to end: run one sandbox payment through `/commande`, watch
+   `/commande/retour` reach *Livraison envoyée*, open the address in the
+   message, and take one download.
+
+Without a key there is no email provider, and that is a deliberate state rather
+than a broken one: the grants are still made, and the Fulfillment State reads
+*Livraison à reprendre* so a buyer who received nothing is visible as one.
 
 ## The commerce data plane
 
@@ -623,7 +734,8 @@ trail append-only, so no application bug and no operator can rewrite either. The
 private bucket has an insert policy and deliberately no select, update or delete
 policy: nothing may overwrite a stored version, and nothing reads a Paid
 Deliverable with a staff session — a buyer receives one through Order Access,
-which is issue #12's to build.
+which signs a fifteen-minute address against the anonymous key after Postgres
+has checked their token, their grant and their allowance.
 
 **There is no service role key.** The back office signs in as the individual
 doing the work and every statement runs under their identity, which is what makes
@@ -984,6 +1096,12 @@ tests/e2e/
 │                                     and out-of-order events; the order-state
 │                                     boundary and what it will not say; polling,
 │                                     going offline, and closing the page
+├── order-access.spec.ts              one delivery per approval, the receipt and
+│                                     its idempotency, a failed delivery that
+│                                     keeps the payment approved, the emailed
+│                                     address, expiry, allowance, temporary
+│                                     private links, exhaustion, a product the
+│                                     order never bought, and an archived one
 ├── services.spec.ts                  canonical packs and prices, the prefilled
 │                                     WhatsApp message, the hosted Discovery
 │                                     Call, the comparison, no service commerce
@@ -1008,6 +1126,8 @@ tests/e2e/
     │                                 payment provider's hosted page
     ├── payment-events.ts             signing and delivering provider events,
     │                                 and asking where an order stands
+    ├── order-access.ts               the buyer's inbox, the emailed address,
+    │                                 and what a temporary private link must be
     └── sample-content.ts             stand-in projects and products
 ```
 
@@ -1034,11 +1154,29 @@ are sent as bytes, because a signature is over bytes and Playwright re-serialise
 a string that is not already valid JSON — which would quietly turn every
 malformed-delivery scenario into a test of nothing.
 
+Two things the suite reaches for that no actor can. **The outbox**, through
+`/api/test/email`: a receipt goes to an address there is no mailbox for on this
+machine, so the fixture email provider keeps what it was asked to send and a
+scenario reads it and follows the Order Access address in it — which is exactly
+the position a buyer is in. **A clock**, through `/api/test/commerce`'s `age`
+action: three of the rules issue #1 asks for are measured in time nobody can
+wait out — a twenty-four-hour Order Snapshot window, thirty days of access and a
+fifteen-minute file address. Ageing what is stored keeps every assertion about
+what the *application* concludes from a moment.
+
+One thing the suite fakes that is not a provider: a browser following an address
+to `stockage.wecreate.test`. Chromium resolves the host of a redirected form
+submission before Playwright is offered the chance to answer for it, so
+`support/order-access.ts` intercepts the submission itself, reads the address
+WeCreate really answered with, and hands the browser back to the access page.
+The `POST` is real, the route is real, the cookie is this browser's own.
+
 Each hook responds 404 unless `WECREATE_TEST_HOOKS=1` **and** its own provider is
-the fixture, so neither can be reached on a deployment backed by a real Sanity or
-Supabase project. The fixture data plane ships published staff credentials, which
-is safe only because it is never selected by inference: an unconfigured
-deployment has no data plane at all rather than falling back to this one.
+the fixture, so none can be reached on a deployment backed by a real Sanity
+project, a real Supabase project or a real mail account. The fixture data plane
+ships published staff credentials, which is safe only because it is never
+selected by inference: an unconfigured deployment has no data plane at all
+rather than falling back to this one.
 
 Content and commerce are each a single shared dataset, so the suite runs
 serially. Later tickets that bring per-worker persistence can lift that.
@@ -1146,11 +1284,18 @@ the inline bootstrap Next.js emits and pins the origin — an injected
 
 **Adding an external service means adding its origin.** The policy names only
 what the site genuinely reaches: `cdn.sanity.io` for editorial images,
-`*.mux.com` for video, `*.litix.io` for Mux's playback telemetry, and
-`*.fedapay.com` in `form-action` because a checkout submission redirects out to
-FedaPay's hosted page and browsers have never agreed on whether `form-action`
-follows a redirect. FedaPay is in no fetch directive: the transaction is created
-by the server, and no browser here talks to it. A new embed,
+`*.mux.com` for video, `*.litix.io` for Mux's playback telemetry, and two
+origins in `form-action` — `*.fedapay.com`, because a checkout submission
+redirects out to FedaPay's hosted page, and the commerce data plane's own
+storage host, because pressing *Télécharger* redirects out to a temporary
+private address there. Both are there for the same reason: browsers have never
+agreed on whether `form-action` follows a redirect. The storage origin is
+derived from the data plane's own configuration — `SUPABASE_URL` on a real
+deployment, and the fixture's own host when `WECREATE_COMMERCE_PROVIDER` asks
+for it — rather than written out, so a project moved to another host cannot
+leave it behind. Neither FedaPay nor Resend is in any fetch
+directive: both are reached by the server, and no browser here talks to either.
+A new embed,
 font host, analytics script or payment widget will be blocked until its origin
 is added to the right directive — which is the point, but it means the failure
 looks like "the thing silently does not load". Check the browser console for a
@@ -1211,6 +1356,14 @@ is still a failure. Send a test delivery from FedaPay's webhook tooling and
 confirm the endpoint answers `200`, then run one sandbox payment end to end,
 before the first real buyer, on every environment, and again each time the
 endpoint's URL or either secret changes.
+
+**The sender is the third quiet one.** A deployment with no `RESEND_API_KEY`
+takes payment, grants access and then cannot tell the buyer about it: the
+Fulfillment State reads *Livraison à reprendre* and the buyer's page says so and
+offers a way to be helped, which is the safe failure and still a failure. An
+unverified sender domain is worse, because it fails silently in somebody else's
+spam folder. Send one receipt to a real mailbox on every environment before the
+first real buyer.
 
 Staff MFA is one of the gate's own prerequisites, and it is enforced rather than
 documented: there is no path into `/commerce` that does not pass through an

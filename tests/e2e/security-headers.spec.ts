@@ -71,9 +71,15 @@ test.describe("Security headers", () => {
     expect(policy.get("default-src")).toBe("'self'");
     expect(policy.get("base-uri")).toBe("'self'");
     expect(policy.get("object-src")).toBe("'none'");
-    // This origin, and the payment provider a checkout submission redirects
-    // out to. Nothing else: a form may not post to another site.
-    expect(policy.get("form-action")).toBe("'self' https://*.fedapay.com");
+    // This origin, and the two places a submission on it redirects out to: the
+    // payment provider's hosted page, and the private store an Order Access
+    // download is handed over from. Nothing else — a form may not post to
+    // another site. The store named here is the fixture's, because that is the
+    // data plane this run is configured with; a real deployment names its
+    // Supabase host, derived from `SUPABASE_URL`.
+    expect(policy.get("form-action")).toBe(
+      "'self' https://*.fedapay.com https://stockage.wecreate.test",
+    );
     // Sanity's Presentation tool frames the site from this same origin. Nobody
     // else may, which is the whole of the clickjacking control.
     expect(policy.get("frame-ancestors")).toBe("'self'");

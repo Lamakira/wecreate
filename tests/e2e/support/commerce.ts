@@ -29,8 +29,26 @@ export class CommerceDataPlane {
 
   /** Return the commerce data plane to its seeded state. */
   async reset(): Promise<void> {
+    await this.act({ action: "reset" });
+  }
+
+  /**
+   * Move every recorded moment this many seconds into the past.
+   *
+   * The one thing here that stands in for a clock. Issue #1 asks for the
+   * twenty-four-hour Order Snapshot window, the thirty-day Order Access and the
+   * fifteen-minute file address to be testable, and none of them can be reached
+   * by waiting or by clicking. Ageing the stored data rather than the server's
+   * clock keeps every assertion about what the *application* concludes from a
+   * moment, which is the thing under test.
+   */
+  async age(seconds: number): Promise<void> {
+    await this.act({ action: "age", seconds });
+  }
+
+  private async act(body: Record<string, unknown>): Promise<void> {
     const response = await this.request.post("/api/test/commerce", {
-      data: { action: "reset" },
+      data: body,
     });
     if (response.status() === 404) {
       throw new Error(

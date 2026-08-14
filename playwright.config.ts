@@ -54,6 +54,10 @@ const serverEnv: Record<string, string> = {
   // The payment provider is a third, for the same reason. Its fixture hands
   // buyers to an address that does not exist and confirms nothing.
   WECREATE_PAYMENT_PROVIDER: "fixture",
+  // And the email provider is a fourth. Its fixture delivers to nobody and
+  // keeps what it was asked to send, which is how a scenario reads a receipt
+  // and follows the Order Access address in it.
+  WECREATE_EMAIL_PROVIDER: "fixture",
   FEDAPAY_SECRET_KEY: TEST_FEDAPAY_SECRET,
   WECREATE_PAYMENT_WEBHOOK_SECRET: TEST_PAYMENT_WEBHOOK_SECRET,
   WECREATE_TEST_HOOKS: "1",
@@ -71,6 +75,12 @@ const serverEnv: Record<string, string> = {
     ".wecreate",
     "acceptance",
     "commerce.json",
+  ),
+  WECREATE_EMAIL_FIXTURE_FILE: path.join(
+    process.cwd(),
+    ".wecreate",
+    "acceptance",
+    "outbox.json",
   ),
   NEXT_PUBLIC_SITE_URL: BASE_URL,
   // Crawlable, like production and unlike every other environment. What the

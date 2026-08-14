@@ -104,3 +104,19 @@ export function areCommerceTestHooksEnabled(): boolean {
     process.env.WECREATE_COMMERCE_PROVIDER === "fixture"
   );
 }
+
+/**
+ * The same switch again, for the outbox.
+ *
+ * This one reads what the application asked its email provider to send, which
+ * on a real deployment is a receipt naming a buyer, an order and an Order
+ * Access token. It is gated on the *email* provider being the fixture for that
+ * reason: a run backed by Resend has a real outbox, and nothing here may offer
+ * a way to read it.
+ */
+export function areEmailTestHooksEnabled(): boolean {
+  return (
+    process.env.WECREATE_TEST_HOOKS === "1" &&
+    process.env.WECREATE_EMAIL_PROVIDER === "fixture"
+  );
+}

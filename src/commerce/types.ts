@@ -10,9 +10,12 @@ import type { PaymentProviderId } from "@/payments/types";
  * WeCreate's staff, not an auth row. The Supabase adapter maps its shapes onto
  * these, and the fixture produces the same ones without a vendor (ADR-0008).
  *
- * One thing is deliberately absent: where the bytes live. No storage bucket,
- * path or signed URL crosses this boundary, so no page, component or audit
- * entry can print one (issue #1).
+ * One thing is deliberately almost absent: where the bytes live. No storage
+ * bucket and no object path crosses this boundary, so no page, component or
+ * audit entry can print one (issue #1). The single exception is the temporary
+ * address `openDownload` hands back, which exists to be followed and is
+ * redirected to rather than rendered — it is never stored, never logged and
+ * never shown; see `OpenDownloadOutcome` in `provider.ts`.
  */
 
 /** How far a staff member's current session has authenticated. */
@@ -191,6 +194,16 @@ export interface PaymentEventRecord {
   disposition: PaymentEventDisposition;
   /** Where the Payment State stands afterwards, when an order was found. */
   paymentState: PaymentState | null;
+  /**
+   * Which order it turned out to be about, when it was about one.
+   *
+   * Here so that the one caller allowed to move a Payment State can start the
+   * delivery of the order it just approved. A webhook carries the provider's
+   * transaction id and nothing of WeCreate's, so without this the endpoint
+   * would have to find the order a second way — and the only other way is to
+   * read one, which is a wider thing to be allowed to do than this.
+   */
+  orderReference: string | null;
 }
 
 /**
@@ -211,6 +224,43 @@ export interface OrderSnapshotLine {
   unitPriceXof: number;
   paidDeliverableVersionId: string;
   paidDeliverableVersion: number;
+}
+
+/**
+ * One purchased Digital Product a buyer may still open.
+ *
+ * It hangs off the order line rather than off the access token, which is what
+ * makes reissuing a token — a lost email, a mistyped address — leave the
+ * allowance exactly where it was (issue #1). The version is the one the Order
+ * Snapshot recorded and never the one on sale today: replacing a Paid
+ * Deliverable is a new version, and a buyer receives what they bought
+ * (CONTEXT.md).
+ */
+export interface OrderAccessGrant {
+  sku: string;
+  /** The title the order recorded, so an archived or retitled product still reads. */
+  title: string;
+  paidDeliverableVersion: number;
+  /** Successful downloads this grant started with. */
+  downloadsAllowed: number;
+  downloadsRemaining: number;
+}
+
+/**
+ * A buyer's time-limited ability to open one paid order, without an account.
+ *
+ * What is *not* here is the point. There is no token and no digest of one: a
+ * caller proves what it holds by asking with it, and nothing that reads access
+ * back is handed the credential. There is no storage address either — see the
+ * note at the top of this file.
+ */
+export interface OrderAccess {
+  /** The order this opens, which is what a buyer quotes to support. */
+  reference: string;
+  /** ISO 8601. Thirty days after the payment was approved. */
+  expiresAt: string;
+  /** One per Digital Product on the Order Snapshot, in the order it was bought. */
+  grants: OrderAccessGrant[];
 }
 
 /**
