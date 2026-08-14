@@ -1,3 +1,6 @@
+import type { LegalDocumentKind } from "@/managed-content/types";
+import type { PaymentProviderId } from "@/payments/types";
+
 /**
  * The commerce data plane, in WeCreate's own vocabulary.
  *
@@ -115,4 +118,115 @@ export interface AuditMetadata {
   version: number;
   fileName: string;
   checksum: string;
+}
+
+/**
+ * The independently tracked outcome of collecting money for one order.
+ *
+ * Separate from fulfillment on purpose (ADR-0005): a receipt that could not be
+ * emailed and a file that could not be prepared must never be able to unsay
+ * that the buyer paid.
+ */
+export type PaymentState = "pending" | "approved" | "failed" | "cancelled";
+
+/** The independently tracked progress of delivering what was paid for. */
+export type FulfillmentState =
+  | "not_started"
+  | "processing"
+  | "delivered"
+  | "failed";
+
+/**
+ * One Digital Product as an order recorded it, and never again.
+ *
+ * Every value is the answer WeCreate's own systems gave at the moment the order
+ * was created — the published title, the price on sale, and the Paid
+ * Deliverable Version activated for that SKU. A later retitle, reprice, archive
+ * or replacement changes none of them (CONTEXT.md).
+ */
+export interface OrderSnapshotLine {
+  /** The Digital Product's stable content identity. */
+  productId: string;
+  /** The identity the two systems share, and what the version was activated against. */
+  sku: string;
+  title: string;
+  /** Whole XOF. Quantity is always one, so this is also the line total. */
+  unitPriceXof: number;
+  paidDeliverableVersionId: string;
+  paidDeliverableVersion: number;
+}
+
+/**
+ * Where an order is going, as the buyer wrote it.
+ *
+ * Recorded with the order and deliberately not part of what this boundary reads
+ * back — see `OrderSnapshot`. Issue #1 allows exactly these four and no postal
+ * address.
+ */
+export interface BuyerContact {
+  fullName: string;
+  email: string;
+  /** International form, `+` and digits only. */
+  telephone: string;
+  company: string | null;
+}
+
+/**
+ * One Legal Revision a buyer accepted, by the identity that still resolves to
+ * exactly those words.
+ */
+export interface AcceptedLegalRevision {
+  kind: LegalDocumentKind;
+  revisionId: string;
+  effectiveFrom: string;
+}
+
+/**
+ * One attempt to collect the money for an order.
+ *
+ * `pending` is an attempt this application has opened and not yet handed to the
+ * provider; `redirected` is one the provider accepted and gave a page for;
+ * `failed` is one the provider never took. None of them is a Payment State: a
+ * buyer who reached the hosted page may still not have paid, and only a
+ * verified webhook may say otherwise (issue #11).
+ */
+export type PaymentAttemptState = "pending" | "redirected" | "failed";
+
+export interface PaymentAttempt {
+  id: string;
+  createdAt: string;
+  state: PaymentAttemptState;
+  /** Which payment provider this attempt was made with. */
+  provider: PaymentProviderId;
+  /** The provider's own identity for the transaction, once it has one. */
+  providerTransactionId: string | null;
+  /** Why the provider could not be reached, in words safe to store and log. */
+  failureReason: string | null;
+}
+
+/**
+ * An order, as the server observes it.
+ *
+ * The buyer's contact details are recorded with the order and are deliberately
+ * absent here. This is read by its reference alone, with no session behind it,
+ * so what it returns is what a page may show somebody holding that reference:
+ * what was bought, what it costs, and where payment stands. `buyerEmailHint` is
+ * enough for a buyer to recognise their own address and not enough for anyone
+ * else to read it. The back office reads the rest under a staff identity
+ * (issue #15).
+ */
+export interface OrderSnapshot {
+  /** WeCreate's own identity for this order, printed on the ticket. */
+  reference: string;
+  createdAt: string;
+  lines: OrderSnapshotLine[];
+  /** Whole XOF, summed by the data plane from the lines it stored. */
+  totalXof: number;
+  /** `a***@exemple.com`: the delivery address, masked. */
+  buyerEmailHint: string;
+  acceptedLegal: AcceptedLegalRevision[];
+  paymentState: PaymentState;
+  fulfillmentState: FulfillmentState;
+  /** Every attempt made on this order, oldest first. */
+  attempts: PaymentAttempt[];
 }

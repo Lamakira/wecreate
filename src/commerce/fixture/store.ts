@@ -2,9 +2,15 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import type {
+  AcceptedLegalRevision,
   AssuranceLevel,
+  BuyerContact,
   CommerceAuditEntry,
+  FulfillmentState,
+  OrderSnapshotLine,
   PaidDeliverableVersion,
+  PaymentAttempt,
+  PaymentState,
 } from "../types";
 import { FIXTURE_STAFF, type FixtureStaffAccount } from "./staff";
 
@@ -41,6 +47,27 @@ export interface StoredSession {
   assurance: AssuranceLevel;
 }
 
+/**
+ * One order as this fixture keeps it: the snapshot, plus the buyer's contact
+ * details, which `OrderSnapshot` deliberately does not carry.
+ *
+ * Postgres separates these into four tables, three of which it refuses to let
+ * anything rewrite. A JSON file cannot refuse anything, so what stands in for
+ * those triggers here is that nothing in this application ever writes to a
+ * stored order except the two functions below that are allowed to.
+ */
+export interface StoredOrder {
+  reference: string;
+  createdAt: string;
+  lines: OrderSnapshotLine[];
+  totalXof: number;
+  buyer: BuyerContact;
+  acceptedLegal: AcceptedLegalRevision[];
+  paymentState: PaymentState;
+  fulfillmentState: FulfillmentState;
+  attempts: PaymentAttempt[];
+}
+
 export interface CommerceFixtureDataset {
   staff: StoredStaff[];
   sessions: StoredSession[];
@@ -48,6 +75,7 @@ export interface CommerceFixtureDataset {
   /** SKU to the id of the version future purchases receive. */
   active: Record<string, string>;
   audit: CommerceAuditEntry[];
+  orders: StoredOrder[];
 }
 
 function datasetPath(): string {
@@ -79,6 +107,7 @@ function initialDataset(): CommerceFixtureDataset {
     versions: [],
     active: {},
     audit: [],
+    orders: [],
   };
 }
 
@@ -101,6 +130,7 @@ export async function readCommerceFixture(): Promise<CommerceFixtureDataset> {
       versions: stored.versions ?? [],
       active: stored.active ?? {},
       audit: stored.audit ?? [],
+      orders: stored.orders ?? [],
     };
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {

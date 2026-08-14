@@ -16,6 +16,7 @@ The canonical specification is GitHub issue #1. Domain vocabulary is defined in
 | Managed Content   | Sanity, with the Studio embedded at `/studio`   |
 | Public video      | Mux, uploaded from the Studio                   |
 | Commerce          | Supabase, behind the back office at `/commerce` |
+| Payments          | FedaPay, on its own hosted page                 |
 | Acceptance tests  | Playwright, against the production build        |
 | Package manager   | pnpm                                            |
 
@@ -42,6 +43,7 @@ Useful scripts:
 | `pnpm lint`         | ESLint                                               |
 | `pnpm test:e2e`     | The acceptance suite (builds, starts, drives it)     |
 | `pnpm test:e2e:ui`  | The same suite in Playwright's UI mode               |
+| `pnpm test:contract`| The provider-contract smoke suite; skips with no credentials |
 
 ## Environment
 
@@ -58,9 +60,12 @@ it belongs to.
 4. **Commerce data plane** — which one this process talks to, and the Supabase
    project and anonymous key when that is Supabase. There is no service role
    key: see *The commerce data plane* below.
-5. **Preview and revalidation secrets** — who may open a preview session and who
+5. **Payments** — which provider takes the money, FedaPay's secret key, and
+   which of its two environments this deployment uses. Sandbox unless something
+   explicitly names the live one.
+6. **Preview and revalidation secrets** — who may open a preview session and who
    may drop the content cache.
-6. **Acceptance-test hooks** — set by `playwright.config.ts`, never by hand.
+7. **Acceptance-test hooks** — set by `playwright.config.ts`, never by hand.
 
 Secrets are server-only and live in the deployment platform's secret management.
 Anything named `NEXT_PUBLIC_*` is compiled into the browser bundle, so nothing
@@ -100,9 +105,10 @@ Two rules keep this useful:
 - **Tests never mock internals.** They swap the provider at this boundary and
   drive the real running application, so they stay valid across refactors.
 
-Later integrations — FedaPay, Resend — get their own boundary of the same shape.
-Mux already has one; see *Portfolio Projects and video* below, and Supabase has
-one under `src/commerce/`; see *The commerce data plane*. Calendly is the
+Every other integration has a boundary of the same shape. Mux is under
+`src/video-playback/`; see *Portfolio Projects and video* below. Supabase is
+under `src/commerce/`; see *The commerce data plane*. FedaPay is under
+`src/payments/`; see *Guest checkout*. Resend arrives the same way. Calendly is the
 exception and never gets one: the site links to its hosted page and loads none
 of its code, so there is no vendor behind a boundary to hide (see *Services and
 Service Enquiries*).
@@ -311,9 +317,91 @@ state-changing surface its CSRF protection without inventing a token scheme.
 
 The drawer is quick review and removal with the checkout action anchored below a
 scrolling list, which is the shape issue #1 asks for on a phone. Form entry is
-not there: *Passer commande* leaves for `/commande`, which is a stub until issue
-#10 builds guest checkout, and which is out of search results from the day the
-address exists.
+not there: *Passer commande* leaves for `/commande`, which is the next section.
+
+## Guest checkout
+
+Where a Digital Cart becomes an order, and the buyer leaves for a page WeCreate
+does not host.
+
+```
+src/checkout/
+├── guest.ts      the four things a guest is asked for, and what is refused
+├── checkout.ts   which of five states a buyer has arrived at
+├── index.ts      resolving all of it again, on the server
+├── session.ts    the http-only cookie naming the order in progress
+├── actions.ts    starting a payment, and starting one again
+├── form.ts       what the guest form remembers between submissions
+└── messages.ts   what the checkout says when a submission is not a payment
+
+src/payments/
+├── types.ts           a hosted payment, and the one way it can fail
+├── provider.ts        the interface, and which implementation is in use
+├── fedapay/provider.ts  FedaPay over REST — the only module that knows it
+└── fixture/provider.ts  the deterministic one the acceptance suite runs against
+```
+
+**Nothing the browser sent decides anything.** `readCheckout()` resolves every
+product, its published title, its price, whether WeCreate may still sell it,
+whether a Paid Deliverable Version stands behind it and which Legal Revisions
+are in force — from Managed Content and the commerce data plane, at the moment
+the page is drawn, and again at the moment the order is written. The cart cookie
+contributes identifiers; the form contributes a name, an email, a telephone, an
+optional company and which revisions were ticked. No amount, no currency, no
+product, no total and no provider identifier is believed from a request.
+
+The composition is the approved Variant C: a black Order Snapshot ticket beside
+a white working surface, stacking on a phone with the ticket compressed to its
+total and its duration so the active state is on screen without scrolling. Five
+states share it — the guest form, a cart that needs a price accepted or a
+product removed, an empty cart, a checkout that is not open, and an order
+already with the payment provider — and they are told apart by words and
+structure, never by a status colour.
+
+**A second payment for one order is the thing this refuses hardest.** After a
+buyer has been redirected, WeCreate cannot know whether they paid — only a
+verified webhook may say so — so `/commande` stops offering any way to pay and
+points at the verification page instead. The one retry it does offer is the
+narrow one issue #10 asks for: when the payment page never opened, the guest
+form comes back with what the buyer typed and pressing it again opens another
+attempt against the *same* Order Snapshot, which is why the checkout can tell
+the two apart at all. A buyer who has changed their mind can leave the order —
+it stays recorded, and their browser stops pointing at it.
+
+**The order is written before FedaPay is contacted.** `commerce_create_order`
+stores the Order Snapshot, its accepted revisions and a `pending` payment
+attempt in one transaction, so a transaction that reached the provider always
+has a record here to explain it. Only then is a hosted payment created; the
+attempt is settled `redirected` with the provider's transaction id, or `failed`
+with the reason. What each line receives is decided in Postgres, not here: the
+function reads the Paid Deliverable Version activated at that instant, sums the
+total from the lines it stored, and refuses outright if a product lost its file
+in between.
+
+**`/commande/retour` cannot approve anything.** It declares no `searchParams` at
+all, so a provider's callback values and a forged `?status=approved` are not
+merely distrusted — they are never read. It prints what the data plane has
+recorded, which today is *Vérification du paiement* and the reassurance that the
+page may be closed. Moving a Payment State needs a verified webhook, and that is
+issue #11's.
+
+The buyer's contact details are recorded with the order and are deliberately
+absent from what the boundary reads back: an order is addressed by its reference
+alone, with no session behind it, so the read returns what was bought, what it
+costs, where payment stands and a masked `a***@exemple.com` — enough for a buyer
+to recognise their own address and not enough for anyone else to learn one. The
+reference carries fifty bits of randomness for the same reason. The back office
+reads the rest under a staff identity (issue #15).
+
+Both `/commande` and `/commande/retour` are out of search results on every
+deployment, as every transaction surface on this site is.
+
+**FedaPay is two REST calls and no SDK** — create the transaction, ask for its
+payment token, send the buyer to the URL it answers with. `FEDAPAY_SECRET_KEY`
+is server-only and there is no `NEXT_PUBLIC_FEDAPAY_*` anything, because no
+browser here ever holds a payment credential. `FEDAPAY_ENVIRONMENT` selects
+sandbox or live and defaults to sandbox; switching it is the Commerce Launch
+Gate's own irreversible decision — see *Before this goes live*.
 
 ## The commerce data plane
 
@@ -324,9 +412,11 @@ through one boundary of the same shape Managed Content has (ADR-0008):
 
 ```
 src/commerce/
-├── types.ts             Paid Deliverable Version, Commerce Operator, audit entry
+├── types.ts             Paid Deliverable Version, Commerce Operator, audit
+│                        entry, Order Snapshot, Payment State
 ├── provider.ts          the interface, and which data plane is in use
 ├── paid-deliverables.ts what may be uploaded, and where its bytes are addressed
+├── orders.ts            how an order is named, how long it may still be paid
 ├── operators.ts         who may see and change commerce data
 ├── session.ts           the operator's session, in an http-only cookie
 ├── actions.ts           everything an operator can do, as form submissions
@@ -383,12 +473,22 @@ that nothing may be sold: a product WeCreate cannot confirm a file for reads
 *bientôt disponible* rather than taking money for something it may not be able
 to deliver.
 
+**Orders live here too, and are the one thing a guest may write.** The four
+functions guest checkout calls carry no session, because a buyer has none — the
+same posture as the public read above, and bounded the same way: an order is
+addressed by a reference with fifty bits of randomness in it, reading one
+returns no contact details beyond a masked address, and none of them can approve
+a payment. Triggers make the lines and the accepted revisions unwritable, refuse
+any update that would change what an order contains or who it is for, and let a
+Payment State leave `pending` exactly once — so no application bug and no
+support action can unsay that a buyer paid (ADR-0005).
+
 **Postgres enforces the same rules, against requests that never render a page.**
 `supabase/migrations/` is the record. The tables live in a `commerce` schema that
-is not exposed to the data API at all; five functions in `public` are the whole
-surface, and each one refuses a caller who has not reached assurance level 2 with
-the Commerce Operator role. Triggers make the versions and the audit trail
-append-only, so no application bug and no operator can rewrite either. The
+is not exposed to the data API at all; the functions in `public` are the whole
+surface, and each staff-facing one refuses a caller who has not reached assurance
+level 2 with the Commerce Operator role. Triggers make the versions and the audit
+trail append-only, so no application bug and no operator can rewrite either. The
 private bucket has an insert policy and deliberately no select, update or delete
 policy: nothing may overwrite a stored version, and nothing reads a Paid
 Deliverable with a staff session — a buyer receives one through Order Access,
@@ -723,6 +823,12 @@ tests/e2e/
 │                                     and its thirty days, tampered identifiers,
 │                                     withdrawn products, accepted price changes,
 │                                     the drawer on a phone, no service offers
+├── checkout.spec.ts                  guest validation, legal consent, prices and
+│                                     products resolved again, the hosted
+│                                     redirect, the secret that stays server-side,
+│                                     an immutable snapshot, a provider that
+│                                     cannot be reached, a return that approves
+│                                     nothing
 ├── services.spec.ts                  canonical packs and prices, the prefilled
 │                                     WhatsApp message, the hosted Discovery
 │                                     Call, the comparison, no service commerce
@@ -743,6 +849,8 @@ tests/e2e/
     ├── managed-content.ts            editorial actions, over HTTP
     ├── commerce.ts                   staff, their authenticators, their actions
     ├── digital-cart.ts               arriving with a cart, and reading it back
+    ├── checkout.ts                   filling the guest form, and answering the
+    │                                 payment provider's hosted page
     └── sample-content.ts             stand-in projects and products
 ```
 
@@ -769,6 +877,15 @@ Content and commerce are each a single shared dataset, so the suite runs
 serially. Later tickets that bring per-worker persistence can lift that.
 
 Browsers are installed once with `pnpm exec playwright install chromium`.
+
+**One suite is deliberately not part of it.** `pnpm test:contract` runs
+`tests/contract/` against a real vendor sandbox, with its own configuration, no
+browser and no server. It checks the two things a fake cannot: that the request
+the FedaPay adapter sends is one FedaPay accepts, and that the answer still has
+a payment page in it. It skips itself when `FEDAPAY_SECRET_KEY` is absent, which
+is every run that has not deliberately been given sandbox credentials, and
+refuses to run at all against the live API. It supplements the acceptance suite
+and never replaces it (issue #1).
 
 ## The hero background
 
@@ -859,7 +976,11 @@ the inline bootstrap Next.js emits and pins the origin — an injected
 
 **Adding an external service means adding its origin.** The policy names only
 what the site genuinely reaches: `cdn.sanity.io` for editorial images,
-`*.mux.com` for video, `*.litix.io` for Mux's playback telemetry. A new embed,
+`*.mux.com` for video, `*.litix.io` for Mux's playback telemetry, and
+`*.fedapay.com` in `form-action` because a checkout submission redirects out to
+FedaPay's hosted page and browsers have never agreed on whether `form-action`
+follows a redirect. FedaPay is in no fetch directive: the transaction is created
+by the server, and no browser here talks to it. A new embed,
 font host, analytics script or payment widget will be blocked until its origin
 is added to the right directive — which is the point, but it means the failure
 looks like "the thing silently does not load". Check the browser console for a
@@ -889,19 +1010,26 @@ what catches an advisory published against a dependency nobody has touched.
 
 Production purchasing stays disabled until the Commerce Launch Gate is signed
 off — see issue #1. Nothing in this repository may switch FedaPay to live; that
-is a deliberate, named decision by WeCreate.
+is a deliberate, named decision by WeCreate. The switch itself is one
+environment variable, `FEDAPAY_ENVIRONMENT=live`, set once, in the deployment
+platform's own configuration, by the people whose money it is. Every default in
+source is the sandbox, and no code path selects the live API by inference.
 
-Three parts of that gate are already enforced in code, and they reinforce each
+Four parts of that gate are already enforced in code, and they reinforce each
 other. Every legal document ships as provisional text, so
 `readEffectiveLegalTerms().checkout` reports `blocked` and names what is still
 waiting for WeCreate's own text until an editor publishes an approved revision of
-each. Every Digital Product ships without purchase enabled, without a cover,
-without its inclusions and without an activated Paid Deliverable Version, so
-`purchaseRequirements()` refuses all six — including on the strength of that same
-unapproved licence. And a checkout with no Supabase project has no commerce data
-plane at all, so no version can be activated and no staff account exists to
-activate one. See *Legal documents*, *The Boutique and Digital Products* and *The
-commerce data plane* above.
+each — and the checkout answers that gate before it looks at the cart at all, so
+`/commande` says it is not open whatever is in one. Every Digital Product
+ships without purchase enabled, without a cover, without its inclusions and
+without an activated Paid Deliverable Version, so `purchaseRequirements()`
+refuses all six — including on the strength of that same unapproved licence. A
+checkout with no Supabase project has no commerce data plane at all, so no
+version can be activated and no staff account exists to activate one. And a
+deployment with no `FEDAPAY_SECRET_KEY` has no payment provider, which is its
+own refusal: there is no fallback, and no fake that could stand in for one. See
+*Legal documents*, *The Boutique and Digital Products*, *Guest checkout* and
+*The commerce data plane* above.
 
 Staff MFA is one of the gate's own prerequisites, and it is enforced rather than
 documented: there is no path into `/commerce` that does not pass through an

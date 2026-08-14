@@ -30,7 +30,14 @@ const PUBLIC_CONTENT_SECURITY_POLICY = [
   // Sanity's Presentation tool previews the real pages in an iframe, and it is
   // served from `/studio` on this same origin. Nobody else may frame the site.
   "frame-ancestors 'self'",
-  "form-action 'self'",
+  // `'self'` is where every form on this site posts, including the checkout's.
+  // FedaPay is named because leaving for its hosted page is a redirect out of
+  // that submission, and browsers have not agreed on whether `form-action`
+  // follows one. Naming the origin costs nothing this policy was protecting —
+  // a form still cannot post anywhere else — and the alternative is the exact
+  // silent failure this file warns about: a buyer whose payment page never
+  // opens, with only a console violation to say why.
+  "form-action 'self' https://*.fedapay.com",
   "script-src 'self' 'unsafe-inline'",
   // Tailwind's utilities are a stylesheet, but the poster frame in
   // `src/video-playback/video-player.tsx` and Mux's player element both set

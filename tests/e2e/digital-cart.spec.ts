@@ -501,10 +501,12 @@ test.describe("Leaving for checkout", () => {
     await drawer.getByTestId("cart-checkout").click();
 
     await expect(page).toHaveURL(/\/commande$/);
-    // The shared placeholder until issue #10 builds guest checkout here: the
-    // address answers, and says plainly that it is not open yet.
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Commande");
-    await expect(page.getByText("Bientôt disponible")).toBeVisible();
+    // Guest checkout, with the cart that arrived resolved into a ticket. What
+    // the checkout then does with it is `checkout.spec.ts`.
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+      "Où devons-nous livrer vos fichiers ?",
+    );
+    await expect(page.getByTestId("ticket-total")).toHaveText("14 000 F");
     expect(await robots(page)).toContain("noindex");
 
     // The cart came along, and the drawer closed behind it.
