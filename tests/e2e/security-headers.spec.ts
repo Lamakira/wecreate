@@ -71,7 +71,9 @@ test.describe("Security headers", () => {
     expect(policy.get("default-src")).toBe("'self'");
     expect(policy.get("base-uri")).toBe("'self'");
     expect(policy.get("object-src")).toBe("'none'");
-    expect(policy.get("form-action")).toBe("'self'");
+    // This origin, and the payment provider a checkout submission redirects
+    // out to. Nothing else: a form may not post to another site.
+    expect(policy.get("form-action")).toBe("'self' https://*.fedapay.com");
     // Sanity's Presentation tool frames the site from this same origin. Nobody
     // else may, which is the whole of the clickjacking control.
     expect(policy.get("frame-ancestors")).toBe("'self'");

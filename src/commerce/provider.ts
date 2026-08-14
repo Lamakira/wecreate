@@ -1,9 +1,15 @@
+import type { PaymentProviderId } from "@/payments/types";
+
 import type {
+  AcceptedLegalRevision,
+  BuyerContact,
   CommerceAuditEntry,
   CommerceOperator,
   OperatorCredentials,
+  OrderSnapshot,
   PaidDeliverable,
   PaidDeliverableVersion,
+  PaymentAttempt,
 } from "./types";
 
 /**
@@ -98,7 +104,87 @@ export interface CommerceProvider {
    * `/boutique` reaches this provider at all (ADR-0003).
    */
   readActiveSkus(): Promise<string[]>;
+
+  /**
+   * Write the immutable Order Snapshot, and open the first payment attempt
+   * against it.
+   *
+   * One call rather than two, because issue #1 asks for the pending attempt to
+   * exist *before* a provider is contacted: an order that reached FedaPay with
+   * nothing recorded on this side would be a charge nobody here could explain.
+   *
+   * The caller supplies what it resolved from Managed Content — the products,
+   * their published titles and the prices the buyer accepted. The Paid
+   * Deliverable Version of each line and the order's total are supplied by the
+   * data plane itself, from what is activated at this moment, so neither is a
+   * number that travelled through a browser or an application process.
+   */
+  createOrder(request: CreateOrderRequest): Promise<CreateOrderOutcome>;
+
+  /**
+   * Open another attempt against an order that is still waiting to be paid.
+   *
+   * Deliberately returns no more than `readOrder` does. Handing back the buyer's
+   * contact details would be convenient — a payment provider needs a customer —
+   * and it would mean anything able to call this could read a buyer's name,
+   * email and telephone out of a reference. The details the next attempt is made
+   * with come from the request that asked for it instead.
+   */
+  openPaymentAttempt(reference: string): Promise<OpenAttemptOutcome>;
+
+  /** Record what the provider answered for one attempt, or that it did not. */
+  settlePaymentAttempt(
+    attemptId: string,
+    outcome: PaymentAttemptOutcome,
+  ): Promise<void>;
+
+  /**
+   * One order by its reference, as the server observes it.
+   *
+   * No session behind it — a guest has none — so what it returns is only what a
+   * page may show somebody holding the reference. See `OrderSnapshot`.
+   */
+  readOrder(reference: string): Promise<OrderSnapshot | undefined>;
 }
+
+/** One line of an order, as the application resolved it before writing it. */
+export interface OrderLineRequest {
+  productId: string;
+  sku: string;
+  title: string;
+  /** The whole-XOF price on sale, which is also the price the buyer accepted. */
+  unitPriceXof: number;
+}
+
+export interface CreateOrderRequest {
+  /** WeCreate's own reference, from `newOrderReference()`. */
+  reference: string;
+  lines: OrderLineRequest[];
+  buyer: BuyerContact;
+  acceptedLegal: AcceptedLegalRevision[];
+  /** Which payment provider the first attempt will be made with. */
+  provider: PaymentProviderId;
+}
+
+/**
+ * Two answers, and no third.
+ *
+ * `refused` is the one race the checkout cannot close from outside: a Paid
+ * Deliverable Version that was activated when the cart was resolved and is not
+ * when the order is written. Nothing is stored in that case, so a buyer sent
+ * back to their cart has not left an order behind.
+ */
+export type CreateOrderOutcome =
+  | { status: "created"; order: OrderSnapshot; attempt: PaymentAttempt }
+  | { status: "refused"; skusWithoutDeliverable: string[] };
+
+export type OpenAttemptOutcome =
+  | { status: "opened"; order: OrderSnapshot; attempt: PaymentAttempt }
+  | { status: "refused" };
+
+export type PaymentAttemptOutcome =
+  | { status: "redirected"; providerTransactionId: string }
+  | { status: "failed"; reason: string };
 
 export interface DeliverableUploadRequest {
   sku: string;

@@ -10,12 +10,17 @@ import {
   deliverableObjectPath,
   nextVersionNumber,
 } from "../paid-deliverables";
+import { isPayable, maskEmail } from "../orders";
 import type {
   ActivationOutcome,
   CommerceProvider,
+  CreateOrderOutcome,
+  CreateOrderRequest,
   CreateVersionOutcome,
   DeliverableUploadRequest,
   EnrolmentTicket,
+  OpenAttemptOutcome,
+  PaymentAttemptOutcome,
   SignInOutcome,
   VerificationOutcome,
 } from "../provider";
@@ -23,14 +28,17 @@ import type {
   CommerceAuditEntry,
   CommerceOperator,
   OperatorCredentials,
+  OrderSnapshot,
   PaidDeliverable,
   PaidDeliverableVersion,
+  PaymentAttempt,
 } from "../types";
 import {
   readCommerceFixture,
   storeDeliverableBytes,
   writeCommerceFixture,
   type CommerceFixtureDataset,
+  type StoredOrder,
   type StoredSession,
   type StoredStaff,
 } from "./store";
@@ -115,6 +123,36 @@ function record(
     ...dataset.audit,
     { ...entry, id: randomUUID(), occurredAt: new Date().toISOString() },
   ];
+}
+
+/**
+ * A stored order as the boundary reports it: the buyer's contact details are
+ * dropped and replaced by the masked hint, exactly as the Postgres function
+ * does.
+ */
+function toOrderSnapshot(order: StoredOrder): OrderSnapshot {
+  return {
+    reference: order.reference,
+    createdAt: order.createdAt,
+    lines: order.lines,
+    totalXof: order.totalXof,
+    buyerEmailHint: maskEmail(order.buyer.email),
+    acceptedLegal: order.acceptedLegal,
+    paymentState: order.paymentState,
+    fulfillmentState: order.fulfillmentState,
+    attempts: order.attempts,
+  };
+}
+
+function newAttempt(provider: PaymentAttempt["provider"]): PaymentAttempt {
+  return {
+    id: randomUUID(),
+    createdAt: new Date().toISOString(),
+    state: "pending",
+    provider,
+    providerTransactionId: null,
+    failureReason: null,
+  };
 }
 
 /** A base32 secret, the shape an authenticator app is handed. */
@@ -335,5 +373,95 @@ export const fixtureCommerceProvider: CommerceProvider = {
         dataset.versions.some((version) => version.id === versionId),
       )
       .map(([sku]) => sku);
+  },
+
+  async createOrder(request: CreateOrderRequest): Promise<CreateOrderOutcome> {
+    const dataset = await readCommerceFixture();
+
+    // The version each line receives is read here rather than taken from the
+    // caller, so an Order Snapshot records what was actually activated at the
+    // moment it was written.
+    const resolved = request.lines.map((line) => ({
+      line,
+      version: dataset.versions.find(
+        (candidate) => candidate.id === dataset.active[line.sku],
+      ),
+    }));
+    const withoutDeliverable = resolved
+      .filter((one) => !one.version)
+      .map((one) => one.line.sku);
+    if (withoutDeliverable.length > 0) {
+      return { status: "refused", skusWithoutDeliverable: withoutDeliverable };
+    }
+
+    const attempt = newAttempt(request.provider);
+    const order: StoredOrder = {
+      reference: request.reference,
+      createdAt: new Date().toISOString(),
+      lines: resolved.map(({ line, version }) => ({
+        productId: line.productId,
+        sku: line.sku,
+        title: line.title,
+        unitPriceXof: line.unitPriceXof,
+        paidDeliverableVersionId: version!.id,
+        paidDeliverableVersion: version!.version,
+      })),
+      // Summed here rather than accepted from the caller: an order's total is
+      // the sum of what it stored, and nothing else may decide it.
+      totalXof: request.lines.reduce((total, line) => total + line.unitPriceXof, 0),
+      buyer: request.buyer,
+      acceptedLegal: request.acceptedLegal,
+      paymentState: "pending",
+      fulfillmentState: "not_started",
+      attempts: [attempt],
+    };
+
+    dataset.orders = [...dataset.orders, order];
+    await writeCommerceFixture(dataset);
+
+    return { status: "created", order: toOrderSnapshot(order), attempt };
+  },
+
+  async openPaymentAttempt(reference: string): Promise<OpenAttemptOutcome> {
+    const dataset = await readCommerceFixture();
+    const order = dataset.orders.find((one) => one.reference === reference);
+    if (!order || !isPayable(toOrderSnapshot(order))) {
+      return { status: "refused" };
+    }
+
+    const attempt = newAttempt(order.attempts.at(-1)?.provider ?? "none");
+    order.attempts = [...order.attempts, attempt];
+    await writeCommerceFixture(dataset);
+
+    return { status: "opened", order: toOrderSnapshot(order), attempt };
+  },
+
+  async settlePaymentAttempt(
+    attemptId: string,
+    outcome: PaymentAttemptOutcome,
+  ): Promise<void> {
+    const dataset = await readCommerceFixture();
+    const order = dataset.orders.find((one) =>
+      one.attempts.some((attempt) => attempt.id === attemptId),
+    );
+    const attempt = order?.attempts.find((one) => one.id === attemptId);
+    // An attempt is settled once. A second answer for the same one is refused
+    // here as the trigger refuses it in Postgres, so a retried request cannot
+    // rewrite what a provider already said.
+    if (!attempt || attempt.state !== "pending") {
+      return;
+    }
+
+    attempt.state = outcome.status === "redirected" ? "redirected" : "failed";
+    attempt.providerTransactionId =
+      outcome.status === "redirected" ? outcome.providerTransactionId : null;
+    attempt.failureReason = outcome.status === "failed" ? outcome.reason : null;
+    await writeCommerceFixture(dataset);
+  },
+
+  async readOrder(reference: string): Promise<OrderSnapshot | undefined> {
+    const dataset = await readCommerceFixture();
+    const order = dataset.orders.find((one) => one.reference === reference);
+    return order ? toOrderSnapshot(order) : undefined;
   },
 };

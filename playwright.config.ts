@@ -24,6 +24,14 @@ export const BASE_URL = `http://127.0.0.1:${PORT}`;
 /** Test-run secrets. Real deployments read these from secret management. */
 export const TEST_PREVIEW_SECRET = "acceptance-preview-secret";
 export const TEST_REVALIDATE_SECRET = "acceptance-revalidate-secret";
+/**
+ * A payment credential nothing in the run reads.
+ *
+ * The fixture payment provider has no credentials at all, which is exactly what
+ * makes this worth setting: if this string ever appears in a response, something
+ * is serialising the environment into one.
+ */
+export const TEST_FEDAPAY_SECRET = "sk_sandbox_acceptance_never_leaves_the_server";
 
 const serverEnv: Record<string, string> = {
   ...(process.env as Record<string, string>),
@@ -33,6 +41,10 @@ const serverEnv: Record<string, string> = {
   // be on fixture content and a real Supabase project, and the two must never
   // be selected together by accident.
   WECREATE_COMMERCE_PROVIDER: "fixture",
+  // The payment provider is a third, for the same reason. Its fixture hands
+  // buyers to an address that does not exist and confirms nothing.
+  WECREATE_PAYMENT_PROVIDER: "fixture",
+  FEDAPAY_SECRET_KEY: TEST_FEDAPAY_SECRET,
   WECREATE_TEST_HOOKS: "1",
   WECREATE_PREVIEW_SECRET: TEST_PREVIEW_SECRET,
   WECREATE_REVALIDATE_SECRET: TEST_REVALIDATE_SECRET,

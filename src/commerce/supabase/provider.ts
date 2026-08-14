@@ -7,16 +7,21 @@ import { deliverableObjectPath } from "../paid-deliverables";
 import type {
   ActivationOutcome,
   CommerceProvider,
+  CreateOrderOutcome,
   CreateVersionOutcome,
   EnrolmentTicket,
+  OpenAttemptOutcome,
+  PaymentAttemptOutcome,
   SignInOutcome,
   VerificationOutcome,
 } from "../provider";
 import type {
   CommerceAuditEntry,
   CommerceOperator,
+  OrderSnapshot,
   PaidDeliverable,
   PaidDeliverableVersion,
+  PaymentAttempt,
 } from "../types";
 import {
   DELIVERABLES_BUCKET,
@@ -100,6 +105,74 @@ function toAuditEntry(row: AuditRow): CommerceAuditEntry {
     sku: row.sku,
     before: metadata(row.before),
     after: metadata(row.after),
+  };
+}
+
+interface OrderRow {
+  reference: string;
+  created_at: string;
+  total_xof: number;
+  buyer_email_hint: string;
+  payment_state: OrderSnapshot["paymentState"];
+  fulfillment_state: OrderSnapshot["fulfillmentState"];
+  lines: Array<{
+    product_id: string;
+    sku: string;
+    title: string;
+    unit_price_xof: number;
+    paid_deliverable_version_id: string;
+    paid_deliverable_version: number;
+  }>;
+  accepted_legal: Array<{
+    kind: OrderSnapshot["acceptedLegal"][number]["kind"];
+    revision_id: string;
+    effective_from: string;
+  }>;
+  attempts: AttemptRow[];
+}
+
+interface AttemptRow {
+  id: string;
+  created_at: string;
+  state: PaymentAttempt["state"];
+  provider: PaymentAttempt["provider"];
+  provider_transaction_id: string | null;
+  failure_reason: string | null;
+}
+
+function toAttempt(row: AttemptRow): PaymentAttempt {
+  return {
+    id: row.id,
+    createdAt: row.created_at,
+    state: row.state,
+    provider: row.provider,
+    providerTransactionId: row.provider_transaction_id,
+    failureReason: row.failure_reason,
+  };
+}
+
+function toOrder(row: OrderRow): OrderSnapshot {
+  return {
+    reference: row.reference,
+    createdAt: row.created_at,
+    totalXof: row.total_xof,
+    buyerEmailHint: row.buyer_email_hint,
+    paymentState: row.payment_state,
+    fulfillmentState: row.fulfillment_state,
+    lines: (row.lines ?? []).map((line) => ({
+      productId: line.product_id,
+      sku: line.sku,
+      title: line.title,
+      unitPriceXof: line.unit_price_xof,
+      paidDeliverableVersionId: line.paid_deliverable_version_id,
+      paidDeliverableVersion: line.paid_deliverable_version,
+    })),
+    acceptedLegal: (row.accepted_legal ?? []).map((accepted) => ({
+      kind: accepted.kind,
+      revisionId: accepted.revision_id,
+      effectiveFrom: accepted.effective_from,
+    })),
+    attempts: (row.attempts ?? []).map(toAttempt),
   };
 }
 
@@ -300,5 +373,93 @@ export const supabaseCommerceProvider: CommerceProvider = {
       "commerce_active_paid_deliverable_skus",
     );
     return skus ?? [];
+  },
+
+  /*
+   * The four order functions carry no session, because a guest has none. They
+   * are reached with the anonymous key, which in this application is
+   * server-only: nothing Supabase is compiled into a browser bundle. What each
+   * of them may do is bounded in Postgres rather than here — see the migration.
+   */
+
+  async createOrder(request): Promise<CreateOrderOutcome> {
+    const answer = await call<
+      | { status: "created"; order: OrderRow; attempt: AttemptRow }
+      | { status: "refused"; skus_without_deliverable: string[] }
+    >(anonymousCommerceClient(), "commerce_create_order", {
+      p_reference: request.reference,
+      p_lines: request.lines.map((line) => ({
+        product_id: line.productId,
+        sku: line.sku,
+        title: line.title,
+        unit_price_xof: line.unitPriceXof,
+      })),
+      p_buyer: {
+        full_name: request.buyer.fullName,
+        email: request.buyer.email,
+        telephone: request.buyer.telephone,
+        company: request.buyer.company ?? "",
+      },
+      p_legal: request.acceptedLegal.map((accepted) => ({
+        kind: accepted.kind,
+        revision_id: accepted.revisionId,
+        effective_from: accepted.effectiveFrom,
+      })),
+      p_provider: request.provider,
+    });
+
+    return answer.status === "created"
+      ? {
+          status: "created",
+          order: toOrder(answer.order),
+          attempt: toAttempt(answer.attempt),
+        }
+      : {
+          status: "refused",
+          skusWithoutDeliverable: answer.skus_without_deliverable ?? [],
+        };
+  },
+
+  async openPaymentAttempt(reference): Promise<OpenAttemptOutcome> {
+    const answer = await call<{
+      order: OrderRow;
+      attempt: AttemptRow;
+    } | null>(anonymousCommerceClient(), "commerce_open_payment_attempt", {
+      p_reference: reference,
+    });
+
+    return answer
+      ? {
+          status: "opened",
+          order: toOrder(answer.order),
+          attempt: toAttempt(answer.attempt),
+        }
+      : { status: "refused" };
+  },
+
+  async settlePaymentAttempt(
+    attemptId: string,
+    outcome: PaymentAttemptOutcome,
+  ): Promise<void> {
+    await call<boolean>(
+      anonymousCommerceClient(),
+      "commerce_settle_payment_attempt",
+      {
+        p_attempt_id: attemptId,
+        p_state: outcome.status,
+        p_provider_transaction_id:
+          outcome.status === "redirected" ? outcome.providerTransactionId : null,
+        p_failure_reason: outcome.status === "failed" ? outcome.reason : null,
+      },
+    );
+  },
+
+  async readOrder(reference: string): Promise<OrderSnapshot | undefined> {
+    const row = await call<OrderRow | null>(
+      anonymousCommerceClient(),
+      "commerce_order",
+      { p_reference: reference },
+    );
+    return row ? toOrder(row) : undefined;
   },
 };
