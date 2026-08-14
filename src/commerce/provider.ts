@@ -1,4 +1,4 @@
-import type { PaymentProviderId } from "@/payments/types";
+import type { PaymentEvent, PaymentProviderId } from "@/payments/types";
 
 import type {
   AcceptedLegalRevision,
@@ -7,9 +7,11 @@ import type {
   CommerceOperator,
   OperatorCredentials,
   OrderSnapshot,
+  OrderState,
   PaidDeliverable,
   PaidDeliverableVersion,
   PaymentAttempt,
+  PaymentEventRecord,
 } from "./types";
 
 /**
@@ -139,12 +141,40 @@ export interface CommerceProvider {
   ): Promise<void>;
 
   /**
+   * Record one verified provider event, and let it decide the Payment State if
+   * it is allowed to.
+   *
+   * The only way a Payment State ever moves. Recording the event and applying
+   * it are one call because they are one transaction: an event that was acted
+   * on but not written down could be acted on again, and one written down but
+   * not acted on would leave an order pending with its own approval sitting in
+   * the trail.
+   *
+   * It never throws for an event that is merely unwelcome — a duplicate, a late
+   * one, one for a transaction this deployment does not know. Each of those is
+   * an answer (see `PaymentEventRecord`), because the caller owes the provider
+   * an acknowledgement either way and a provider told "failed" redelivers
+   * forever.
+   */
+  recordPaymentEvent(event: PaymentEvent): Promise<PaymentEventRecord>;
+
+  /**
    * One order by its reference, as the server observes it.
    *
    * No session behind it — a guest has none — so what it returns is only what a
    * page may show somebody holding the reference. See `OrderSnapshot`.
    */
   readOrder(reference: string): Promise<OrderSnapshot | undefined>;
+
+  /**
+   * Where one order stands, and nothing else about it.
+   *
+   * Separate from `readOrder` rather than derived from it, because the
+   * difference is the point: this is what a page polls every few seconds while
+   * a buyer waits, and a poll that returned an order and printed two fields of
+   * it would still have read the order. See `OrderState`.
+   */
+  readOrderState(reference: string): Promise<OrderState | undefined>;
 }
 
 /** One line of an order, as the application resolved it before writing it. */

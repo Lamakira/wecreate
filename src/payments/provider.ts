@@ -3,6 +3,8 @@ import "server-only";
 import type {
   HostedPayment,
   HostedPaymentRequest,
+  PaymentEventDelivery,
+  PaymentEventReading,
   PaymentProviderId,
 } from "./types";
 
@@ -12,10 +14,11 @@ export type { PaymentProviderId } from "./types";
  * The single outbound boundary between WeCreate and whoever collects the money
  * (ADR-0008).
  *
- * One method, because version one asks for one thing: create a transaction on
- * the server and hand back the hosted page to send the buyer to. Checkout.js and
- * anything that would put a payment form on WeCreate's own pages are explicitly
- * out of scope (issue #1), and this interface has nowhere to put them.
+ * Two methods, and they are the two directions money news travels: WeCreate
+ * asks for a page a buyer can pay on, and the provider later tells WeCreate what
+ * happened on it. Checkout.js and anything that would put a payment form on
+ * WeCreate's own pages are explicitly out of scope (issue #1), and this
+ * interface has nowhere to put them.
  */
 export interface PaymentProvider {
   readonly id: PaymentProviderId;
@@ -28,6 +31,20 @@ export interface PaymentProvider {
    * buyer or records a failed attempt and offers to try again.
    */
   createHostedPayment(request: HostedPaymentRequest): Promise<HostedPayment>;
+
+  /**
+   * Read one delivered event, having first proved the provider sent it.
+   *
+   * Verification belongs here rather than in the route handler because the
+   * signature scheme is the provider's, and so is the shape underneath it: the
+   * endpoint decides what to do with an answer, and never how one is reached
+   * (ADR-0008).
+   *
+   * It returns rather than throws, because every answer is one this application
+   * has a considered response to — including "signed, readable, and about
+   * something WeCreate does not track".
+   */
+  readPaymentEvent(delivery: PaymentEventDelivery): PaymentEventReading;
 }
 
 /** Which provider this process pays through. See `PaymentProviderId`. */

@@ -7,12 +7,14 @@
  * adapter maps its shapes onto these, and the fixture produces the same ones
  * without a vendor (ADR-0008).
  *
- * Two things are deliberately absent. Nothing about a *payment method* crosses
+ * One thing is deliberately absent. Nothing about a *payment method* crosses
  * this boundary — no card, no Mobile Money number, no token — because the whole
- * point of a hosted page is that WeCreate never sees any of it (issue #1). And
- * there is no way to ask this boundary whether a payment succeeded: a browser
- * coming back from the provider is not evidence, and only a verified webhook
- * may move a Payment State (issue #11).
+ * point of a hosted page is that WeCreate never sees any of it (issue #1).
+ *
+ * And one thing is deliberately narrow. There is no way to *ask* this boundary
+ * whether a payment succeeded: the only thing that can say so is an event the
+ * provider delivered and this application verified. A browser coming back from
+ * the hosted page is not evidence, and neither is anything it carries.
  */
 
 /**
@@ -60,6 +62,74 @@ export interface HostedPayment {
   /** Where the buyer completes payment. Another origin, always. */
   redirectUrl: string;
 }
+
+/**
+ * One delivery from a payment provider, exactly as it arrived.
+ *
+ * The body is the raw text and not a parsed object, because a signature is over
+ * bytes: re-serialising a parsed body changes it, and a check that passes on
+ * something other than what was sent is not a check (issue #1).
+ */
+export interface PaymentEventDelivery {
+  /** The raw request body. */
+  body: string;
+  /** The request headers, for whatever the provider signs with. */
+  headers: Headers;
+}
+
+/**
+ * What one event says about the money, in WeCreate's own vocabulary.
+ *
+ * The same four words a Payment State is written in, on purpose: an event
+ * carries an outcome and the data plane decides whether the state may move to
+ * it. `pending` is a real answer — a provider announcing a transaction it has
+ * only just created has said nothing new about whether it was paid.
+ */
+export type PaymentOutcome = "pending" | "approved" | "failed" | "cancelled";
+
+/** One verified event, in the shape the commerce data plane records. */
+export interface PaymentEvent {
+  /**
+   * Which provider delivered it.
+   *
+   * Part of the event's identity rather than context around it: two providers
+   * numbering their events from one must not collide, and a recorded event has
+   * to say who said it without the reader inferring it from a URL.
+   */
+  provider: PaymentProviderId;
+  /**
+   * The provider's own identity for this delivery.
+   *
+   * How a retry is recognised as the same event rather than a second one. It
+   * has to be stable across redeliveries, which is why a provider that gives no
+   * identity of its own gets one derived from the body it sent rather than from
+   * the moment it arrived.
+   */
+  providerEventId: string;
+  /** The provider's own name for what happened, recorded as it was sent. */
+  providerEventType: string;
+  /** The provider's transaction identity, which is how the order is found. */
+  providerTransactionId: string;
+  /** When the provider says it happened. */
+  occurredAt: string;
+  outcome: PaymentOutcome;
+}
+
+/**
+ * What reading a delivery came to.
+ *
+ * Four answers, and the caller owes each a different HTTP status. `ignored` is
+ * not a refusal: a genuine event this application has no meaning for is
+ * acknowledged, because a provider told it failed will redeliver it forever.
+ */
+export type PaymentEventReading =
+  | { status: "verified"; event: PaymentEvent }
+  /** The signature was absent, malformed, stale or wrong for this body. */
+  | { status: "unsigned" }
+  /** Signed by the provider, and not something this boundary can read. */
+  | { status: "malformed" }
+  /** Signed and readable, and about something WeCreate does not track. */
+  | { status: "ignored" };
 
 /**
  * The provider did not create a payment page.

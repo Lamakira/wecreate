@@ -33,6 +33,16 @@ export const TEST_REVALIDATE_SECRET = "acceptance-revalidate-secret";
  */
 export const TEST_FEDAPAY_SECRET = "sk_sandbox_acceptance_never_leaves_the_server";
 
+/**
+ * The secret the fixture payment provider signs webhook deliveries with.
+ *
+ * A real deployment gets this from FedaPay's own webhook settings. The fixture
+ * has its own because the acceptance suite has to be able to *send* a delivery
+ * WeCreate accepts and one it refuses, and neither is possible without holding
+ * the same secret the application verifies against.
+ */
+export const TEST_PAYMENT_WEBHOOK_SECRET = "acceptance-webhook-secret";
+
 const serverEnv: Record<string, string> = {
   ...(process.env as Record<string, string>),
   NODE_ENV: "production",
@@ -45,6 +55,7 @@ const serverEnv: Record<string, string> = {
   // buyers to an address that does not exist and confirms nothing.
   WECREATE_PAYMENT_PROVIDER: "fixture",
   FEDAPAY_SECRET_KEY: TEST_FEDAPAY_SECRET,
+  WECREATE_PAYMENT_WEBHOOK_SECRET: TEST_PAYMENT_WEBHOOK_SECRET,
   WECREATE_TEST_HOOKS: "1",
   WECREATE_PREVIEW_SECRET: TEST_PREVIEW_SECRET,
   WECREATE_REVALIDATE_SECRET: TEST_REVALIDATE_SECRET,

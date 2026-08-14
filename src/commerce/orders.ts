@@ -1,6 +1,14 @@
 import { randomBytes } from "node:crypto";
 
-import type { OrderSnapshot, PaymentAttempt, PaymentState } from "./types";
+import type { PaymentOutcome } from "@/payments/types";
+
+import type {
+  FulfillmentState,
+  OrderSnapshot,
+  PaymentAttempt,
+  PaymentEventEffect,
+  PaymentState,
+} from "./types";
 
 /**
  * The rules an order carries with it, wherever it is stored.
@@ -88,6 +96,64 @@ export const PAYMENT_STATE_LABELS: Record<PaymentState, string> = {
   failed: "Paiement non abouti",
   cancelled: "Paiement annulé",
 };
+
+/**
+ * The same for the other half of an order, which moves on its own (ADR-0005).
+ *
+ * `not_started` is written as *Préparation à venir* rather than as a failure or
+ * a promise: an approved payment whose delivery has not begun is the ordinary
+ * state of a fresh order, and today it is the only one WeCreate can reach —
+ * fulfillment is issue #12's. Saying so plainly is the point. A buyer told
+ * their files are on the way by a system that cannot send them has been lied to.
+ */
+export const FULFILLMENT_STATE_LABELS: Record<FulfillmentState, string> = {
+  not_started: "Préparation à venir",
+  processing: "Préparation en cours",
+  delivered: "Livraison envoyée",
+  failed: "Livraison à reprendre",
+};
+
+/**
+ * A mark beside each state, for a reader scanning rather than reading.
+ *
+ * Decoration and nothing more: issue #1 rules out distinguishing transaction
+ * states by a red or a green accent, and a symbol carrying meaning on its own
+ * is the same mistake in another alphabet. Every surface that prints one hides
+ * it from assistive technology and puts the word beside it.
+ */
+export const PAYMENT_STATE_MARKS: Record<PaymentState, string> = {
+  pending: "…",
+  approved: "✓",
+  failed: "×",
+  cancelled: "—",
+};
+
+/**
+ * What a verified event does to a Payment State.
+ *
+ * The rule, in one place, because two systems answer to it: Postgres enforces
+ * it inside `commerce_record_payment_event` and the fixture applies it in
+ * JavaScript — change one and change the other, as `maskEmail` says of itself.
+ *
+ * Three answers, and the order of the questions is the whole rule:
+ *
+ * 1. An event that only announces a transaction says nothing about whether it
+ *    was paid, whatever the order's state is.
+ * 2. A pending order takes the first outcome that reaches it.
+ * 3. Anything else arrived after payment truth was already decided. It is
+ *    recorded and it changes nothing — nothing may unsay that a buyer paid, and
+ *    a provider retrying out of order must not be able to (ADR-0005).
+ */
+export function paymentEventEffect(
+  current: PaymentState,
+  outcome: PaymentOutcome,
+): PaymentEventEffect {
+  if (outcome === "pending") return "unchanged";
+  if (current === "pending") return "applied";
+  // A second event saying what the state already says is agreement, not a
+  // conflict, and reads better in the trail as such.
+  return current === outcome ? "unchanged" : "superseded";
+}
 
 /** Whether this order may still be handed to a payment provider. */
 export function isPayable(order: OrderSnapshot): boolean {

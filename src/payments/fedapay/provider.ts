@@ -3,7 +3,10 @@ import {
   PaymentProviderUnreachable,
   type HostedPayment,
   type HostedPaymentRequest,
+  type PaymentEventDelivery,
+  type PaymentEventReading,
 } from "../types";
+import { readFedaPayEvent } from "./webhook";
 
 /**
  * FedaPay, and the only module in the application that knows it exists
@@ -227,5 +230,9 @@ export const fedaPayProvider: PaymentProvider = {
     }
 
     return { providerTransactionId: String(transactionId), redirectUrl };
+  },
+
+  readPaymentEvent(delivery: PaymentEventDelivery): PaymentEventReading {
+    return readFedaPayEvent(delivery);
   },
 };

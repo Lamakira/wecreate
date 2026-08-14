@@ -19,14 +19,17 @@ import type {
   CommerceAuditEntry,
   CommerceOperator,
   OrderSnapshot,
+  OrderState,
   PaidDeliverable,
   PaidDeliverableVersion,
   PaymentAttempt,
+  PaymentEventRecord,
 } from "../types";
 import {
   DELIVERABLES_BUCKET,
   anonymousCommerceClient,
   operatorCommerceClient,
+  paymentEventSecret,
 } from "./client";
 
 /**
@@ -376,10 +379,11 @@ export const supabaseCommerceProvider: CommerceProvider = {
   },
 
   /*
-   * The four order functions carry no session, because a guest has none. They
-   * are reached with the anonymous key, which in this application is
-   * server-only: nothing Supabase is compiled into a browser bundle. What each
-   * of them may do is bounded in Postgres rather than here — see the migration.
+   * The order functions carry no session, because a guest has none — and
+   * neither has a payment provider posting a webhook. They are reached with the
+   * anonymous key, which in this application is server-only: nothing Supabase is
+   * compiled into a browser bundle. What each of them may do is bounded in
+   * Postgres rather than here — see the migrations.
    */
 
   async createOrder(request): Promise<CreateOrderOutcome> {
@@ -454,6 +458,28 @@ export const supabaseCommerceProvider: CommerceProvider = {
     );
   },
 
+  async recordPaymentEvent(event): Promise<PaymentEventRecord> {
+    const answer = await call<{
+      disposition: PaymentEventRecord["disposition"];
+      payment_state: OrderSnapshot["paymentState"] | null;
+    }>(anonymousCommerceClient(), "commerce_record_payment_event", {
+      // Proved before Postgres reads a row. The anonymous key alone approves
+      // nothing here — see `paymentEventSecret()`.
+      p_secret: paymentEventSecret(),
+      p_provider: event.provider,
+      p_event_id: event.providerEventId,
+      p_event_type: event.providerEventType,
+      p_transaction_id: event.providerTransactionId,
+      p_occurred_at: event.occurredAt,
+      p_outcome: event.outcome,
+    });
+
+    return {
+      disposition: answer.disposition,
+      paymentState: answer.payment_state,
+    };
+  },
+
   async readOrder(reference: string): Promise<OrderSnapshot | undefined> {
     const row = await call<OrderRow | null>(
       anonymousCommerceClient(),
@@ -461,5 +487,18 @@ export const supabaseCommerceProvider: CommerceProvider = {
       { p_reference: reference },
     );
     return row ? toOrder(row) : undefined;
+  },
+
+  async readOrderState(reference: string): Promise<OrderState | undefined> {
+    const row = await call<{
+      payment_state: OrderSnapshot["paymentState"];
+      fulfillment_state: OrderSnapshot["fulfillmentState"];
+    } | null>(anonymousCommerceClient(), "commerce_order_state", {
+      p_reference: reference,
+    });
+
+    return row
+      ? { payment: row.payment_state, fulfillment: row.fulfillment_state }
+      : undefined;
   },
 };
