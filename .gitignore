@@ -56,5 +56,8 @@ next-env.d.ts
 # local agent instructions
 /CLAUDE.md
 
+# a code index one agent builds from the source, rebuilt rather than shared
+/.codegraph/
+
 # editor
 /.idea/
