@@ -1,13 +1,16 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
+import Link from "next/link";
+
 import { readOrderByReference } from "@/checkout";
-import { PAYMENT_RETURN_COPY } from "@/checkout/messages";
+import { PAYMENT_RETRY_COPY, paymentReturnCopy } from "@/checkout/messages";
 import { readOrderInProgress } from "@/checkout/session";
 import {
   FULFILLMENT_STATE_LABELS,
   PAYMENT_STATE_LABELS,
   PAYMENT_STATE_MARKS,
+  paymentProspect,
 } from "@/commerce/orders";
 import {
   BoutiqueLink,
@@ -43,13 +46,18 @@ export const instant = false;
  * plane has recorded for the order this browser is carrying, and the only thing
  * that put it there is a verified webhook (`/api/paiement/fedapay`).
  *
- * So the four surfaces below are all the *same* surface: a heading, the two
- * states the server has observed, and whatever the buyer can do about it. While
- * nothing has confirmed the payment it says *Vérification du paiement*, offers
- * no second payment, and says out loud that the page may be closed —
- * verification and, later, delivery continue without it. When a webhook has
- * decided the matter it says which way, in words and structure rather than in a
- * colour, and points at the one thing left to do.
+ * So the surfaces below are all the *same* surface: a heading, the two states
+ * the server has observed, and whatever the buyer can do about it. What the
+ * buyer can do is the thing that differs, and it comes from `paymentProspect()`
+ * rather than from the Payment State alone — the checkout answers to the same
+ * rule, so what is offered here and what the action accepts cannot disagree.
+ *
+ * While a payment is outstanding it says *Vérification du paiement*, offers no
+ * second payment, and says out loud that the page may be closed — verification
+ * and, later, delivery continue without it. A payment FedaPay refused says so
+ * and offers the order again for twenty-four hours (issue #13); past that, and
+ * for an approved payment, it points at the one thing left to do. Each is told
+ * apart by its heading, its structure and what it offers, never by a colour.
  *
  * Payment and delivery are printed as two separate facts on purpose (ADR-0005),
  * and the second is what decides everything under the first. An approved
@@ -82,8 +90,15 @@ export default async function PaymentReturnRoute() {
     );
   }
 
-  const copy = PAYMENT_RETURN_COPY[order.paymentState];
-  const awaiting = order.paymentState === "pending";
+  // One rule, three surfaces: the checkout, this page and Postgres all act on
+  // it, so what is offered here and what the action accepts cannot disagree.
+  // Waiting is exactly "an attempt is outstanding" — the same thing
+  // `/commande/etat` answers and `PaymentVerification` polls for — and both
+  // retries offer the order again rather than a new one.
+  const prospect = paymentProspect(order);
+  const waiting = prospect === "awaiting";
+  const retryable = prospect === "resumable" || prospect === "retryable";
+  const copy = paymentReturnCopy(order.paymentState, prospect);
   // WeCreate's own administrative address, written once in Managed Content and
   // read here as the header, the footer and the receipt read it.
   const supportEmail = (await readSiteSettings()).contact.email;
@@ -132,7 +147,7 @@ export default async function PaymentReturnRoute() {
           </Fact>
         </dl>
 
-        {awaiting ? (
+        {waiting ? (
           <>
             {/*
               Issue #11 asks this surface to say that processing continues
@@ -162,8 +177,27 @@ export default async function PaymentReturnRoute() {
               data-testid="payment-next-step"
               className="m-0 mt-8 text-body-lg font-light text-wc-ink"
             >
-              {copy.nextStep}
+              {retryable ? PAYMENT_RETRY_COPY.nextStep : copy.nextStep}
             </p>
+
+            {/*
+              A link rather than a control that pays: FedaPay needs a buyer's
+              name, email and telephone, and the commerce data plane will not
+              hand those back for a reference. So the retry goes through the
+              page that collects them, which resolves this same order again and
+              opens one more attempt against it.
+            */}
+            {retryable ? (
+              <p className="m-0 mt-6">
+                <Link
+                  href="/commande"
+                  data-testid="payment-retry"
+                  className="border-b border-wc-pure pb-1 text-body-lg font-semibold"
+                >
+                  {PAYMENT_RETRY_COPY.action}
+                </Link>
+              </p>
+            ) : null}
 
             {/*
               Shown and not opened. The token in the buyer's email is what

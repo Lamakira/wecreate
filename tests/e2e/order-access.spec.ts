@@ -142,6 +142,7 @@ test.describe("The first approved payment", () => {
     expect(await readOrderState(page)).toEqual({
       payment: "approved",
       fulfillment: "delivered",
+      awaiting: false,
     });
 
     // One row per Digital Product, with the two things a buyer needs to plan

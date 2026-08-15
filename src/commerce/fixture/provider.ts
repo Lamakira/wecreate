@@ -17,7 +17,12 @@ import {
   isAccessLive,
   liveLinkSeconds,
 } from "../order-access";
-import { isPayable, maskEmail, paymentEventEffect } from "../orders";
+import {
+  isPayable,
+  maskEmail,
+  paymentEventEffect,
+  paymentProspect,
+} from "../orders";
 import type {
   ActivationOutcome,
   BeginFulfillmentOutcome,
@@ -53,6 +58,7 @@ import {
   type CommerceFixtureDataset,
   type StoredOrder,
   type StoredOrderAccess,
+  type StoredPaymentAttempt,
   type StoredSession,
   type StoredStaff,
 } from "./store";
@@ -143,8 +149,16 @@ function record(
  * A stored order as the boundary reports it: the buyer's contact details are
  * dropped and replaced by the masked hint, exactly as the Postgres function
  * does.
+ *
+ * Each attempt's outcome is read out of the events rather than kept beside
+ * them, which is what `commerce.attempt_json` does with the same two tables:
+ * what the provider said about a transaction is recorded once, in the trail,
+ * and a copy on the attempt could only ever disagree with it.
  */
-function toOrderSnapshot(order: StoredOrder): OrderSnapshot {
+function toOrderSnapshot(
+  dataset: CommerceFixtureDataset,
+  order: StoredOrder,
+): OrderSnapshot {
   return {
     reference: order.reference,
     createdAt: order.createdAt,
@@ -154,8 +168,34 @@ function toOrderSnapshot(order: StoredOrder): OrderSnapshot {
     acceptedLegal: order.acceptedLegal,
     paymentState: order.paymentState,
     fulfillmentState: order.fulfillmentState,
-    attempts: order.attempts,
+    attempts: order.attempts.map((attempt) => ({
+      ...attempt,
+      outcome: attemptOutcome(dataset, attempt),
+    })),
   };
+}
+
+/**
+ * The verdict most recently recorded for one attempt's transaction, or nothing
+ * yet.
+ *
+ * The last event about it that said anything at all: a `transaction.created`
+ * announces a transaction and answers nothing, so it is passed over the way
+ * `paymentEventEffect()` passes over it. `commerce.attempt_json` reads the same
+ * way — change one and change the other.
+ */
+function attemptOutcome(
+  dataset: CommerceFixtureDataset,
+  attempt: StoredPaymentAttempt,
+): PaymentAttempt["outcome"] {
+  if (!attempt.providerTransactionId) return null;
+  return (
+    dataset.paymentEvents.findLast(
+      (event) =>
+        event.providerTransactionId === attempt.providerTransactionId &&
+        event.outcome !== "pending",
+    )?.outcome ?? null
+  );
 }
 
 /** What one order's buyer may still open, assembled from its stored grants. */
@@ -209,7 +249,9 @@ function findOrderAccess(
   return held ? toOrderAccess(dataset, held) : undefined;
 }
 
-function newAttempt(provider: PaymentAttempt["provider"]): PaymentAttempt {
+function newAttempt(
+  provider: PaymentAttempt["provider"],
+): StoredPaymentAttempt {
   return {
     id: randomUUID(),
     createdAt: new Date().toISOString(),
@@ -484,13 +526,18 @@ export const fixtureCommerceProvider: CommerceProvider = {
     dataset.orders = [...dataset.orders, order];
     await writeCommerceFixture(dataset);
 
-    return { status: "created", order: toOrderSnapshot(order), attempt };
+    // Nothing has been said about an attempt that has only just been opened.
+    return {
+      status: "created",
+      order: toOrderSnapshot(dataset, order),
+      attempt: { ...attempt, outcome: null },
+    };
   },
 
   async openPaymentAttempt(reference: string): Promise<OpenAttemptOutcome> {
     const dataset = await readCommerceFixture();
     const order = dataset.orders.find((one) => one.reference === reference);
-    if (!order || !isPayable(toOrderSnapshot(order))) {
+    if (!order || !isPayable(toOrderSnapshot(dataset, order))) {
       return { status: "refused" };
     }
 
@@ -498,7 +545,11 @@ export const fixtureCommerceProvider: CommerceProvider = {
     order.attempts = [...order.attempts, attempt];
     await writeCommerceFixture(dataset);
 
-    return { status: "opened", order: toOrderSnapshot(order), attempt };
+    return {
+      status: "opened",
+      order: toOrderSnapshot(dataset, order),
+      attempt: { ...attempt, outcome: null },
+    };
   },
 
   async settlePaymentAttempt(
@@ -586,17 +637,23 @@ export const fixtureCommerceProvider: CommerceProvider = {
   async readOrder(reference: string): Promise<OrderSnapshot | undefined> {
     const dataset = await readCommerceFixture();
     const order = dataset.orders.find((one) => one.reference === reference);
-    return order ? toOrderSnapshot(order) : undefined;
+    return order ? toOrderSnapshot(dataset, order) : undefined;
   },
 
   async readOrderState(reference: string): Promise<OrderState | undefined> {
     const dataset = await readCommerceFixture();
     const order = dataset.orders.find((one) => one.reference === reference);
-    // Two fields, read out of the record rather than projected from a snapshot,
-    // so this cannot grow a third by accident. Postgres answers the same way.
-    return order
-      ? { payment: order.paymentState, fulfillment: order.fulfillmentState }
-      : undefined;
+    if (!order) return undefined;
+
+    // Three answers and no fourth: two states, and whether anything is still
+    // coming. Nothing of the order itself is projected into it, which is the
+    // rule rather than the count. Postgres answers the same way, in
+    // `commerce_order_state`.
+    return {
+      payment: order.paymentState,
+      fulfillment: order.fulfillmentState,
+      awaiting: paymentProspect(toOrderSnapshot(dataset, order)) === "awaiting",
+    };
   },
 
   async beginFulfillment(request): Promise<BeginFulfillmentOutcome> {
@@ -654,7 +711,7 @@ export const fixtureCommerceProvider: CommerceProvider = {
 
     return {
       status: "claimed",
-      order: toOrderSnapshot(order),
+      order: toOrderSnapshot(dataset, order),
       access: toOrderAccess(dataset, held),
       deliverTo: order.buyer.email,
     };

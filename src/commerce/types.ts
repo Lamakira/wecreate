@@ -1,5 +1,5 @@
 import type { LegalDocumentKind } from "@/managed-content/types";
-import type { PaymentProviderId } from "@/payments/types";
+import type { PaymentOutcome, PaymentProviderId } from "@/payments/types";
 
 /**
  * The commerce data plane, in WeCreate's own vocabulary.
@@ -144,8 +144,8 @@ export type FulfillmentState =
  *
  * The whole of what the public order-state boundary reads. It carries no
  * reference, no total, no product and no address — not even the masked one —
- * because a browser polling for a confirmation needs two words, and a surface
- * that returns more is a way to read an order (issue #1).
+ * because a browser polling for a confirmation needs to know when to stop
+ * polling, and a surface that returns more is a way to read an order (issue #1).
  *
  * There is no "unknown" here. An order the data plane cannot answer for is
  * absent rather than uncertain; saying so is the HTTP boundary's job, and its
@@ -154,6 +154,20 @@ export type FulfillmentState =
 export interface OrderState {
   payment: PaymentState;
   fulfillment: FulfillmentState;
+  /**
+   * Whether a payment on this order is still waiting on a verified event.
+   *
+   * The one thing the waiting page actually polls for, and the reason it is
+   * here rather than inferred from the Payment State: once a buyer may pay
+   * again (issue #13), a second refusal leaves that state exactly as it was.
+   * A page watching for the *state* to move would go on saying *Vérification du
+   * paiement* over a payment FedaPay had already refused twice.
+   *
+   * It says nothing about the order beyond what the two states beside it
+   * already say — no reference, no total, no product, no address — which is the
+   * rule this boundary actually keeps.
+   */
+  awaiting: boolean;
 }
 
 /**
@@ -302,6 +316,7 @@ export type PaymentAttemptState = "pending" | "redirected" | "failed";
 export interface PaymentAttempt {
   id: string;
   createdAt: string;
+  /** What *this application* did with the attempt. */
   state: PaymentAttemptState;
   /** Which payment provider this attempt was made with. */
   provider: PaymentProviderId;
@@ -309,6 +324,24 @@ export interface PaymentAttempt {
   providerTransactionId: string | null;
   /** Why the provider could not be reached, in words safe to store and log. */
   failureReason: string | null;
+  /**
+   * The verdict most recently recorded for this attempt's transaction.
+   *
+   * The other half of `state`, and the half WeCreate does not get a vote in.
+   * Derived from the recorded events rather than stored beside them, so it
+   * cannot drift from the trail it is read out of, and `null` until one of them
+   * decides something — a `transaction.created` announces a transaction and
+   * answers nothing. A provider that contradicts itself about one transaction
+   * is kept in the trail either way, and what an order's Payment State makes of
+   * those events is `paymentEventEffect()`'s decision rather than this field's.
+   *
+   * It is what tells an outstanding payment from a settled one once an order
+   * has more than one attempt on it (issue #13). Both surfaces need that: an
+   * order whose Payment State reads *failed* may have a fresh transaction open
+   * with the provider, and offering a second payment page for it is how
+   * somebody pays twice.
+   */
+  outcome: PaymentOutcome | null;
 }
 
 /**

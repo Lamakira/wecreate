@@ -366,15 +366,49 @@ product removed, an empty cart, a checkout that is not open, and an order
 already with the payment provider — and they are told apart by words and
 structure, never by a status colour.
 
-**A second payment for one order is the thing this refuses hardest.** After a
-buyer has been redirected, WeCreate cannot know whether they paid — only a
-verified webhook may say so — so `/commande` stops offering any way to pay and
-points at the verification page instead. The one retry it does offer is the
-narrow one issue #10 asks for: when the payment page never opened, the guest
-form comes back with what the buyer typed and pressing it again opens another
-attempt against the *same* Order Snapshot, which is why the checkout can tell
-the two apart at all. A buyer who has changed their mind can leave the order —
-it stays recorded, and their browser stops pointing at it.
+**A second payment *while one is outstanding* is the thing this refuses
+hardest.** After a buyer has been redirected, WeCreate cannot know whether they
+paid — only a verified webhook may say so — so `/commande` stops offering any
+way to pay and points at the verification page instead. What decides that is the
+Payment Prospect — `paymentProspect()` in `src/commerce/orders.ts` — and it is
+the same answer the checkout, the payment return page and Postgres all act on:
+
+| Prospect    | When                                                      | What is offered      |
+| ----------- | --------------------------------------------------------- | -------------------- |
+| `awaiting`  | an attempt is open and no verified event has answered it   | nothing but waiting  |
+| `resumable` | pending, inside twenty-four hours, nothing ever opened     | the same order again |
+| `retryable` | refused or cancelled, inside twenty-four hours             | the same order again |
+| `closed`    | approved, or past those twenty-four hours                  | the Boutique         |
+
+**The two middle rows are the retry, and it is one more attempt rather than one
+more order.** `resumable` is issue #10's: the payment page never opened, so the
+guest form comes back with what the buyer typed and pressing it again opens
+another attempt against the *same* Order Snapshot. `retryable` is issue #13's:
+`/commande/retour` says the payment did not go through and offers *Reprendre le
+paiement*, which is a link back to `/commande` because the provider needs a
+name, an email and a telephone and the data plane deliberately will not hand
+those back for a reference. Either way the reference, the products, the prices,
+the Paid Deliverable Versions and the accepted Legal Revisions are the ones
+already recorded, and pressing the control changes no Payment State — only a
+verified webhook does that. A retry is also not asked to accept anything: the
+Legal Revisions the order recorded are the ones it keeps, so the acceptances are
+absent from that form rather than collected again and discarded.
+
+The two differ in one place, and it is the cart. An attempt that never reached
+the provider leaves the buyer where they were, still in this checkout with this
+cart, so it is resumed only while the cart holds exactly what the order
+recorded. An order FedaPay refused is resolved **before the cart is consulted at
+all**: for twenty-four hours the Order Snapshot is what is being paid, so a
+price the catalogue published since, a product WeCreate withdrew since and a
+cart the buyer emptied since have no say in it. What the cart holds decides what
+a *new* order would contain, which is a different question and the one asked
+once the window has closed.
+
+A buyer who has changed their mind can leave the order — it stays recorded, and
+their browser stops pointing at it. That control is on the two surfaces that
+hold them to one: a payment already with the provider, and a `retryable` order.
+Not on `resumable`, which needs no way out because it *is* resolved against the
+cart — changing the cart is already the way past it.
 
 **The order is written before FedaPay is contacted.** `commerce_create_order`
 stores the Order Snapshot, its accepted revisions and a `pending` payment
@@ -418,27 +452,48 @@ the only function granted to `anon` that can approve a payment, and it is
 addressed by FedaPay's transaction id rather than by an unguessable reference,
 so it demands `WECREATE_PAYMENT_EVENT_SECRET` before it reads a row. A leaked
 anonymous key approves nothing. The rule itself:
-`transaction.created` announces a transaction and changes nothing, a pending
-order takes the first outcome that reaches it, and an event arriving after that
-is recorded and ignored. Nothing may unsay that a buyer paid, and a provider
-retrying out of order must not be able to (ADR-0005). An event for a transaction
-this deployment never opened is acknowledged and dropped — that is another
-environment's webhook, not an error.
+`transaction.created` announces a transaction and changes nothing; a pending
+order takes the first outcome that reaches it; an approval decides an order
+whose payment had not succeeded; and anything else is recorded and ignored.
 
-**`GET /commande/etat` is what the buyer's page polls, and it answers two
-words.** It lives under `/commande` rather than `/api` because that is where the
-order cookie is scoped: the order is the one this browser is carrying, never one
-a caller names, so no reference reaches an access log, a referrer or a browser
-history. It returns a Payment State and a Fulfillment State and there is nowhere
-in it for a third field to appear — not the reference, not the total, not the
-masked address. A browser with no order, an order nobody here knows and an
-unreachable data plane all answer `unknown`, which the page treats as "keep
-waiting" and never as a failure.
+**One direction is closed and it is the one that matters: nothing may unsay
+that a buyer paid.** An approved order is final against every later event, so a
+refusal, a cancellation and a provider retrying out of order are all kept for
+reconciliation rather than acted on (ADR-0005, ADR-0009). A refusal is *not* final in the
+same way, because a buyer may pay again for twenty-four hours (issue #13) and a
+retry that could never be approved would be a button that cannot work — but the
+only thing that may replace it is an approval, so a second refusal cannot
+rewrite the first. An event for a transaction this deployment never opened is
+acknowledged and dropped — that is another environment's webhook, not an error.
+
+**An attempt carries what FedaPay finally said about it**, read back out of
+those events rather than stored beside them, so the two cannot drift. It is what
+tells an outstanding payment from a settled one once an order has more than one
+attempt: an order still recording *Paiement non abouti* may have a fresh
+transaction open with FedaPay, and that is exactly when a second payment page
+would charge somebody twice.
+
+**`GET /commande/etat` is what the buyer's page polls, and it answers where the
+payment stands and whether anything is still coming.** It lives under
+`/commande` rather than `/api` because that is where the order cookie is scoped:
+the order is the one this browser is carrying, never one a caller names, so no
+reference reaches an access log, a referrer or a browser history. It returns a
+Payment State, a Fulfillment State and whether an attempt is still outstanding,
+and there is nowhere in it for anything *about the order* to appear — not the
+reference, not the total, not the product, not the masked address. That is the
+rule it keeps, rather than a count of fields. A browser with no order, an order
+nobody here knows and an unreachable data plane all answer `unknown` and stay
+outstanding, which the page treats as "keep waiting" and never as a failure.
+
+The third word is there because the first two stopped answering the question.
+Once a buyer may pay again, a refused retry leaves the Payment State exactly as
+it was, so a page watching that state for a change would go on saying
+*Vérification du paiement* over a payment FedaPay had already refused twice.
 
 **The waiting itself is the only client-side code on the checkout.**
 `PaymentVerification` asks that endpoint on a growing delay — two seconds out to
-twenty, then it stops and says so — and refreshes the route when the answer
-changes rather than rendering the new state itself. A hidden tab and an offline
+twenty, then it stops and says so — and refreshes the route once nothing is
+outstanding any more, rather than rendering the new state itself. A hidden tab and an offline
 browser schedule nothing at all; the browser's own `online` and
 `visibilitychange` events restart it, which is faster than any interval. A
 request that failed or timed out is never evidence: the page keeps saying
@@ -446,14 +501,25 @@ request that failed or timed out is never evidence: the page keeps saying
 dropped connection. Issue #1 is explicit that connectivity uncertainty must
 never become a failed payment.
 
-The four states are told apart by their heading, their structure and what a
-buyer can do next — never by a colour, and the mark beside each (`✓`, `×`, `…`)
-is `aria-hidden` decoration with the word beside it. None of them offers a
-second payment. **Approved says the money arrived and stops there**, and what
-follows it is decided by the Fulfillment State printed beside it: what was
-bought and where the files open from, or a way to be helped. Payment and
-delivery are two facts and this page prints two — see *Fulfillment and Order
-Access* below.
+The states are told apart by their heading, their structure and what a buyer can
+do next — never by a colour, and the mark beside each (`✓`, `×`, `…`) is
+`aria-hidden` decoration with the word beside it. What each says is the Payment
+State and the Payment Prospect together, because neither answers alone: a
+refusal offers *Reprendre le paiement* while the order is inside its window and
+the way back to the Boutique once it is not, and a payment being verified and an
+approved one offer no second payment at all, which is the distinction issue #13
+asks this surface to draw. A payment being relaunched leads with *Vérification
+du paiement* and says so in as many words, with the refusal it has not replaced
+still printed underneath: leading with the refusal while a transaction is open
+would invite the very second payment this page exists to prevent. And a `pending`
+order with nothing outstanding — a payment page that never opened, or one
+nobody ever heard back about — reads *Paiement non confirmé* rather than
+borrowing the sentence about waiting for FedaPay, because nothing is on its way.
+
+**Approved says the money arrived and stops there**, and what follows it is
+decided by the Fulfillment State printed beside it: what was bought and where
+the files open from, or a way to be helped. Payment and delivery are two facts
+and this page prints two — see *Fulfillment and Order Access* below.
 
 The buyer's contact details are recorded with the order and are deliberately
 absent from what the boundary reads back: an order is addressed by its reference
@@ -721,9 +787,11 @@ it is the only one that is not granted on the strength of the anonymous key
 alone: it demands `WECREATE_PAYMENT_EVENT_SECRET` before it reads a row.
 Triggers make the lines, the accepted
 revisions and the payment events unwritable, refuse any update that would change
-what an order contains or who it is for, and let a Payment State leave `pending`
-exactly once — so no application bug and no support action can unsay that a
-buyer paid (ADR-0005).
+what an order contains or who it is for, and close the one direction a Payment
+State may never move in: nothing may leave `approved`, and a refusal may be
+replaced by an approval and by nothing else — so no application bug and no
+support action can unsay that a buyer paid (ADR-0005, ADR-0009), while the retry
+issue #13 asks for is still a payment that can succeed.
 
 **Postgres enforces the same rules, against requests that never render a page.**
 `supabase/migrations/` is the record. The tables live in a `commerce` schema that
@@ -1096,6 +1164,11 @@ tests/e2e/
 │                                     and out-of-order events; the order-state
 │                                     boundary and what it will not say; polling,
 │                                     going offline, and closing the page
+├── payment-retry.spec.ts             the same Order Snapshot paid again after a
+│                                     refusal, prices that moved, several
+│                                     attempts, what a payment in flight and an
+│                                     approval suppress, the twenty-four hour
+│                                     boundary, and a retry the provider refused
 ├── order-access.spec.ts              one delivery per approval, the receipt and
 │                                     its idempotency, a failed delivery that
 │                                     keeps the payment approved, the emailed

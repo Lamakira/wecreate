@@ -1,4 +1,4 @@
-import { isPayable, lastAttempt } from "@/commerce/orders";
+import { paymentProspect } from "@/commerce/orders";
 import type { OrderSnapshot } from "@/commerce/types";
 import type { DigitalCartBlocker, DigitalCartView } from "@/digital-cart/cart";
 import type {
@@ -50,14 +50,23 @@ export type CheckoutState =
   | {
       status: "payable";
       cart: DigitalCartView;
-      /** The Legal Revisions this buyer accepts before paying. */
+      /**
+       * The Legal Revisions this buyer accepts before paying.
+       *
+       * Empty when an order that has already been through the provider is being
+       * paid again: it recorded the revisions the buyer accepted when it was
+       * created, a retry cannot change them, and asking for today's instead
+       * would be collecting a consent that goes nowhere (issue #13).
+       */
       mustAccept: EffectiveLegalRevision[];
       /**
        * An order this submission pays again rather than replacing.
        *
-       * Set only where an earlier attempt never reached the provider and the
-       * cart still holds exactly what that order recorded. It is what keeps a
-       * transaction-creation failure from becoming a second Order Snapshot.
+       * Two ways an order gets here, and both are one more attempt against one
+       * Order Snapshot rather than a second Order Snapshot: an earlier attempt
+       * that never reached the provider — with the cart still holding exactly
+       * what that order recorded — and a payment FedaPay refused or the buyer
+       * cancelled, inside the twenty-four hours the order was priced for.
        */
       resuming: OrderSnapshot | null;
     };
@@ -99,14 +108,23 @@ function matchesCart(order: OrderSnapshot, cart: DigitalCartView): boolean {
  * cannot ask usefully.
  *
  * Without a payment provider nothing can be paid, not even an order that
- * already exists, so that is first. An order that has already reached the
- * provider comes next, and it is the one case where the checkout offers no way
- * to pay at all: WeCreate cannot yet know whether that payment went through —
- * only a verified webhook can say (issue #11) — and opening a second payment
- * page for the same order is how a buyer pays twice. The legal gate is then
- * what stands between a cart and a *new* order; an order created under terms
- * that were in force stays payable under them. The cart's own answers come
- * last, because they are the only ones a buyer can act on here.
+ * already exists, so that is first. An order with a payment outstanding comes
+ * next, and it is the one case where the checkout offers no way to pay at all:
+ * WeCreate cannot yet know whether that payment went through — only a verified
+ * webhook can say (issue #11) — and opening a second payment page for the same
+ * order is how a buyer pays twice.
+ *
+ * An order FedaPay refused is then paid again **on its own terms**, before the
+ * cart is consulted at all. That is issue #13's whole point: for twenty-four
+ * hours the Order Snapshot is what the buyer is paying, so a price the
+ * catalogue published since, a product WeCreate has withdrawn since and a cart
+ * the buyer has emptied since have no say in it. What the cart still holds
+ * decides what a *new* order would contain, and that is a different question.
+ *
+ * The legal gate is what stands between a cart and a new order for the same
+ * reason: an order created under terms that were in force stays payable under
+ * them. The cart's own answers come last, because they are the only ones a
+ * buyer can act on here.
  */
 export function resolveCheckout({
   canPay,
@@ -118,13 +136,24 @@ export function resolveCheckout({
     return { status: "closed", reason: "paymentUnavailable" };
   }
 
-  // An order whose window has closed is neither resumed nor shown: issue #1
-  // asks for a buyer past it to start again at current prices rather than under
-  // commercial terms nobody has looked at for a day.
-  const waiting = orderInProgress && isPayable(orderInProgress) ? orderInProgress : undefined;
-  const reachedProvider = waiting && lastAttempt(waiting)?.state !== "failed";
-  if (waiting && reachedProvider) {
-    return { status: "awaitingPayment", order: waiting };
+  // The order this browser is carrying, and what can still happen to its
+  // payment. A `closed` one is neither resumed nor shown: its payment was
+  // approved, or issue #1 asks for a buyer past its window to start again at
+  // current prices rather than under commercial terms nobody has looked at for
+  // a day.
+  const carried = orderInProgress && {
+    order: orderInProgress,
+    prospect: paymentProspect(orderInProgress),
+  };
+
+  if (carried && carried.prospect === "awaiting") {
+    return { status: "awaitingPayment", order: carried.order };
+  }
+
+  // A payment FedaPay refused or the buyer cancelled. The Order Snapshot is
+  // what is being paid, so nothing about today's cart is asked.
+  if (carried?.prospect === "retryable") {
+    return { status: "payable", cart, mustAccept: [], resuming: carried.order };
   }
 
   if (legal.status === "blocked") {
@@ -139,10 +168,16 @@ export function resolveCheckout({
     return { status: "notPayable", cart, blockedBy: cart.blockedBy };
   }
 
+  // An attempt that never reached the provider leaves the buyer where they
+  // were: still in this checkout, with this cart. So it is resumed only while
+  // the cart still holds exactly what the order recorded — otherwise they are
+  // buying something else, and something else is a new order.
+  const unopened = carried?.prospect === "resumable" ? carried.order : undefined;
+
   return {
     status: "payable",
     cart,
     mustAccept: legal.mustAccept,
-    resuming: waiting && matchesCart(waiting, cart) ? waiting : null,
+    resuming: unopened && matchesCart(unopened, cart) ? unopened : null,
   };
 }

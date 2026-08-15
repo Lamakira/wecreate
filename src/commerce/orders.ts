@@ -5,7 +5,6 @@ import type { PaymentOutcome } from "@/payments/types";
 import type {
   FulfillmentState,
   OrderSnapshot,
-  PaymentAttempt,
   PaymentEventEffect,
   PaymentState,
 } from "./types";
@@ -78,8 +77,9 @@ export function isOrderReference(value: string): boolean {
  * Issue #1: another attempt may be made against the same Order Snapshot until
  * the order is twenty-four hours old, after which a buyer starts again at
  * current prices rather than under commercial terms nobody has looked at since.
- * Issue #13 builds the rest of that retry journey; this is the window it will
- * widen, and the reason a buyer cannot be trapped by an order they abandoned.
+ * It is measured from the order's creation and never from its latest attempt,
+ * so retrying cannot extend it — an Order Snapshot that kept renewing its own
+ * window would hold yesterday's prices open indefinitely.
  */
 export const ORDER_PAYABLE_SECONDS = 24 * 60 * 60;
 
@@ -135,14 +135,22 @@ export const PAYMENT_STATE_MARKS: Record<PaymentState, string> = {
  * it inside `commerce_record_payment_event` and the fixture applies it in
  * JavaScript — change one and change the other, as `maskEmail` says of itself.
  *
- * Three answers, and the order of the questions is the whole rule:
+ * Four answers, and the order of the questions is the whole rule:
  *
  * 1. An event that only announces a transaction says nothing about whether it
  *    was paid, whatever the order's state is.
  * 2. A pending order takes the first outcome that reaches it.
- * 3. Anything else arrived after payment truth was already decided. It is
- *    recorded and it changes nothing — nothing may unsay that a buyer paid, and
- *    a provider retrying out of order must not be able to (ADR-0005).
+ * 3. **An approval decides an order whose payment had not succeeded.** A buyer
+ *    may pay again for twenty-four hours (issue #13), so a refusal is not the
+ *    end of an order — and when FedaPay says the money arrived, it arrived,
+ *    whether that is the first thing it said or the third.
+ * 4. Anything else arrived after payment truth was already decided. It is
+ *    recorded and it changes nothing.
+ *
+ * Only one direction is closed, and it is the one that matters: **nothing may
+ * unsay that a buyer paid.** An approved order is final, so a refusal, a
+ * cancellation and a provider retrying out of order all land in (4) and are
+ * kept for reconciliation rather than acted on (ADR-0005).
  */
 export function paymentEventEffect(
   current: PaymentState,
@@ -152,21 +160,82 @@ export function paymentEventEffect(
   if (current === "pending") return "applied";
   // A second event saying what the state already says is agreement, not a
   // conflict, and reads better in the trail as such.
-  return current === outcome ? "unchanged" : "superseded";
+  if (current === outcome) return "unchanged";
+  return current !== "approved" && outcome === "approved"
+    ? "applied"
+    : "superseded";
 }
 
-/** Whether this order may still be handed to a payment provider. */
+/**
+ * What can still happen to this order's payment.
+ *
+ * The rule the checkout, the payment return page and the data plane all answer
+ * to, so that what a buyer is offered, what a page says and what a request that
+ * never rendered a page is allowed to do cannot disagree. Four answers, and the
+ * two in the middle are two different retries rather than one:
+ *
+ * - `awaiting`: an attempt is outstanding. There is nothing to do but wait for
+ *   a verified event, and opening a second payment page is how somebody pays
+ *   twice.
+ * - `resumable`: nothing was ever opened with the provider — the payment page
+ *   did not come back. Issue #10's narrow retry: the buyer never left the
+ *   checkout, so what they are paying for is still decided with the cart in
+ *   front of them.
+ * - `retryable`: the provider refused the payment or the buyer cancelled it.
+ *   Issue #13's retry: the Order Snapshot is what is being paid — its products,
+ *   its prices, its Paid Deliverable Versions and the Legal Revisions the buyer
+ *   accepted — and today's catalogue has no say in it.
+ * - `closed`: nothing more will be collected for it. The payment was approved,
+ *   or the twenty-four hours it was priced for have run out and the buyer
+ *   starts again from what WeCreate publishes today.
+ */
+export type PaymentProspect =
+  | "awaiting"
+  | "resumable"
+  | "retryable"
+  | "closed";
+
+export function paymentProspect(order: OrderSnapshot): PaymentProspect {
+  if (order.paymentState === "approved") return "closed";
+  if (!isWithinPaymentWindow(order)) return "closed";
+  if (isAwaitingPayment(order)) return "awaiting";
+  return order.paymentState === "pending" ? "resumable" : "retryable";
+}
+
+/**
+ * Whether this order may still be handed to a payment provider.
+ *
+ * Both retries, because the data plane does not care which of them a buyer is
+ * making: it is being asked for one more attempt against an order that has not
+ * been paid for. `commerce_open_payment_attempt` is this function's twin —
+ * change one and change the other.
+ */
 export function isPayable(order: OrderSnapshot): boolean {
-  if (order.paymentState !== "pending") {
-    return false;
-  }
+  const prospect = paymentProspect(order);
+  return prospect === "resumable" || prospect === "retryable";
+}
+
+/** Whether this order is still inside the window its prices were recorded for. */
+function isWithinPaymentWindow(order: OrderSnapshot): boolean {
   const age = Date.now() - new Date(order.createdAt).getTime();
   return Number.isFinite(age) && age < ORDER_PAYABLE_SECONDS * 1000;
 }
 
-/** The most recent attempt made on this order, if any has been. */
-export function lastAttempt(order: OrderSnapshot): PaymentAttempt | undefined {
-  return order.attempts.at(-1);
+/**
+ * Whether an attempt on this order is still outstanding.
+ *
+ * Two attempts are: one the provider gave a payment page for and no verified
+ * event has answered, and one this application opened and never recorded an
+ * answer for at all — a request that died between the two. They mean the same
+ * thing to a buyer, which is that a payment may be in flight.
+ *
+ * An attempt that never reached the provider is not outstanding: nothing was
+ * opened, so there is nothing to wait for.
+ */
+function isAwaitingPayment(order: OrderSnapshot): boolean {
+  return order.attempts.some(
+    (attempt) => attempt.state !== "failed" && attempt.outcome === null,
+  );
 }
 
 /**
