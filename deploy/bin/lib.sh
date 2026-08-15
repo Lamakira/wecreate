@@ -39,15 +39,6 @@ run() {
   "$@"
 }
 
-# The same, for a shell pipeline that cannot be expressed as an argv.
-run_sh() {
-  if [[ "${DRY_RUN}" == "1" ]]; then
-    printf '%s  would run:%s %s\n' "${DIM}" "${OFF}" "$*" >&2
-    return 0
-  fi
-  bash -c "$*"
-}
-
 require_root() {
   [[ "${EUID}" -eq 0 ]] || die "run this as root on the server (it edits /etc and creates a system user)"
 }

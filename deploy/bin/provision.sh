@@ -100,6 +100,15 @@ install_rendered() {
   return 0
 }
 
+step "Checking what this run needs before it changes anything"
+# Fail fast, and specifically *before* the first mutating step. A certificate
+# with no registered address gives nobody the sixty-day warning that is the
+# only thing standing between a forgotten renewal and an expired certificate,
+# and finding that out after the vhost is installed and reloaded leaves the
+# machine half-provisioned for no reason.
+[[ -n "${ACME_EMAIL}" ]] || die "ACME_EMAIL is not set. Re-run as: ACME_EMAIL=you@example.com $0"
+ok "ACME_EMAIL=${ACME_EMAIL}"
+
 step "Checking that preflight ran"
 if ! compgen -G "${BASELINE_DIR}/baseline-*.txt" >/dev/null; then
   die "no baseline in ${BASELINE_DIR}. Run preflight.sh first — without a record of what the nginx configuration looked like beforehand, there is no way to show afterwards that the neighbours were not changed."
@@ -203,7 +212,7 @@ else
   visudo -c -q -f "${tmp}" || { rm -f "${tmp}"; die "generated sudoers file does not parse — nothing installed"; }
   install -m 0440 -o root -g root "${tmp}" "${SUDOERS}"
   rm -f "${tmp}"
-  ok "wrote ${SUDOERS} (five verbs, one unit)"
+  ok "wrote ${SUDOERS} (six verbs, one unit)"
 fi
 
 # ---------------------------------------------------------------------------
@@ -290,7 +299,6 @@ if [[ ! -d "/etc/letsencrypt/live/${SITE_HOST}" ]]; then
   assert_neighbours_ok
 
   step "The certificate"
-  [[ -n "${ACME_EMAIL}" ]] || die "ACME_EMAIL is not set. Re-run as: ACME_EMAIL=you@example.com $0 — the expiry warning it registers is the only thing between a forgotten renewal and a dead certificate."
   if ! run certbot certonly --webroot --webroot-path "${ACME_WEBROOT}" \
       --domain "${SITE_HOST}" \
       --email "${ACME_EMAIL}" --agree-tos --no-eff-email \
@@ -313,6 +321,48 @@ if [[ ! -d "/etc/letsencrypt/live/${SITE_HOST}" ]]; then
   # block in the full vhost keeps the challenge location.
 else
   log "  certificate for ${SITE_HOST} already exists"
+fi
+
+# ---------------------------------------------------------------------------
+step "Making a renewed certificate actually get served"
+# ---------------------------------------------------------------------------
+# The half of "automatically renewed" that `certonly` does not do. certbot
+# writes the new files and stops; nginx went on holding the old certificate in
+# memory, and would keep serving it until something reloaded — which, with no
+# installer plugin involved, nothing ever does. The failure arrives sixty days
+# later as an expired certificate on a site nobody touched.
+#
+# A deploy hook rather than `--deploy-hook` on the command above, because the
+# renewal config was written when the certificate was first issued and a flag
+# passed now would not be in it. This runs for every certificate on the
+# machine, which is what the neighbours want too, and only when something was
+# actually renewed.
+run install -d -m 0755 -o root -g root /etc/letsencrypt/renewal-hooks/deploy
+if [[ "${DRY_RUN}" == "1" ]]; then
+  log "${DIM}  would write /etc/letsencrypt/renewal-hooks/deploy/reload-nginx${OFF}"
+else
+  tmp="$(mktemp)"
+  cat > "${tmp}" <<'HOOK'
+#!/bin/sh
+# Installed by WeCreate's deploy/bin/provision.sh.
+#
+# certbot renews a certificate on disk; nginx keeps serving the one it loaded
+# at startup until it is told otherwise. Without this, "automatically renewed"
+# is only half true and the site serves an expired certificate.
+#
+# Tested before reloading: a reload on a broken configuration is refused, but
+# checking first turns a silent no-op into a message in the renewal log.
+nginx -t && systemctl reload nginx
+HOOK
+  install -m 0755 -o root -g root "${tmp}" /etc/letsencrypt/renewal-hooks/deploy/reload-nginx
+  rm -f "${tmp}"
+  ok "installed /etc/letsencrypt/renewal-hooks/deploy/reload-nginx"
+fi
+
+if systemctl is-enabled certbot.timer >/dev/null 2>&1; then
+  ok "certbot.timer is enabled — renewal is scheduled"
+else
+  warn "certbot.timer is not enabled. Nothing will renew this certificate: systemctl enable --now certbot.timer"
 fi
 
 # ---------------------------------------------------------------------------

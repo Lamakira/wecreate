@@ -97,7 +97,7 @@ activate() {
 }
 
 prune() {
-  local keep="${KEEP_RELEASES}" current stale old keepers
+  local keep="${KEEP_RELEASES}" current stale old keepers pinned others_kept
   current="$(basename "$(readlink -f "${CURRENT}")")"
   keepers="${current}"
   if [[ -L "${PREVIOUS}" ]]; then
@@ -105,12 +105,19 @@ prune() {
   fi
   # Never prune what is running or what a rollback would land on, whatever
   # their age — a release that has been live for a while must not delete the
-  # one it would fall back to.
+  # one it would fall back to. Both are excluded from the list below *and*
+  # counted against KEEP_RELEASES, so what survives is the number
+  # `deployment.env` promises rather than that number plus the pinned ones.
+  pinned="$(grep -c . <<<"${keepers}" || true)"
+  others_kept=$(( keep > pinned ? keep - pinned : 0 ))
+  #
+  # `tail -n +N` prints *from* line N, so the first line to drop is one past
+  # the last one kept — `+${keep}` would have kept one fewer than asked.
   #
   # `|| true`, and collected before the loop rather than piped into it: with a
   # single release on disk `grep -v` matches nothing and exits 1, which under
   # `pipefail` would fail a deployment that had already succeeded.
-  stale="$(ls -1t "${RELEASES}" 2>/dev/null | grep -vFxf <(printf '%s\n' "${keepers}") | tail -n "+${keep}" || true)"
+  stale="$(ls -1t "${RELEASES}" 2>/dev/null | grep -vFxf <(printf '%s\n' "${keepers}") | tail -n "+$(( others_kept + 1 ))" || true)"
   [[ -z "${stale}" ]] && return 0
   while read -r old; do
     [[ -n "${old}" ]] || continue
@@ -159,6 +166,25 @@ deploy() {
     die "bundle needs Node >= ${needs_node}, this machine runs ${have_node}"
   fi
   log "  node ${have_node} (built on ${built_on:-unknown}, needs >= ${needs_node})"
+
+  # The origin is compiled into the bundle and cannot be corrected here, so a
+  # bundle built for the wrong host is not something this machine can fix — it
+  # can only decline to serve it. Getting this wrong is not a broken page: it
+  # is a working page that emails buyers an Order Access address on a hostname
+  # this deployment does not answer to, and that address has to keep resolving
+  # for ever.
+  #
+  # A warning rather than a refusal when BUILD_INFO carries no ORIGIN at all,
+  # so a bundle built before this field existed still deploys.
+  local origin
+  origin="$(sed -n 's/^ORIGIN=//p' <<<"${build_info}" | head -1)"
+  if [[ -z "${origin}" ]]; then
+    log "  origin: not recorded in this bundle — cannot check it against ${SITE_HOST}"
+  elif [[ "${origin#*://}" != "${SITE_HOST}" && "${origin#*://}" != "${SITE_HOST}/" ]]; then
+    die "bundle was built with NEXT_PUBLIC_SITE_URL=${origin}, but this machine serves ${SITE_HOST}. Every canonical URL and every emailed Order Access address in it would name the wrong host."
+  else
+    log "  origin ${origin}"
+  fi
 
   if [[ -d "${RELEASES}/${release}" ]]; then
     log "release ${release} is already unpacked — reusing it"

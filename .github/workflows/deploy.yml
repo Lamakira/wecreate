@@ -25,14 +25,18 @@ on:
         type: environment
         required: true
         default: staging
-  push:
-    branches: [main]
+# Deliberately no `push:` trigger. Issue #42 asks that the build happen in CI
+# and that the deployment swap an artifact; it does not ask for continuous
+# deployment, and this repository has no test job to gate one — `audit.yml`
+# checks advisories, and the acceptance suite is not run in CI at all. An
+# unattended deploy on every merge would be a policy nobody chose. Adding
+# `push: branches: [main]` here is the whole change if that becomes wanted.
 
 concurrency:
   # One deployment at a time per environment, and never cancel one in flight:
   # a run killed between the symlink move and the health check would leave the
   # rollback undone.
-  group: deploy-${{ inputs.environment || 'staging' }}
+  group: deploy-${{ inputs.environment }}
   cancel-in-progress: false
 
 jobs:
@@ -44,7 +48,7 @@ jobs:
     # builder is too, and `ubuntu-latest` moving on is not allowed to be the
     # thing that breaks a deployment.
     runs-on: ubuntu-24.04
-    environment: ${{ inputs.environment || 'staging' }}
+    environment: ${{ inputs.environment }}
     outputs:
       release: ${{ steps.identify.outputs.release }}
     steps:
@@ -95,6 +99,17 @@ jobs:
           NEXT_PUBLIC_SANITY_DATASET: ${{ vars.NEXT_PUBLIC_SANITY_DATASET }}
           NEXT_PUBLIC_SANITY_API_VERSION: ${{ vars.NEXT_PUBLIC_SANITY_API_VERSION }}
           NEXT_PUBLIC_MUX_ENV_KEY: ${{ vars.NEXT_PUBLIC_MUX_ENV_KEY }}
+          # Build-time despite the missing NEXT_PUBLIC_ prefix, which is why it
+          # is here and not in the server's environment file. `/robots.txt` is
+          # prerendered — it appears in `.next/prerender-manifest.json` — so
+          # `isIndexable()` in `src/site-config.ts` is evaluated once, during
+          # the build, and baked into a static file. Setting it on the server
+          # changes nothing.
+          #
+          # Unset on staging, which is what refuses that deployment to
+          # crawlers. Only production ever sets it, and until this was passed
+          # here production could not have been made indexable at all.
+          WECREATE_ALLOW_INDEXING: ${{ vars.WECREATE_ALLOW_INDEXING }}
           # Read at build time by next.config.ts, which derives the
           # Content-Security-Policy's `form-action` from the data plane's own
           # origin — that is the directive a buyer's download redirect travels
@@ -110,13 +125,17 @@ jobs:
       - name: Assemble the bundle
         env:
           RELEASE: ${{ steps.identify.outputs.release }}
+          NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL }}
         run: |
           set -euo pipefail
 
           # Where the standalone tree put its server. Found rather than assumed:
           # the path nests when Next.js decides the project has a workspace root
           # above it, and this repository has a pnpm-workspace.yaml.
-          server="$(find .next/standalone -maxdepth 4 -name server.js -print -quit)"
+          # `-not -path '*/node_modules/*'`: find walks in readdir order, so
+          # without it a `server.js` belonging to a traced dependency could be
+          # returned before the real one at the top of the tree.
+          server="$(find .next/standalone -maxdepth 4 -name server.js -not -path '*/node_modules/*' -print -quit)"
           test -n "$server" || { echo "::error::no server.js under .next/standalone — is output:'standalone' still set in next.config.ts?"; exit 1; }
           root="$(dirname "$server")"
           echo "standalone root: $root"
@@ -143,9 +162,22 @@ jobs:
           # NODE_MIN is read out of the framework's own `engines` field rather
           # than written down, so the number the server checks against moves
           # when Next.js moves it and nobody has to remember.
+          # ORIGIN is recorded because NEXT_PUBLIC_SITE_URL is compiled in and
+          # cannot be corrected on the server. Writing it down lets release.sh
+          # refuse a bundle built for a different host than the one it is being
+          # deployed to — the mistake that would otherwise be discovered in a
+          # buyer's inbox, in a link that has to keep resolving for ever.
+          #
+          # NODE_MIN is read out of the framework's own `engines` field rather
+          # than written down, so the number the server checks against moves
+          # when Next.js moves it and nobody has to remember. Matched as a
+          # single x.y.z rather than stripped of non-digits: `>=20.9.0` and a
+          # future `^20.9.0 || >=22` both have to yield one usable version, and
+          # a blind strip turns the second into `20.9.022`.
           cat > bundle/BUILD_INFO <<EOF
           RELEASE=${RELEASE}
-          NODE_MIN=$(node -p 'require("next/package.json").engines.node.replace(/[^0-9.]/g,"")')
+          ORIGIN=${NEXT_PUBLIC_SITE_URL}
+          NODE_MIN=$(node -p 'const m=require("next/package.json").engines.node.match(/\d+(\.\d+){0,2}/); if(!m) throw new Error("cannot read a version out of next engines.node"); m[0]')
           NODE_BUILD=$(node -p 'process.versions.node')
           COMMIT=${GITHUB_SHA}
           REF=${GITHUB_REF}
@@ -172,7 +204,7 @@ jobs:
     # Commerce Launch Gate becomes something the pipeline enforces rather than
     # something a person remembers.
     environment:
-      name: ${{ inputs.environment || 'staging' }}
+      name: ${{ inputs.environment }}
       url: ${{ vars.NEXT_PUBLIC_SITE_URL }}
     steps:
       - uses: actions/download-artifact@v4

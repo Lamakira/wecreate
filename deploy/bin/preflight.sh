@@ -125,7 +125,11 @@ mkdir -p "${BASELINE_DIR}"
   echo "# Diff a later capture against this to show what provisioning changed."
   echo
   echo "## nginx -T (full effective configuration)"
-  nginx -T 2>/dev/null
+  # `|| true`, like every other capture in this read-only script: on a machine
+  # whose nginx configuration is already broken — the finding reported above —
+  # `nginx -T` exits non-zero, and under `set -e` that would kill the survey
+  # before it printed the summary it exists to print.
+  nginx -T 2>/dev/null || true
   echo
   echo "## enabled sites"
   ls -l /etc/nginx/sites-enabled/

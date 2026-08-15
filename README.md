@@ -1576,7 +1576,9 @@ copy of anything.
 | `/opt/wecreate-deploy/` | A copy of `deploy/`, so the way back lives on the machine |
 | `/etc/systemd/system/wecreate.service` | The supervised process |
 | `/etc/nginx/sites-available/wecreate` | The virtual host |
-| `/etc/nginx/snippets/wecreate-origin.conf` | Who may reach the origin |
+| `/etc/nginx/snippets/wecreate-origin.conf` | Restores the visitor's IP, refuses non-CDN traffic |
+| `/etc/nginx/conf.d/wecreate-cdn.conf` | The `geo` block that decides which peers are the CDN |
+| `/etc/letsencrypt/renewal-hooks/deploy/reload-nginx` | Makes a renewed certificate actually get served |
 | `/var/log/wecreate-deploy/baseline-*.txt` | `nginx -T` before provisioning, for diffing |
 
 The application runs as `wecreate`, a system account with no login shell that
@@ -1619,6 +1621,25 @@ Then fill in `/srv/wecreate/shared/env` from
 commerce — the back office's functions do not exist in a project that has not
 had them.
 
+**Verify that they landed rather than assuming it.** No test in this repository
+ever runs that SQL: the acceptance suite drives the fixture, so the migrations
+and the Supabase adapter are the one part of the system with no automated
+coverage. Ask the project itself, with nothing but the anonymous key the
+deployment uses:
+
+```bash
+curl -s -X POST \
+  "$SUPABASE_URL/rest/v1/rpc/commerce_active_paid_deliverable_skus" \
+  -H "apikey: $SUPABASE_ANON_KEY" \
+  -H "Content-Type: application/json" -d '{}'
+```
+
+A JSON array — `[]` on an empty project, `["PT-1"]` on a seeded one — means the
+functions and their grants are there. `404` means the migrations have not been
+applied; `401` or `permission denied` means they have been applied but the
+grants have not, which is the failure that looks like a working deployment
+until a Commerce Operator signs in. Repeat it after every migration.
+
 ### Building and shipping
 
 `next build` never runs on the server. It saturates both cores for minutes and
@@ -1626,15 +1647,21 @@ the site next door would feel it, so `.github/workflows/deploy.yml` builds in CI
 and ships only the output: Next.js' standalone bundle, which carries the traced
 subset of `node_modules` and needs no install step at the other end.
 
-The workflow runs on a push to `main`, or from *Actions → Deploy* with an
-environment chosen. It needs, per GitHub Environment:
+The workflow runs from *Actions → Deploy* with an environment chosen, and only
+from there. There is deliberately no push trigger: issue #42 asks that the build
+happen in CI and that a deployment swap an artifact, not that every merge deploy
+itself, and nothing in CI runs the acceptance suite to gate one. Adding
+`push: branches: [main]` is the whole change if that becomes wanted.
+
+It needs, per GitHub Environment:
 
 | Kind | Name | Why |
 | ---- | ---- | --- |
 | Variable | `NEXT_PUBLIC_SITE_URL` | The origin actually served. Compiled in; see below |
 | Variable | `NEXT_PUBLIC_SANITY_PROJECT_ID`, `NEXT_PUBLIC_SANITY_DATASET` | Which content this deployment reads |
 | Variable | `NEXT_PUBLIC_SANITY_API_VERSION`, `NEXT_PUBLIC_MUX_ENV_KEY` | Optional |
-| Variable | `WECREATE_COMMERCE_PROVIDER` | Read at build time by `next.config.ts` |
+| Variable | `WECREATE_COMMERCE_PROVIDER` | Read at build time *and* runtime — set in both places |
+| Variable | `WECREATE_ALLOW_INDEXING` | Production only. Build-time despite the name — see below |
 | Secret | `SUPABASE_URL` | Also read at build time — see below |
 | Secret | `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY` | Where to ship and as whom |
 | Secret | `DEPLOY_KNOWN_HOSTS` | `ssh-keyscan <host>`. Pinned, not learned |
@@ -1643,7 +1670,16 @@ environment chosen. It needs, per GitHub Environment:
 on the server.** Setting it in `shared/env` does nothing at all. That matters
 most for `NEXT_PUBLIC_SITE_URL`, which every canonical URL and every emailed
 Order Access address carries: a deployment built with the wrong value puts an
-address in a buyer's inbox that has to keep resolving for ever.
+address in a buyer's inbox that has to keep resolving for ever. Each bundle
+records the origin it was built for and `release.sh` refuses one that does not
+match the host it is being deployed to, which is the cheapest place to catch
+that mistake.
+
+**`WECREATE_ALLOW_INDEXING` is build-time too, despite the missing prefix.**
+`/robots.txt` is prerendered, so `isIndexable()` runs once during the build and
+its answer is baked into a static file. It belongs in the GitHub Environment
+with the rest, unset everywhere but production; setting it on the server has no
+effect at all.
 
 Two variables are read in *both* places and have to agree, because
 `next.config.ts` reads them at build time to derive the Content-Security-Policy
@@ -1708,17 +1744,40 @@ written a line of nginx configuration here or anywhere else on the machine.
 Renewal is the `certbot.timer` that was already running for the two certificates
 that came first; this one joined them and there is no new schedule to forget.
 The port-80 server block keeps its `/.well-known/acme-challenge/` location for
-exactly that reason. To check: `certbot certificates`, and
-`certbot renew --dry-run`.
+exactly that reason.
 
-**The CDN and the origin.** `deploy/bin/refresh-cloudflare-ips.sh` writes the
-snippet that both restores the visitor's real IP from `CF-Connecting-IP` and
-refuses anything that did not come through the CDN, and installs a weekly cron
-to keep the list current — an allowlist that is never refreshed becomes an
-outage the day Cloudflare adds a range. Run it with `--off` to open the origin
-again; until it is run at all, the origin is open and the CDN criterion is not
-met. Turning it on before DNS is proxied makes the site unreachable, so proxy
-first.
+Renewing the file is only half of it. certbot writes the new certificate and
+stops; nginx goes on serving the one it loaded at startup, and with no installer
+plugin involved nothing would ever reload it — the failure arrives sixty days
+later as an expired certificate on a site nobody touched. So provisioning
+installs `/etc/letsencrypt/renewal-hooks/deploy/reload-nginx`, which tests the
+configuration and reloads when anything on the machine renews, the neighbours
+included. To check: `certbot certificates`, and `certbot renew --dry-run`.
+
+**The CDN and the origin.** `deploy/bin/refresh-cloudflare-ips.sh` writes two
+files — a `geo` block in `conf.d` and a snippet the vhost includes — that
+together restore the visitor's real IP from `CF-Connecting-IP` and refuse
+anything that did not arrive through the CDN. It installs a weekly cron to keep
+the range list current, because an allowlist nobody refreshes becomes an outage
+the day Cloudflare adds a range. Run it with `--off` to open the origin again;
+until it is run at all the origin is open and that criterion is not met.
+Turning it on before DNS is proxied makes the site unreachable, so proxy first.
+
+**Why it is a `geo` block and not `allow`/`deny`.** The obvious spelling is
+silently backwards. nginx's realip module runs before the access module, so by
+the time `allow`/`deny` is evaluated `$remote_addr` has already been replaced by
+the `CF-Connecting-IP` header — the allowlist then compares Cloudflare's ranges
+against the visitor's own address, refuses every genuine request, and lets a
+forged header through. The decision is therefore made against
+`$realip_remote_addr`, the address the connection actually came from.
+
+**Serving cached pages without reaching Node is Cloudflare's half, and it is not
+configured by anything here.** Cloudflare does not cache HTML by default however
+correct the origin's `Cache-Control` is, so a Cache Rule has to be added in the
+dashboard — match the public paths, *Eligible for cache*, and respect the
+origin's headers, which Next.js already sets to `public` on a prerendered page
+and `private, no-cache` on a dynamic one. Without that rule the CDN is a proxy
+and every visitor still reaches the Node process.
 
 **The upload ceiling.** Three numbers have to agree, and they are checked at the
 26 MiB boundary: `MAX_DELIVERABLE_BYTES` (25 MiB) in

@@ -27,6 +27,7 @@ readonly UNIT="/etc/systemd/system/${APP_USER}.service"
 readonly VHOST_AVAILABLE="/etc/nginx/sites-available/${APP_USER}"
 readonly VHOST_ENABLED="/etc/nginx/sites-enabled/${APP_USER}"
 readonly SNIPPET="/etc/nginx/snippets/${APP_USER}-origin.conf"
+readonly GEO="/etc/nginx/conf.d/${APP_USER}-cdn.conf"
 readonly SUDOERS="/etc/sudoers.d/${APP_USER}-deploy"
 readonly CRON="/etc/cron.d/${APP_USER}-cloudflare-ips"
 
@@ -46,7 +47,7 @@ fi
 
 step "Removing the virtual host"
 removed_nginx=0
-for path in "${VHOST_ENABLED}" "${VHOST_AVAILABLE}" "${SNIPPET}"; do
+for path in "${VHOST_ENABLED}" "${VHOST_AVAILABLE}" "${SNIPPET}" "${GEO}"; do
   if [[ -e "${path}" || -L "${path}" ]]; then
     run rm -f "${path}"
     log "  removed ${path}"
