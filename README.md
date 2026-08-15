@@ -18,6 +18,7 @@ The canonical specification is GitHub issue #1. Domain vocabulary is defined in
 | Commerce          | Supabase, behind the back office at `/commerce` |
 | Payments          | FedaPay, on its own hosted page                 |
 | Transactional email | Resend, for receipts and Order Access         |
+| Hosting           | A Node server WeCreate runs in Paris, behind a CDN (ADR-0011) |
 | Acceptance tests  | Playwright, against the production build        |
 | Package manager   | pnpm                                            |
 
@@ -931,11 +932,14 @@ request body the deployment will carry — 25 MB here, and `serverActions
 overhead — and note that limit is global, because Next.js has no per-route one:
 it is also the ceiling on the Digital Cart's own Server Functions, which carry a
 handful of identifiers and come nowhere near it, so what actually bounds an
-upload is `MAX_DELIVERABLE_BYTES`. A platform with a
-smaller request limit of its own (Vercel's serverless functions cap request
-bodies well below this) needs the upload to go directly to storage against a
-signed upload URL before a large ebook can be uploaded there. Final Paid Deliverables are an external launch input in any case
-(issue #1), so this is a Commerce Launch Gate item rather than a live problem.
+upload is `MAX_DELIVERABLE_BYTES`. On the deployment ADR-0011 describes, the
+other bound is `client_max_body_size` in nginx, which WeCreate sets — so the
+ceiling is a decision rather than a platform's. A host that capped request
+bodies below this (serverless functions typically do, well below) would need the
+upload to go directly to storage against a signed upload URL before a large
+ebook could be uploaded there; running our own server is what takes that off the
+Commerce Launch Gate. Final Paid Deliverables are an external launch input in
+any case (issue #1).
 
 ## Services and Service Enquiries
 
