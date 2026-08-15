@@ -1754,6 +1754,20 @@ installs `/etc/letsencrypt/renewal-hooks/deploy/reload-nginx`, which tests the
 configuration and reloads when anything on the machine renews, the neighbours
 included. To check: `certbot certificates`, and `certbot renew --dry-run`.
 
+**There is no CDN in front of staging, and that is a decision.** Cloudflare's
+free plan offers only the full setup: it will not proxy one subdomain and leave
+the rest of the DNS where it is — that is a Business-plan feature. So putting a
+CDN in front of `wecreate.weact.bj` means moving the whole `weact.bj` zone's
+nameservers away from Netim, which changes how `weact.bj` and `askive.weact.bj`
+are resolved. A staging site with no visitors is a poor reason to reshuffle the
+DNS two live sites depend on, and edge caching is worth nothing to an audience
+of one. So staging is served straight from the origin, the CDN criterion of
+issue #42 stays open, and it is settled for the production domain instead —
+which is the deployment that will actually have visitors, and the point at
+which the nameserver move has to happen anyway.
+
+Everything below is written and tested for that day; none of it is running now.
+
 **The CDN and the origin.** `deploy/bin/refresh-cloudflare-ips.sh` writes two
 files — a `geo` block in `conf.d` and a snippet the vhost includes — that
 together restore the visitor's real IP from `CF-Connecting-IP` and refuse

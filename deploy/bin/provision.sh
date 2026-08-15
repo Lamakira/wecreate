@@ -268,22 +268,32 @@ run install -d -m 0755 -o root -g root "${ACME_WEBROOT}/.well-known"
 ok "${ACME_WEBROOT}"
 
 # ---------------------------------------------------------------------------
-step "The origin allowlist placeholder"
+step "The origin restriction placeholder"
 # ---------------------------------------------------------------------------
-# Open, for now. The vhost includes this path unconditionally, and an nginx
-# `include` of a missing file is a config error — so the file has to exist
-# before the vhost does, and turning the CDN lockdown on later is then one
-# script run rather than an edit to a live vhost.
+# Empty, and that is the decision rather than an oversight: staging is served
+# straight from this origin, with no CDN in front. Putting one there on the
+# free plan means moving the whole weact.bj zone's nameservers to Cloudflare,
+# which is a change to how two live sites are resolved, and a staging site with
+# no visitors is a poor reason to make it. The CDN belongs to the production
+# deployment; `refresh-cloudflare-ips.sh` is written and tested for that day.
+#
+# The file still has to exist, because the vhost includes this path
+# unconditionally and an nginx `include` of a missing file is a config error.
+# That is what makes turning the lockdown on later one script run rather than
+# an edit to a live vhost.
 run install -d -m 0755 -o root -g root /etc/nginx/snippets
 if [[ ! -f "${SNIPPET}" ]]; then
   if [[ "${DRY_RUN}" == "1" ]]; then
-    log "${DIM}  would write ${SNIPPET} (allow all)${OFF}"
+    log "${DIM}  would write ${SNIPPET} (open origin, no CDN)${OFF}"
   else
     printf '%s\n' \
-      "# Placeholder written by provision.sh. No CDN in front of this origin yet." \
-      "# deploy/bin/refresh-cloudflare-ips.sh replaces this with the lockdown." \
-      "allow all;" > "${SNIPPET}"
-    ok "wrote ${SNIPPET} (open)"
+      "# Placeholder written by provision.sh. No CDN in front of this origin." \
+      "#" \
+      "# Nothing is restricted here: with no CDN there is no list to refuse" \
+      "# anyone against, and no proxy whose word about the client address" \
+      "# should be believed. deploy/bin/refresh-cloudflare-ips.sh replaces this" \
+      "# with the lockdown when one is put in front." > "${SNIPPET}"
+    ok "wrote ${SNIPPET} (open — no CDN, by decision)"
   fi
 else
   log "  ${SNIPPET} already exists — left alone"
