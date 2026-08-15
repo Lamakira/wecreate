@@ -204,6 +204,59 @@ export type PaymentEventDisposition =
   | "duplicate"
   | "unmatched";
 
+/**
+ * Something that happened to an order which no rule here could settle.
+ *
+ * Not an error and not a state: a decision WeCreate has to make by hand, kept
+ * where the person making it will find it (issue #15's Commerce Operator view).
+ * Three of them, and each is a thing the automatic rules deliberately refuse to
+ * guess at:
+ *
+ * - `duplicate_payment`: a *second* transaction was approved for one order. The
+ *   Payment State does not move — it was already approved — so nothing is
+ *   delivered twice, and somebody owes the buyer a refund that only a person
+ *   can decide on.
+ * - `contradictory_event`: a provider said one thing about a transaction and
+ *   then the opposite. Payment truth is settled by the first answer that was
+ *   allowed to decide it (ADR-0009), so the later one is kept and not acted on.
+ * - `fulfillment_failed`: a delivery could not be finished. The payment stays
+ *   approved and the grants stand (ADR-0005), and a buyer who has not been
+ *   written to is somebody WeCreate has to write to.
+ *
+ * A delivery *taken up again* is deliberately not one (ADR-0010). It is the
+ * thing that was supposed to happen, and there is nothing for anybody to decide
+ * about it — a queue of work that includes its own successes is a queue nobody
+ * reads.
+ */
+export type OrderAnomalyKind =
+  | "duplicate_payment"
+  | "contradictory_event"
+  | "fulfillment_failed";
+
+/**
+ * One of those, as it is kept.
+ *
+ * What is *not* here is the point, and it is the same rule the audit trail
+ * keeps: the provider's own identifiers, which are not secrets and are what an
+ * operator has in front of them in a provider dashboard — and nothing of the
+ * buyer, no delivery body, no token and no storage address. A raw payload kept
+ * "just in case" would be an unbounded copy of somebody's contact details in a
+ * table nobody reads until something has gone wrong (issue #1).
+ */
+export interface OrderAnomaly {
+  kind: OrderAnomalyKind;
+  /** The order it is about, which is what an operator quotes back to a buyer. */
+  reference: string;
+  detectedAt: string;
+  provider: string | null;
+  providerTransactionId: string | null;
+  providerEventId: string | null;
+  /** Why, in words safe to store and log. Never a payload, an address or a key. */
+  detail: string | null;
+  /** When a Commerce Operator settled it, or `null` while it is outstanding. */
+  resolvedAt: string | null;
+}
+
 export interface PaymentEventRecord {
   disposition: PaymentEventDisposition;
   /** Where the Payment State stands afterwards, when an order was found. */
@@ -271,6 +324,16 @@ export interface OrderAccessGrant {
 export interface OrderAccess {
   /** The order this opens, which is what a buyer quotes to support. */
   reference: string;
+  /**
+   * ISO 8601. When the token now in force was issued.
+   *
+   * It moves when a delivery is taken up again and a fresh token is emailed
+   * (ADR-0010), which is exactly what makes it useful: it is the stable name of
+   * *this* issuance, and the receipt carrying that token is idempotent under it.
+   * A key that named only the order would let a provider swallow the second
+   * message as a repeat of one the buyer never received.
+   */
+  issuedAt: string;
   /** ISO 8601. Thirty days after the payment was approved. */
   expiresAt: string;
   /** One per Digital Product on the Order Snapshot, in the order it was bought. */

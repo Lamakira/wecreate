@@ -11,13 +11,20 @@ import { areEmailTestHooksEnabled } from "@/site-config";
  * and this reads it back — which is exactly the position a buyer is in when
  * they open their mail and follow the Order Access address in it.
  *
+ * It also puts the provider out of action and brings it back, which is the
+ * second thing no actor can do. Issue #14 asks for a delivery that failed to be
+ * taken up again and finish, and for a claim left behind by a request nobody is
+ * waiting on any more; a sender that always refuses can show neither.
+ *
  * It is inert unless BOTH `WECREATE_TEST_HOOKS=1` and
  * `WECREATE_EMAIL_PROVIDER=fixture` are set, and answers 404 rather than 403
  * when they are not: on a deployment that sends real mail this address does not
  * exist, and does not advertise that it might.
  */
 
-type TestEmailRequest = { action: "reset" };
+type TestEmailRequest =
+  | { action: "reset" }
+  | { action: "outage"; mode: "off" | "refuse" | "stall"; seconds?: number };
 
 export async function GET(): Promise<Response> {
   if (!areEmailTestHooksEnabled()) {
@@ -37,6 +44,16 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
 
   const body = (await request.json()) as TestEmailRequest;
+
+  if (body.action === "outage") {
+    const { setEmailOutage } = await import("@/email/fixture/provider");
+    await setEmailOutage({
+      mode: body.mode,
+      seconds: Number(body.seconds) || 0,
+    });
+    return NextResponse.json({ ok: true, action: body.action });
+  }
+
   if (body.action !== "reset") {
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   }

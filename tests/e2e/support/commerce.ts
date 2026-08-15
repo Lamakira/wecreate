@@ -46,6 +46,20 @@ export class CommerceDataPlane {
     await this.act({ action: "age", seconds });
   }
 
+  /**
+   * Take away the bytes behind every Paid Deliverable Version, leaving the
+   * records that describe them.
+   *
+   * A private store that cannot answer for an object it should have. Issue #14
+   * asks for a failure to produce a file address to stay a technical
+   * uncertainty — retryable, costing the buyer no part of their allowance and
+   * saying nothing about their payment — and that cannot be shown by deleting a
+   * version, because deleting one is a thing the data plane refuses.
+   */
+  async emptyPrivateStore(): Promise<void> {
+    await this.act({ action: "emptyPrivateStore" });
+  }
+
   private async act(body: Record<string, unknown>): Promise<void> {
     const response = await this.request.post("/api/test/commerce", {
       data: body,

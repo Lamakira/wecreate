@@ -466,6 +466,11 @@ only thing that may replace it is an approval, so a second refusal cannot
 rewrite the first. An event for a transaction this deployment never opened is
 acknowledged and dropped — that is another environment's webhook, not an error.
 
+Two of those are more than kept: a provider contradicting the verdict that
+stands, and an approval for a *second* transaction against one order, are
+recorded as Order Anomalies for a person to settle. See *Fulfillment and Order
+Access* below.
+
 **An attempt carries what FedaPay finally said about it**, read back out of
 those events rather than stored beside them, so the two cannot drift. It is what
 tells an outstanding payment from a settled one once an order has more than one
@@ -618,22 +623,22 @@ src/email/
 ├── resend/provider.ts   Resend over REST — the only module that knows it
 └── fixture/provider.ts  an outbox on disk, for the acceptance suite
 
-src/commerce/order-access.ts   thirty days, five downloads, fifteen minutes, and
-                               how all three are said in French
+src/commerce/order-access.ts   thirty days, five downloads, fifteen minutes, how
+                               long a claim may stall, and how they are said in
+                               French
 ```
 
 **Payment and delivery move independently, and delivery never leads** (ADR-0005).
-The webhook records the event first; only a *first effective approval* then
-starts a delivery, and the delivery cannot fail that request — a receipt that
-did not go out leaves an approved payment approved, and the buyer's page leads
-with *Paiement approuvé* whatever happened next.
+The webhook records the event first; every verified event that leaves the order
+approved then *offers* to deliver it, and the delivery cannot fail that request
+— a receipt that did not go out leaves an approved payment approved, and the
+buyer's page leads with *Paiement approuvé* whatever happened next.
 
 **One approval delivers once, and the data plane decides that rather than the
 application.** `commerce_begin_fulfillment` claims the order with its row
-locked: a Fulfillment State leaves `not_started` exactly once, so a redelivered
-webhook, a retried request and two processes racing produce one set of grants
-and one receipt between them. Idempotency that lived in one process would be one
-process's opinion.
+locked, so a redelivered webhook, a retried request and two processes racing
+produce one set of grants and one receipt between them. Idempotency that lived
+in one process would be one process's opinion.
 
 **The order of the steps is the guarantee.** The grants are made *inside* the
 claim and the receipt is attempted after, so a buyer whose email never went out
@@ -641,12 +646,51 @@ still owns everything they paid for — which is why `/commande/retour` lists wh
 was bought even when the Fulfillment State reads *Livraison à reprendre*, and
 adds one way to be helped rather than another way to pay.
 
-**A failed delivery stays failed, for now.** Nothing in this application can
-claim one a second time — Postgres refuses the transition, deliberately — so
-until the back office gains the retry and the access reissue that issue #15
-brings it, resolving one means writing to the buyer by hand with the reference
-their page is showing them. That is a small number of orders and a visible
-state, which is the right trade against a retry surface nobody has designed.
+**A delivery that stopped may be taken up; one that succeeded may not**
+(ADR-0010). `delivered` is terminal in every direction, and a claim somebody is
+holding right now is theirs — but a delivery that failed, and one abandoned
+unfinished for longer than `FULFILLMENT_STALL_SECONDS`, are both claimable
+again. The second is the one worth being exact about: a process that stops
+between claiming an order and finishing it fails nothing and says nothing, and
+without a moment at which its claim is abandoned that order is never delivered
+by anything.
+
+What makes taking one up safe is that the durable half is idempotent rather than
+repeated. The grants already made are left exactly as the buyer left them —
+allowance included — and one order holds one live Order Access token, reissued
+in place with its thirty days still measured from the approval rather than from
+the delivery that finally carried it. Two consequences are easy to miss: a claim
+is settled *by name*, so a request that gave up cannot mark an order failed that
+has since been delivered; and a receipt's idempotency key names the issuance
+rather than the order, because a second message carries a token the first one
+never did.
+
+**What takes one up today is the payment provider's own redelivery**, which
+covers an outage that ends inside FedaPay's retry schedule and nothing past it.
+A person deciding to retry a delivery, and reissuing a token to a corrected
+address, are issue #15's.
+
+**And what no rule could settle is written down rather than guessed at.**
+`commerce.order_anomalies` is where a Commerce Operator will be sent (issue
+#15), and it holds three things and no others: a *second* transaction approved
+for one order — the buyer was charged twice, the Payment State is right not to
+move, and only a person can decide on the refund; a provider contradicting
+itself about the transaction whose verdict stands; and a delivery that failed,
+once per order rather than once per redelivery into the same outage. A delivery
+*taken up again* is deliberately absent — it is the thing that was supposed to
+happen, and a queue of work that lists its own successes is a queue nobody
+reads. What is recorded is the provider's own identifiers, which are not secrets
+and are what an operator has in front of them in a provider dashboard — and
+never a delivery body, a buyer's details, a token or a storage address, for the
+reason the audit trail never holds one.
+
+The rule for the first two is `paymentEventAnomaly()` in `src/commerce/orders.ts`
+and `commerce.payment_event_anomaly` in Postgres, written to agree the way
+`paymentEventEffect()` and its twin are. It exists because "what may this event
+do to the Payment State" is a narrower question than it looks: a second approval
+means nothing when it is the provider repeating itself about the transaction
+that already paid, and means a double charge when it is another transaction —
+and the state does not move either way.
 
 **Only the digest of the token is stored.** The emailed address carries 256 bits
 from a cryptographic source; what the data plane holds is its SHA-256, and
@@ -715,11 +759,13 @@ through one boundary of the same shape Managed Content has (ADR-0008):
 ```
 src/commerce/
 ├── types.ts             Paid Deliverable Version, Commerce Operator, audit
-│                        entry, Order Snapshot, Payment State, order state
+│                        entry, Order Snapshot, Payment State, order state,
+│                        Order Anomaly
 ├── provider.ts          the interface, and which data plane is in use
 ├── paid-deliverables.ts what may be uploaded, and where its bytes are addressed
 ├── orders.ts            how an order is named, how long it may still be paid,
-│                        and what a verified event does to its Payment State
+│                        what a verified event does to its Payment State, and
+│                        what it leaves for a person to settle
 ├── operators.ts         who may see and change commerce data
 ├── session.ts           the operator's session, in an http-only cookie
 ├── actions.ts           everything an operator can do, as form submissions
@@ -791,7 +837,10 @@ what an order contains or who it is for, and close the one direction a Payment
 State may never move in: nothing may leave `approved`, and a refusal may be
 replaced by an approval and by nothing else — so no application bug and no
 support action can unsay that a buyer paid (ADR-0005, ADR-0009), while the retry
-issue #13 asks for is still a payment that can succeed.
+issue #13 asks for is still a payment that can succeed. A delivered order is
+closed the same way, and everything short of it may be taken up again
+(ADR-0010). What no rule could settle becomes an Order Anomaly, which is
+append-only apart from an operator recording that they have dealt with it.
 
 **Postgres enforces the same rules, against requests that never render a page.**
 `supabase/migrations/` is the record. The tables live in a `commerce` schema that
@@ -1175,6 +1224,12 @@ tests/e2e/
 │                                     address, expiry, allowance, temporary
 │                                     private links, exhaustion, a product the
 │                                     order never bought, and an archived one
+├── exactly-once.spec.ts              approvals raced, duplicated and reordered;
+│                                     a second transaction flagged rather than
+│                                     delivered again; a mail provider that
+│                                     refuses and then comes back; a claim
+│                                     nobody finished; parallel downloads; a
+│                                     private store that cannot answer
 ├── services.spec.ts                  canonical packs and prices, the prefilled
 │                                     WhatsApp message, the hosted Discovery
 │                                     Call, the comparison, no service commerce
@@ -1199,16 +1254,19 @@ tests/e2e/
     │                                 payment provider's hosted page
     ├── payment-events.ts             signing and delivering provider events,
     │                                 and asking where an order stands
-    ├── order-access.ts               the buyer's inbox, the emailed address,
-    │                                 and what a temporary private link must be
+    ├── order-access.ts               the buyer's inbox and its outages, the
+    │                                 emailed address, what a temporary private
+    │                                 link must be, presses made at once, and
+    │                                 what the data plane durably holds
     └── sample-content.ts             stand-in projects and products
 ```
 
 Tests act as a Content Editor would, through `/api/test/managed-content`, and as
 a Commerce Operator would, through the back office itself — signing in with a
 password and a code their authenticator really produces, uploading through the
-real form. `/api/test/commerce` exists only to return the data plane to its
-seeded state between scenarios, which is the one thing no operator can do.
+real form. `/api/test/commerce` exists only for the things no operator can do —
+returning the data plane to its seeded state between scenarios, moving time, and
+taking away the bytes behind the versions it holds.
 
 The Digital Cart is the one place a test writes state directly, and both reasons
 are themselves under test: a cart that survives a closed browser for thirty days
@@ -1227,15 +1285,25 @@ are sent as bytes, because a signature is over bytes and Playwright re-serialise
 a string that is not already valid JSON — which would quietly turn every
 malformed-delivery scenario into a test of nothing.
 
-Two things the suite reaches for that no actor can. **The outbox**, through
-`/api/test/email`: a receipt goes to an address there is no mailbox for on this
-machine, so the fixture email provider keeps what it was asked to send and a
-scenario reads it and follows the Order Access address in it — which is exactly
-the position a buyer is in. **A clock**, through `/api/test/commerce`'s `age`
-action: three of the rules issue #1 asks for are measured in time nobody can
-wait out — a twenty-four-hour Order Snapshot window, thirty days of access and a
-fifteen-minute file address. Ageing what is stored keeps every assertion about
-what the *application* concludes from a moment.
+Four things the suite reaches for that no actor can, and each is at an outbound
+boundary rather than inside anything. **The outbox**, through `/api/test/email`:
+a receipt goes to an address there is no mailbox for on this machine, so the
+fixture email provider keeps what it was asked to send and a scenario reads it
+and follows the Order Access address in it — which is exactly the position a
+buyer is in. **A clock**, through `/api/test/commerce`'s `age` action: four of
+the rules issue #1 asks for are measured in time nobody can wait out — a
+twenty-four-hour Order Snapshot window, thirty days of access, a fifteen-minute
+file address and the moment an unfinished delivery may be taken up. Ageing what
+is stored keeps every assertion about what the *application* concludes from a
+moment. **A mail provider that stops answering and comes back**, through
+`/api/test/email`'s `outage` action, which refuses or simply holds the request
+open: a sender that always fails can show a delivery that stayed failed and
+nothing else, and issue #14 asks for one that is taken up again and finishes,
+and for a claim left behind by a request nobody is waiting on any more. **A
+private store that cannot answer for an object it should have**, through
+`emptyPrivateStore`, because a file address that could not be produced must cost
+a buyer no part of their allowance and deleting a version is a thing the data
+plane refuses.
 
 One thing the suite fakes that is not a provider: a browser following an address
 to `stockage.wecreate.test`. Chromium resolves the host of a redirected form
@@ -1243,6 +1311,22 @@ submission before Playwright is offered the chance to answer for it, so
 `support/order-access.ts` intercepts the submission itself, reads the address
 WeCreate really answered with, and hands the browser back to the access page.
 The `POST` is real, the route is real, the cookie is this browser's own.
+
+Presses that have to be *simultaneous* go a second way, and for a reason worth
+knowing before writing another one: they carry the access cookie as a header
+rather than letting a cookie jar carry it. Clicking the button serialises the
+presses and would test nothing about two of them racing, and Playwright's HTTP
+client will not send a `Secure` cookie to `127.0.0.1` over plain HTTP the way a
+browser will — so a helper that relied on the jar would be told `unknownAccess`
+every time and prove nothing.
+
+Two claims are made against the data plane's own storage rather than against a
+page, and both are things issue #1 and issue #14 ask for that no page could ever
+show: that persistence holds the digest of an Order Access token and never the
+token, and that a doubled, reordered or repeated webhook leaves exactly one
+grant, every event, and the anomalies a Commerce Operator will be handed.
+`support/order-access.ts` spells that stored shape out by hand for the reason it
+spells out the storage signature.
 
 Each hook responds 404 unless `WECREATE_TEST_HOOKS=1` **and** its own provider is
 the fixture, so none can be reached on a deployment backed by a real Sanity

@@ -180,33 +180,52 @@ export interface CommerceProvider {
   /**
    * Claim one approved order for delivery, and make its grants.
    *
-   * The whole of what makes fulfillment happen once. Claiming and granting are
-   * one call because they are one transaction, and the claim is what a second
-   * caller loses: a Fulfillment State moves out of `not_started` exactly once,
-   * so a redelivered webhook, a retried request and two processes racing each
-   * other produce one set of grants and one receipt between them.
+   * The whole of what makes fulfillment happen once, and once is not the same
+   * as *at most* once. Two rules, and they pull against each other on purpose
+   * (ADR-0010):
+   *
+   * **No two callers hold a claim at the same time.** Claiming and granting are
+   * one call because they are one transaction, and the claim is what the second
+   * caller loses — so a redelivered webhook, a retried request and two processes
+   * racing produce one set of grants and one receipt between them.
+   *
+   * **A claim nobody finished may be taken up.** A delivery that failed, and one
+   * abandoned unfinished for longer than `stalledSeconds`, are both claimable
+   * again. What makes that safe rather than a second delivery is that
+   * everything durable is idempotent: the grants already made are kept exactly
+   * as the buyer left them, and the access row is reissued rather than added to.
    *
    * It creates one grant per Order Snapshot line, against the Paid Deliverable
    * Version that line recorded — never the one activated today. Only the digest
    * of the emailed token is stored; the token itself never reaches this
    * boundary and could not be recovered from what does.
-   *
-   * There is no way back in. A delivery that failed stays failed until an
-   * operator retries it, and that is issue #15's — along with reissuing a
-   * token, which is the other reason this would ever run twice.
    */
   beginFulfillment(
     request: BeginFulfillmentRequest,
   ): Promise<BeginFulfillmentOutcome>;
 
   /**
-   * Record how the delivery went.
+   * Record how the delivery this caller claimed went.
    *
    * It moves a Fulfillment State and touches nothing else — least of all a
    * Payment State. A receipt that could not be sent and a file that could not
    * be prepared must never be able to unsay that a buyer paid (ADR-0005).
+   *
+   * `claimId` is what makes it *this caller's* delivery rather than whichever
+   * one the order is currently running. Once a claim may be taken up by
+   * somebody else, an abandoned request waking up to report a failure would
+   * otherwise settle the delivery that replaced it — and mark an order failed
+   * that had just succeeded.
+   *
+   * It answers whether it did settle, rather than nothing at all: a caller told
+   * nothing would go on believing it had delivered an order that belongs to
+   * somebody else now, and that is precisely the thing worth a line in the log.
    */
-  settleFulfillment(reference: string, state: FulfillmentOutcome): Promise<void>;
+  settleFulfillment(
+    reference: string,
+    state: FulfillmentOutcome,
+    claimId: string,
+  ): Promise<boolean>;
 
   /**
    * What the holder of this token may still open, or nothing.
@@ -266,21 +285,37 @@ export interface BeginFulfillmentRequest {
   accessDays: number;
   /** Successful downloads each grant starts with. */
   downloadsAllowed: number;
+  /**
+   * How long a claim may go unfinished before another caller may take it up.
+   *
+   * `FULFILLMENT_STALL_SECONDS` in `src/commerce/order-access.ts`, passed in the
+   * way the three durations above are: the rule is the application's and the
+   * data plane is what applies it inside a transaction.
+   */
+  stalledSeconds: number;
 }
 
 /**
  * Two answers, and no third.
  *
  * `refused` is every reason there is nothing to do: no such order, a payment
- * that was not approved, and — the one that matters — a delivery another caller
- * already claimed. They are one answer because the caller does the same thing
- * with all of them, which is nothing.
+ * that was not approved, a delivery already finished, and — the one that
+ * matters — one another caller is running right now. They are one answer
+ * because the caller does the same thing with all of them, which is nothing.
  */
 export type BeginFulfillmentOutcome =
   | {
       status: "claimed";
       order: OrderSnapshot;
       access: OrderAccess;
+      /**
+       * This claim's own identity, to settle it with.
+       *
+       * New on every claim, including on one that takes up an abandoned
+       * delivery, which is what stops the abandoned caller from settling the
+       * delivery that replaced it.
+       */
+      claimId: string;
       /**
        * Where the receipt goes.
        *

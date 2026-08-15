@@ -2,6 +2,7 @@ import "server-only";
 
 import {
   DOWNLOADS_PER_GRANT,
+  FULFILLMENT_STALL_SECONDS,
   ORDER_ACCESS_DAYS,
   PRIVATE_LINK_SECONDS,
 } from "@/commerce/order-access";
@@ -25,11 +26,18 @@ import { accessTokenDigest, newAccessToken } from "./token";
  * delivery has to be taken up again, which is exactly what it does when the
  * receipt cannot be sent.
  *
- * **It happens once per effective approval, and the data plane decides that.**
+ * **It happens once per approval, and the data plane decides that.**
  * `beginFulfillment` claims the order; a second caller — a redelivered webhook,
  * a retry, another process — is refused and does nothing. So the idempotency
  * that matters is not this module remembering what it has done, which would be
  * one process's opinion, but a claim two callers cannot both win.
+ *
+ * **A delivery that did not finish may be taken up, and this is where it is**
+ * (ADR-0010). Nothing here decides that either: the same claim admits an order
+ * whose delivery failed and one abandoned unfinished, and refuses one that is
+ * running or already done. What that costs this module is one thing — the claim
+ * it settles has to be named, because by the time a stalled request reports its
+ * failure the delivery may belong to somebody else.
  *
  * **The order it does things in is the guarantee.** The grants are made first,
  * inside the claim, and the receipt is attempted after — so a buyer whose email
@@ -60,18 +68,18 @@ export async function deliverApprovedOrder(reference: string): Promise<void> {
       tokenDigest: accessTokenDigest(token),
       accessDays: ORDER_ACCESS_DAYS,
       downloadsAllowed: DOWNLOADS_PER_GRANT,
+      stalledSeconds: FULFILLMENT_STALL_SECONDS,
     });
   } catch (error) {
-    // Nothing was claimed, so nothing has to be unwound: the order is still
-    // `not_started` and the next attempt — an operator's, issue #15 — finds it
-    // exactly as it was.
+    // Nothing was claimed, so nothing has to be unwound: the order is exactly
+    // where it was, and the next delivery to reach it finds it that way.
     console.error(`Claiming order ${reference} for delivery failed.`, error);
     return;
   }
 
   if (claimed.status === "refused") {
-    // Already delivered, already being delivered, or never approved. All three
-    // are somebody else's business and none of them is an error.
+    // Already delivered, being delivered right now, or never approved. All
+    // three are somebody else's business and none of them is an error.
     return;
   }
 
@@ -94,14 +102,24 @@ export async function deliverApprovedOrder(reference: string): Promise<void> {
         supportEmail: settings.contact.email,
       }),
     );
-    await commerce.settleFulfillment(reference, "delivered");
+    if (!(await commerce.settleFulfillment(reference, "delivered", claimed.claimId))) {
+      // The claim was taken up by somebody else while this delivery was
+      // running, so the receipt that just went out is a second one. Nothing to
+      // undo — the grants and the access are one order's, not one delivery's —
+      // but it is the line that explains a buyer holding two messages.
+      console.warn(
+        `Order ${reference} was delivered under a claim that had already been taken up.`,
+      );
+    }
   } catch (error) {
     // Correlated by the order reference, which is not a secret and is what an
     // operator has in front of them. Never the address, never the token, never
     // the message (issue #1).
     console.error(`Delivering order ${reference} failed.`, error);
+    // Named with this claim, so a delivery that took over from this one while
+    // it was away is not the one marked failed.
     await commerce
-      .settleFulfillment(reference, "failed")
+      .settleFulfillment(reference, "failed", claimed.claimId)
       .catch((settling: unknown) => {
         console.error(
           `Recording the failed delivery of order ${reference} failed too.`,

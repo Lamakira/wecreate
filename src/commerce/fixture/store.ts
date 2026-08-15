@@ -7,6 +7,7 @@ import type {
   BuyerContact,
   CommerceAuditEntry,
   FulfillmentState,
+  OrderAnomaly,
   OrderSnapshotLine,
   PaidDeliverableVersion,
   PaymentAttempt,
@@ -66,6 +67,17 @@ export interface StoredOrder {
   acceptedLegal: AcceptedLegalRevision[];
   paymentState: PaymentState;
   fulfillmentState: FulfillmentState;
+  /**
+   * Who is delivering this order, and since when.
+   *
+   * A claim is held by a caller rather than by a state: a settlement names the
+   * claim it settles, so a request that gave up cannot mark an order failed
+   * that has since been delivered, and a claim nobody finished may be taken up
+   * once it is old enough to be abandoned (ADR-0010). Postgres keeps the same
+   * two columns.
+   */
+  fulfillmentClaimId: string | null;
+  fulfillmentClaimedAt: string | null;
   attempts: StoredPaymentAttempt[];
 }
 
@@ -143,6 +155,17 @@ export interface StoredGrant {
   linkExpiresAt: string | null;
 }
 
+/**
+ * One thing that happened to an order which no rule could settle.
+ *
+ * Kept for the Commerce Operator view issue #15 builds, and holding what
+ * `commerce.order_anomalies` holds: the provider's own identifiers, which are
+ * not secrets, and nothing of the buyer, no delivery body and no token.
+ */
+export type StoredOrderAnomaly = Omit<OrderAnomaly, "reference"> & {
+  orderReference: string;
+};
+
 export interface CommerceFixtureDataset {
   staff: StoredStaff[];
   sessions: StoredSession[];
@@ -154,6 +177,7 @@ export interface CommerceFixtureDataset {
   paymentEvents: StoredPaymentEvent[];
   access: StoredOrderAccess[];
   grants: StoredGrant[];
+  anomalies: StoredOrderAnomaly[];
 }
 
 function datasetPath(): string {
@@ -189,6 +213,7 @@ function initialDataset(): CommerceFixtureDataset {
     paymentEvents: [],
     access: [],
     grants: [],
+    anomalies: [],
   };
 }
 
@@ -215,6 +240,7 @@ export async function readCommerceFixture(): Promise<CommerceFixtureDataset> {
       paymentEvents: stored.paymentEvents ?? [],
       access: stored.access ?? [],
       grants: stored.grants ?? [],
+      anomalies: stored.anomalies ?? [],
     };
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
@@ -222,6 +248,53 @@ export async function readCommerceFixture(): Promise<CommerceFixtureDataset> {
     }
     throw error;
   }
+}
+
+/**
+ * The queue every change to this dataset waits in.
+ *
+ * Postgres does the work this stands in for with a locked row: two callers
+ * reach `commerce_begin_fulfillment` for one order and the second waits, then
+ * finds the claim gone. A JSON file has no such thing — read, change, write is
+ * three awaits, and two requests interleaving in them is one of the two changes
+ * silently lost. Which is exactly the failure issue #14 is about: two webhooks
+ * arriving together would each read `not_started`, each claim, and each deliver.
+ *
+ * So changes are serialised here instead, and the whole read-change-write is
+ * the critical section rather than the write alone. It is in-process, which is
+ * all it has to be: the acceptance suite drives one server, and the only other
+ * writers are its own test hooks, which run between scenarios rather than
+ * during one.
+ */
+let changing: Promise<unknown> = Promise.resolve();
+
+/**
+ * Read the dataset, change it, and write it back, with nothing else in between.
+ *
+ * Every write on this provider goes through here. The change may await —
+ * signing a private address, storing bytes — and holding the queue while it
+ * does is deliberate: checking an allowance, producing an address and spending
+ * a download is one decision, and a fixture that let another request in
+ * halfway would be a fixture that could hand out two downloads for one.
+ *
+ * The dataset is written back only when the change returns. A change that threw
+ * leaves what was stored exactly as it was, which is what a transaction rolling
+ * back does.
+ */
+export async function changeCommerceFixture<T>(
+  change: (dataset: CommerceFixtureDataset) => T | Promise<T>,
+): Promise<T> {
+  const queued = changing.then(async () => {
+    const dataset = await readCommerceFixture();
+    const answer = await change(dataset);
+    await writeCommerceFixture(dataset);
+    return answer;
+  });
+
+  // The queue moves on whether this change succeeded or not; the caller still
+  // gets the failure.
+  changing = queued.catch(() => undefined);
+  return queued;
 }
 
 export async function writeCommerceFixture(
@@ -314,37 +387,64 @@ export async function ageCommerceFixture(seconds: number): Promise<void> {
   const shift = (moment: string): string =>
     new Date(Date.parse(moment) - seconds * 1000).toISOString();
 
-  const dataset = await readCommerceFixture();
-  dataset.orders = dataset.orders.map((order) => ({
-    ...order,
-    createdAt: shift(order.createdAt),
-    attempts: order.attempts.map((attempt) => ({
-      ...attempt,
-      createdAt: shift(attempt.createdAt),
-    })),
-  }));
-  dataset.access = dataset.access.map((one) => ({
-    ...one,
-    issuedAt: shift(one.issuedAt),
-    expiresAt: shift(one.expiresAt),
-  }));
-  dataset.grants = dataset.grants.map((grant) => ({
-    ...grant,
-    linkExpiresAt: grant.linkExpiresAt ? shift(grant.linkExpiresAt) : null,
-  }));
-
-  await writeCommerceFixture(dataset);
+  await changeCommerceFixture((dataset) => {
+    dataset.orders = dataset.orders.map((order) => ({
+      ...order,
+      createdAt: shift(order.createdAt),
+      // Ageing this is what lets a scenario reach the moment a claim nobody
+      // finished may be taken up, which is otherwise a quarter of an hour away.
+      fulfillmentClaimedAt: order.fulfillmentClaimedAt
+        ? shift(order.fulfillmentClaimedAt)
+        : null,
+      attempts: order.attempts.map((attempt) => ({
+        ...attempt,
+        createdAt: shift(attempt.createdAt),
+      })),
+    }));
+    dataset.access = dataset.access.map((one) => ({
+      ...one,
+      issuedAt: shift(one.issuedAt),
+      expiresAt: shift(one.expiresAt),
+    }));
+    dataset.grants = dataset.grants.map((grant) => ({
+      ...grant,
+      linkExpiresAt: grant.linkExpiresAt ? shift(grant.linkExpiresAt) : null,
+    }));
+  });
 }
 
-/** Return the data plane to its seeded state. Sessions and files both go. */
-export async function resetCommerceFixture(): Promise<CommerceFixtureDataset> {
-  const dataset = initialDataset();
-  await writeCommerceFixture(dataset);
+/**
+ * Take away the bytes behind every stored version, and leave the records.
+ *
+ * A private store that cannot answer for an object it should have. Nothing an
+ * operator can do — deleting a version is a thing the data plane refuses — and
+ * the only way to show that a store which did not answer costs a buyer no part
+ * of their allowance (issue #14).
+ *
+ * Only the fixture has it, and the hook that reaches it is inert unless the
+ * data plane is this one.
+ */
+export async function emptyPrivateStore(): Promise<void> {
   const { rm } = await import("node:fs/promises");
   await rm(/* turbopackIgnore: true */ deliverablesDirectory(), {
     recursive: true,
     force: true,
   });
+}
+
+/**
+ * Return the data plane to its seeded state. Sessions and files both go.
+ *
+ * Queued like every other change rather than written straight over: a scenario
+ * that left a request in flight — one holding a claim while a mail provider
+ * refuses to answer — would otherwise have its reset undone by that request
+ * finishing afterwards.
+ */
+export async function resetCommerceFixture(): Promise<CommerceFixtureDataset> {
+  const dataset = await changeCommerceFixture((current) =>
+    Object.assign(current, initialDataset()),
+  );
+  await emptyPrivateStore();
   return dataset;
 }
 
