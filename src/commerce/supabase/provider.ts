@@ -188,6 +188,7 @@ function toOrder(row: OrderRow): OrderSnapshot {
 
 interface AccessRow {
   reference: string;
+  issued_at: string;
   expires_at: string;
   grants: Array<{
     sku: string;
@@ -201,6 +202,7 @@ interface AccessRow {
 function toAccess(row: AccessRow): OrderAccess {
   return {
     reference: row.reference,
+    issuedAt: row.issued_at,
     expiresAt: row.expires_at,
     grants: (row.grants ?? []).map((grant) => ({
       sku: grant.sku,
@@ -546,6 +548,7 @@ export const supabaseCommerceProvider: CommerceProvider = {
     const answer = await call<{
       order: OrderRow;
       access: AccessRow;
+      claim_id: string;
       deliver_to: string;
     } | null>(anonymousCommerceClient(), "commerce_begin_fulfillment", {
       // The two functions that write a delivery demand it, for the reason
@@ -556,6 +559,7 @@ export const supabaseCommerceProvider: CommerceProvider = {
       p_token_digest: request.tokenDigest,
       p_access_days: request.accessDays,
       p_downloads_allowed: request.downloadsAllowed,
+      p_stalled_seconds: request.stalledSeconds,
     });
 
     return answer
@@ -563,16 +567,24 @@ export const supabaseCommerceProvider: CommerceProvider = {
           status: "claimed",
           order: toOrder(answer.order),
           access: toAccess(answer.access),
+          claimId: answer.claim_id,
           deliverTo: answer.deliver_to,
         }
       : { status: "refused" };
   },
 
-  async settleFulfillment(reference, state): Promise<void> {
-    await call<boolean>(
+  async settleFulfillment(reference, state, claimId): Promise<boolean> {
+    return call<boolean>(
       anonymousCommerceClient(),
       "commerce_settle_fulfillment",
-      { p_secret: paymentEventSecret(), p_reference: reference, p_state: state },
+      {
+        p_secret: paymentEventSecret(),
+        p_reference: reference,
+        p_state: state,
+        // Whose delivery this is. A claim that has since been taken up by
+        // somebody else settles nothing here.
+        p_claim_id: claimId,
+      },
     );
   },
 

@@ -4,6 +4,7 @@ import type { PaymentOutcome } from "@/payments/types";
 
 import type {
   FulfillmentState,
+  OrderAnomalyKind,
   OrderSnapshot,
   PaymentEventEffect,
   PaymentState,
@@ -164,6 +165,58 @@ export function paymentEventEffect(
   return current !== "approved" && outcome === "approved"
     ? "applied"
     : "superseded";
+}
+
+/**
+ * What a verified event leaves for a person to settle, or nothing.
+ *
+ * The other half of `paymentEventEffect()`, and it exists because that function
+ * answers a narrower question than it looks like it does. It says what an event
+ * may do to a Payment State; it cannot say whether the fact that the event
+ * arrived at all is fine. Two of its answers are ambiguous in exactly that way,
+ * and the transaction the event is about is what tells the halves apart:
+ *
+ * - **A second approval.** For the transaction that already paid the order, it
+ *   is the provider repeating itself and means nothing. For *another*
+ *   transaction, it means the buyer's money was taken twice — the Payment State
+ *   is right to stay where it is, and somebody owes a refund.
+ * - **A contradiction.** For the transaction whose verdict currently stands,
+ *   the provider has said the opposite of what it said before, and that is
+ *   worth a person's attention. For another transaction it is ordinary: an
+ *   earlier attempt's refusal arriving after a later attempt was approved is
+ *   exactly what a retry looks like from the outside (issue #13).
+ *
+ * `commerce.payment_event_anomaly` is its twin — change one and change the
+ * other.
+ */
+export function paymentEventAnomaly(input: {
+  /** Where the Payment State stood when the event arrived. */
+  current: PaymentState;
+  outcome: PaymentOutcome;
+  effect: PaymentEventEffect;
+  /**
+   * Whether this event is about the transaction whose event decided the current
+   * Payment State. `false` when another one did, and when nothing has yet.
+   */
+  decidedByThisTransaction: boolean;
+}): OrderAnomalyKind | null {
+  const { current, outcome, effect, decidedByThisTransaction } = input;
+  // An announcement is not a verdict, so it can neither contradict one nor be a
+  // second payment.
+  if (outcome === "pending") return null;
+
+  if (effect === "superseded") {
+    return decidedByThisTransaction ? "contradictory_event" : null;
+  }
+  if (
+    effect === "unchanged" &&
+    outcome === "approved" &&
+    current === "approved" &&
+    !decidedByThisTransaction
+  ) {
+    return "duplicate_payment";
+  }
+  return null;
 }
 
 /**

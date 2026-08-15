@@ -37,6 +37,25 @@ export const DOWNLOADS_PER_GRANT = 5;
 export const PRIVATE_LINK_SECONDS = 15 * 60;
 
 /**
+ * How long a claimed delivery may go unfinished before another caller may take
+ * it up.
+ *
+ * A delivery is claimed so that two callers cannot both make one, and that
+ * claim is held for as long as the request holding it lives. A process that
+ * stops between claiming and finishing — a deploy, a restart, a serverless
+ * invocation killed mid-flight — leaves the claim behind it, and without a
+ * moment at which it is abandoned that order would never be delivered by
+ * anything (ADR-0010).
+ *
+ * Fifteen minutes is chosen against what is on the other side of it. Too short
+ * and a mail provider taking its time is treated as a dead process, which is
+ * how a buyer gets two receipts; too long and a delivery WeCreate could have
+ * finished sits there instead. It is comfortably longer than any request this
+ * application will survive and comfortably shorter than a person noticing.
+ */
+export const FULFILLMENT_STALL_SECONDS = 15 * 60;
+
+/**
  * When access for a payment approved at this moment stops working.
  *
  * Anchored to the approval and to nothing else: however long a delivery took to

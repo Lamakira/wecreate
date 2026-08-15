@@ -23,10 +23,59 @@ import { EmailProviderUnreachable, type TransactionalEmail } from "../types";
  * webhook redelivery producing one receipt is a claim the suite can actually
  * hold, rather than one that happens to be true of the application's own
  * bookkeeping.
+ *
+ * **And it can be put out of action and brought back**, which a permanently
+ * unreachable address cannot do. Issue #14 asks for a delivery that failed to
+ * be taken up again and finish, and for a claim held by a request nobody is
+ * waiting on any more; neither can be shown by a sender that always refuses.
  */
 
 /** A buyer whose receipt this provider refuses, whatever it says. */
 export const UNREACHABLE_RECIPIENT = "panne-resend@exemple.test";
+
+/**
+ * Whether this provider is working, and how it is not.
+ *
+ * `refuse` is a provider answering that it will not take the message. `stall`
+ * is the worse one: a provider that takes longer to answer than the request
+ * waiting on it, which is how a delivery ends up claimed and unfinished.
+ *
+ * On disk beside the outbox, for the reason the outbox is: the scenario setting
+ * it and the server honouring it are two processes.
+ */
+export interface EmailOutage {
+  mode: "off" | "refuse" | "stall";
+  seconds: number;
+}
+
+const WORKING: EmailOutage = { mode: "off", seconds: 0 };
+
+function outagePath(): string {
+  return `${outboxPath()}.outage.json`;
+}
+
+export async function readEmailOutage(): Promise<EmailOutage> {
+  try {
+    const raw = await readFile(/* turbopackIgnore: true */ outagePath(), "utf8");
+    return JSON.parse(raw) as EmailOutage;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return WORKING;
+    }
+    throw error;
+  }
+}
+
+export async function setEmailOutage(outage: EmailOutage): Promise<void> {
+  await mkdir(/* turbopackIgnore: true */ path.dirname(outagePath()), {
+    recursive: true,
+  });
+  await writeFile(
+    /* turbopackIgnore: true */ outagePath(),
+    `${JSON.stringify(outage, null, 2)}\n`,
+    "utf8",
+  );
+}
 
 export interface SentEmail extends TransactionalEmail {
   sentAt: string;
@@ -74,9 +123,10 @@ async function writeOutbox(messages: SentEmail[]): Promise<void> {
   await rename(/* turbopackIgnore: true */ temporary, file);
 }
 
-/** Empty the outbox. */
+/** Empty the outbox, and bring the provider back. */
 export async function resetOutbox(): Promise<void> {
   await writeOutbox([]);
+  await setEmailOutage(WORKING);
 }
 
 export const fixtureEmailProvider: EmailProvider = {
@@ -85,6 +135,18 @@ export const fixtureEmailProvider: EmailProvider = {
   async send(message: TransactionalEmail): Promise<void> {
     if (message.to.trim().toLowerCase() === UNREACHABLE_RECIPIENT) {
       throw new EmailProviderUnreachable("POST /emails answered 502");
+    }
+
+    const outage = await readEmailOutage();
+    if (outage.mode === "stall") {
+      // Held open, and then refused. A provider that answers eventually and a
+      // provider that never answers are the same thing to the request waiting
+      // on it, and the interesting half is what happened meanwhile.
+      await new Promise((wake) => setTimeout(wake, outage.seconds * 1000));
+      throw new EmailProviderUnreachable("POST /emails did not answer in time");
+    }
+    if (outage.mode === "refuse") {
+      throw new EmailProviderUnreachable("POST /emails answered 503");
     }
 
     const outbox = await readOutbox();

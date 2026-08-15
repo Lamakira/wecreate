@@ -9,8 +9,16 @@ import { areCommerceTestHooksEnabled } from "@/site-config";
  *
  * The acceptance suite does everything else through the back office itself —
  * signing in, uploading, activating — because those are the behaviours under
- * test. Two things no actor can do are all this endpoint offers: returning the
- * data plane to its seeded state between scenarios, and moving time.
+ * test. Three things no actor can do are all this endpoint offers: returning
+ * the data plane to its seeded state between scenarios, moving time, and taking
+ * away the bytes behind the versions it holds.
+ *
+ * **The private store is here because a store that cannot answer is a state the
+ * buyer's page has to handle.** Issue #14 asks for a failure to produce a file
+ * address to stay a technical uncertainty — retryable, costing the buyer no
+ * part of their allowance and saying nothing about their payment — and it
+ * cannot be reached by deleting a version, because deleting one is a thing the
+ * data plane refuses.
  *
  * **Time is here because three of the rules are measured in it.** An Order
  * Snapshot may be paid for twenty-four hours, Order Access lasts thirty days,
@@ -27,7 +35,8 @@ import { areCommerceTestHooksEnabled } from "@/site-config";
 
 type TestCommerceRequest =
   | { action: "reset" }
-  | { action: "age"; seconds: number };
+  | { action: "age"; seconds: number }
+  | { action: "emptyPrivateStore" };
 
 export async function POST(request: NextRequest): Promise<Response> {
   if (!areCommerceTestHooksEnabled()) {
@@ -39,6 +48,12 @@ export async function POST(request: NextRequest): Promise<Response> {
   if (body.action === "age") {
     const { ageCommerceFixture } = await import("@/commerce/fixture/store");
     await ageCommerceFixture(Number(body.seconds) || 0);
+    return NextResponse.json({ ok: true, action: body.action });
+  }
+
+  if (body.action === "emptyPrivateStore") {
+    const { emptyPrivateStore } = await import("@/commerce/fixture/store");
+    await emptyPrivateStore();
     return NextResponse.json({ ok: true, action: body.action });
   }
 

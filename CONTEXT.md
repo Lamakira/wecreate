@@ -95,3 +95,12 @@ _Avoid_: Payment status, retry state, order state
 **Fulfillment State**:
 The independently tracked progress of granting access or delivering confirmation after an approved payment.
 _Avoid_: Payment state, order status
+
+**Order Anomaly**:
+Something that happened to an order which no automatic rule could settle, kept
+for a Commerce Operator to resolve: a second transaction approved for one order,
+a payment provider contradicting itself, a delivery that failed. It is not a
+state an order is in and never changes one — it records that a person has
+something to decide, and holds the provider's own identifiers rather than
+anything the provider sent.
+_Avoid_: Error, exception, failed order, alert

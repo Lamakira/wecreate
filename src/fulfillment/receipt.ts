@@ -30,12 +30,19 @@ function subject(order: OrderSnapshot): string {
  * The key the email provider recognises a repeat by.
  *
  * Derived from a stable fulfillment event rather than from the moment of
- * sending (issue #1), and the stable event here is the one delivery an order
- * gets: a webhook redelivered three times asks for one message three times and
- * the buyer receives one.
+ * sending (issue #1), and the stable event here is the *issuance* of the access
+ * this message carries: a webhook redelivered three times against one delivery
+ * asks for one message three times and the buyer receives one.
+ *
+ * The order alone will not do, and the reason is the whole of ADR-0010. A
+ * delivery that failed may be taken up again, and taking it up issues a fresh
+ * token — so a second message is a different message, addressed to a buyer who
+ * received nothing the first time. A key naming only the order would have the
+ * provider swallow it as a repeat, and the buyer would be left holding an
+ * address that no longer opens anything.
  */
-function idempotencyKey(order: OrderSnapshot): string {
-  return `receipt-${order.reference}`;
+function idempotencyKey(order: OrderSnapshot, access: OrderAccess): string {
+  return `receipt-${order.reference}-${access.issuedAt}`;
 }
 
 export interface ReceiptInput {
@@ -92,6 +99,6 @@ export function composeReceipt({
     to: deliverTo,
     subject: subject(order),
     body,
-    idempotencyKey: idempotencyKey(order),
+    idempotencyKey: idempotencyKey(order, access),
   };
 }

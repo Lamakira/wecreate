@@ -26,6 +26,13 @@ import { expect, type APIRequestContext, type Page } from "@playwright/test";
  * the payment provider. Fulfillment failing after an approved payment is a
  * state the buyer's page has to handle, and it cannot be demonstrated by
  * unplugging anything.
+ *
+ * **The sender that fails and then stops failing.** `Outbox.outage()` is the
+ * same idea with the fault under the scenario's control rather than the
+ * address's: a mail provider that refuses, or one that takes longer to answer
+ * than anybody is willing to wait, and then comes back. A permanently
+ * unreachable sender can only ever demonstrate a delivery that stayed failed —
+ * issue #14 asks for one that is taken up again and finishes.
  */
 
 /** Where the fixture data plane hosts its private files. Never resolved. */
@@ -84,6 +91,24 @@ export class Outbox {
     expect(sent, `exactly one message reached ${to}`).toHaveLength(1);
     return sent[0];
   }
+
+  /**
+   * Put the mail provider out of action, or bring it back.
+   *
+   * `refuse` is a provider answering that it will not take the message.
+   * `stall` is the worse one and the one issue #14 names: a provider that takes
+   * longer to answer than the request waiting on it, which is how a delivery
+   * ends up claimed and unfinished. `off` is the provider working again.
+   */
+  async outage(
+    mode: "off" | "refuse" | "stall",
+    seconds = 0,
+  ): Promise<void> {
+    const response = await this.request.post("/api/test/email", {
+      data: { action: "outage", mode, seconds },
+    });
+    expect(response.ok(), "the email test hook accepts an outage").toBeTruthy();
+  }
 }
 
 /**
@@ -124,6 +149,55 @@ export async function storedCommerceData(): Promise<string> {
       `${process.cwd()}/.wecreate/acceptance/commerce.json`,
     "utf8",
   );
+}
+
+/**
+ * The same storage, read as records rather than as text.
+ *
+ * Issue #14 asks for outcomes that are *durable* and for anomaly data kept for
+ * a Commerce Operator view that does not exist yet, and neither can be observed
+ * through a page: exactly one grant behind a doubled webhook, every event of a
+ * reordered sequence still present, a second approved transaction flagged. Each
+ * is a claim about what persistence holds, so persistence is what is read.
+ *
+ * The shape is spelled out here by hand rather than imported, for the reason
+ * `support/digital-cart.ts` spells out the cart cookie: changing how the data
+ * plane keeps any of this has to be a deliberate change to this file too.
+ */
+export interface StoredCommerce {
+  orders: {
+    reference: string;
+    paymentState: string;
+    fulfillmentState: string;
+  }[];
+  paymentEvents: {
+    providerEventId: string;
+    providerTransactionId: string;
+    outcome: string;
+    effect: string;
+  }[];
+  access: { orderReference: string; tokenDigest: string }[];
+  grants: {
+    orderReference: string;
+    sku: string;
+    downloadsAllowed: number;
+    downloadsUsed: number;
+  }[];
+  /** What a Commerce Operator will be asked to look at (issue #15). */
+  anomalies: {
+    kind: string;
+    orderReference: string;
+    provider: string | null;
+    providerTransactionId: string | null;
+    providerEventId: string | null;
+    /** Words this application wrote, where it had any to write. */
+    detail: string | null;
+    resolvedAt: string | null;
+  }[];
+}
+
+export async function storedCommerce(): Promise<StoredCommerce> {
+  return JSON.parse(await storedCommerceData()) as StoredCommerce;
 }
 
 /** SHA-256 of one token, hexadecimal: the only form that may be stored. */
@@ -180,6 +254,54 @@ export async function pressDownload(page: Page, sku: string): Promise<string> {
   await page.unroute(`**${DOWNLOAD_PATH}`);
 
   return handed;
+}
+
+/**
+ * The cookie the emailed token is exchanged for, named here by hand.
+ *
+ * `pressTogether` below sends it as a header, for the reason
+ * `support/digital-cart.ts` spells the cart cookie out: a helper that imported
+ * the application's own name for it would agree with whatever the application
+ * called it.
+ */
+const ACCESS_COOKIE = "wc_acces";
+
+/**
+ * Press *Télécharger* several times at once, and answer with what WeCreate
+ * handed each of them.
+ *
+ * Concurrency is the point, so these do not go through the button:
+ * `pressDownload` above submits a form and waits for the page to come back,
+ * which serialises the presses and would test nothing about two of them racing.
+ *
+ * They carry the buyer's own credential the way their browser carries it — as
+ * the access cookie, in the header, on a real POST to the real route. Sending
+ * it by hand rather than letting the cookie jar do it is not a shortcut: the
+ * cookie is `Secure`, a browser will send it to `127.0.0.1` over plain HTTP and
+ * an HTTP client outside a browser will not, so a helper that relied on the jar
+ * would answer `unknownAccess` to every press and prove nothing.
+ *
+ * The redirect is read rather than followed, because `stockage.wecreate.test`
+ * deliberately does not resolve and what is under test is the answer rather
+ * than the file.
+ */
+export async function pressTogether(
+  request: APIRequestContext,
+  input: { token: string; sku: string; times: number; origin: string },
+): Promise<string[]> {
+  const answers = await Promise.all(
+    Array.from({ length: input.times }, () =>
+      request.post("/commande/acces/telechargement", {
+        form: { sku: input.sku },
+        headers: {
+          cookie: `${ACCESS_COOKIE}=${input.token}`,
+          origin: input.origin,
+        },
+        maxRedirects: 0,
+      }),
+    ),
+  );
+  return answers.map((answer) => answer.headers()["location"] ?? "");
 }
 
 /** Where the bytes of one Paid Deliverable Version are addressed. */
