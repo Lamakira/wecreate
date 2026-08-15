@@ -97,7 +97,11 @@ log "  files loaded now:    $(sort -u "${split_dir_after}/.paths" | grep -c . ||
 if [[ -n "${added}" ]]; then
   log ""
   log "  new files, which should be WeCreate's and nothing else:"
-  printf '%s' "${added}" | sed 's/^/    + /'
+  # `>&2` like every other line here. Without it this list goes to stdout while
+  # the headings go to stderr, and the two arrive interleaved over ssh — the
+  # list printed above its own title, which is how a reader ends up trusting
+  # the wrong summary.
+  printf '%s' "${added}" | sed 's/^/    + /' >&2
 fi
 
 if [[ -z "${foreign}" && -z "${removed}" ]]; then
