@@ -82,8 +82,9 @@ corrected on the server afterwards; everything else is read at runtime from
 below, which is also where the exceptions are spelled out.
 
 Nothing sensitive may ever carry the `NEXT_PUBLIC_` prefix, because it ends up
-in the browser bundle. Local, staging and production use separate datasets and
-separate secrets throughout.
+in the browser bundle. Every environment has its own secrets. Datasets are the
+one thing that cannot be separated three ways — Sanity caps a project at two —
+so production has one to itself and the rest share the other.
 
 ## Managed Content
 
@@ -1120,7 +1121,13 @@ do the same.
 ## Setting up Sanity
 
 1. Create a project at [sanity.io/manage](https://www.sanity.io/manage) with a
-   `production` dataset, plus a separate dataset per non-production environment.
+   `production` dataset and a `development` one. Two is the limit — Sanity
+   allows two datasets on the free plan and two on the first paid tier, so
+   paying does not buy a third. Production therefore gets a dataset to itself
+   and every non-production environment shares `development`: local work and
+   the staging deployment read the same content, which is harmless with one
+   editor and makes a publish visible on staging immediately. What must not be
+   shared is real client content, and it is not.
 2. Put the project id and dataset in `.env.local`
    (`NEXT_PUBLIC_SANITY_PROJECT_ID`, `NEXT_PUBLIC_SANITY_DATASET`).
 3. Create a **Viewer** token and set it as `SANITY_API_READ_TOKEN`. It is what
@@ -1807,8 +1814,12 @@ application never sees the request.
 What is deployed is staging, at `wecreate.weact.bj`, and it stays that way until
 WeCreate owns the domain it will launch on. `WECREATE_ALLOW_INDEXING` is unset
 there, so `/robots.txt` answers `Disallow: /` and the deployment is refused to
-crawlers. It runs against the staging Sanity dataset, the staging Supabase
-project and the FedaPay sandbox, never production credentials.
+crawlers. It runs against the FedaPay sandbox and never production
+credentials. Its content comes from the `development` dataset, shared with local
+work because Sanity caps a project at two datasets and `production` keeps the
+other; its orders come from the same Supabase project that serves production
+today, which is safe only while no real order exists and is the first thing to
+separate before the Commerce Launch Gate opens.
 
 Production waits for the domain, and the reason is the one above: the canonical
 origin is compiled in and is what every emailed Order Access address carries, so
