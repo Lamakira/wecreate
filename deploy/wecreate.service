@@ -88,7 +88,14 @@ ProtectControlGroups=true
 RestrictSUIDSGID=true
 RestrictNamespaces=true
 LockPersonality=true
-RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+# AF_NETLINK belongs here even though nothing in this application speaks it
+# directly. glibc's resolver uses a netlink socket to enumerate local interfaces
+# before it picks a source address, so blocking the family can make every
+# outbound hostname lookup fail — Sanity, Supabase, Mux, Resend, FedaPay, all of
+# it. The failure is nasty precisely because it is partial: the process starts,
+# the deploy health check asks 127.0.0.1 for a prerendered page and gets one, and
+# the deployment reports success while nothing it depends on is reachable.
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
 
 [Install]
 WantedBy=multi-user.target
