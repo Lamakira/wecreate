@@ -3,6 +3,12 @@ import { randomBytes, randomUUID } from "node:crypto";
 import type { PaymentEvent } from "@/payments/types";
 
 import {
+  deliveryAddress,
+  deliveryTelephone,
+  maskEmail,
+  maskTelephone,
+} from "../contact";
+import {
   COMMERCE_OPERATOR_ROLE,
   administersCommerce,
   mayEnrolSecondFactor,
@@ -19,33 +25,50 @@ import {
 } from "../order-access";
 import {
   isPayable,
-  maskEmail,
   paymentEventAnomaly,
   paymentEventEffect,
   paymentProspect,
 } from "../orders";
+import {
+  matchesOrderSearch,
+  normaliseReason,
+  outstandingKinds,
+  readContactCorrection,
+  reasonRefusal,
+} from "../support";
 import type {
   ActivationOutcome,
+  AnnotateOrderRequest,
   BeginFulfillmentOutcome,
   CommerceProvider,
+  CorrectContactRequest,
   CreateOrderOutcome,
   CreateOrderRequest,
   CreateVersionOutcome,
   DeliverableUploadRequest,
+  DeliveryRetryNote,
   EnrolmentTicket,
   OpenAttemptOutcome,
   OpenDownloadOutcome,
   PaymentAttemptOutcome,
+  ReissueAccessOutcome,
+  ReissueAccessRequest,
   SignInOutcome,
+  SupportOutcome,
+  UpgradeGrantRequest,
   VerificationOutcome,
 } from "../provider";
 import type {
   CommerceAuditEntry,
   CommerceOperator,
+  ContactCorrection,
   OperatorCredentials,
   OrderAccess,
+  OrderAnomaly,
+  OrderDossier,
   OrderSnapshot,
   OrderState,
+  OrderSummary,
   PaidDeliverable,
   PaidDeliverableVersion,
   PaymentAttempt,
@@ -57,6 +80,7 @@ import {
   signPrivateAddress,
   storeDeliverableBytes,
   type CommerceFixtureDataset,
+  type StoredGrant,
   type StoredOrder,
   type StoredOrderAccess,
   type StoredOrderAnomaly,
@@ -165,7 +189,14 @@ function noteAnomaly(
   dataset: CommerceFixtureDataset,
   anomaly: Omit<
     StoredOrderAnomaly,
-    "detectedAt" | "resolvedAt" | "provider" | "providerTransactionId" | "providerEventId"
+    | "id"
+    | "detectedAt"
+    | "resolvedAt"
+    | "resolution"
+    | "resolvedByEmail"
+    | "provider"
+    | "providerTransactionId"
+    | "providerEventId"
   > &
     Partial<
       Pick<
@@ -193,15 +224,46 @@ function noteAnomaly(
     ...dataset.anomalies,
     {
       ...anomaly,
+      id: randomUUID(),
       provider,
       providerTransactionId,
       providerEventId,
       detail: anomaly.detail?.slice(0, 200) ?? null,
       detectedAt: new Date().toISOString(),
-      // Issue #15 is what closes one. Nothing here ever does.
+      // Settled by a Commerce Operator and by nobody else: `annotateOrder` is
+      // the only thing in this file that writes these three.
       resolvedAt: null,
+      resolution: null,
+      resolvedByEmail: null,
     },
   ];
+}
+
+/**
+ * What an operator has corrected about this order, or nothing.
+ *
+ * Read through a helper because a dataset written before there were any
+ * corrections has no such field at all, and `undefined` is not an answer this
+ * boundary gives: there either is a correction or there is not.
+ */
+function correctionOf(order: StoredOrder): ContactCorrection | null {
+  return order.correction ?? null;
+}
+
+/** One anomaly as the boundary reports it: by the order rather than by its row. */
+function toAnomaly(stored: StoredOrderAnomaly): OrderAnomaly {
+  const { orderReference, ...rest } = stored;
+  return { ...rest, reference: orderReference };
+}
+
+/** Everything one order has left for a person, in the order it was detected. */
+function anomaliesOf(
+  dataset: CommerceFixtureDataset,
+  reference: string,
+): OrderAnomaly[] {
+  return dataset.anomalies
+    .filter((one) => one.orderReference === reference)
+    .map(toAnomaly);
 }
 
 /**
@@ -240,7 +302,10 @@ function toOrderSnapshot(
     createdAt: order.createdAt,
     lines: order.lines,
     totalXof: order.totalXof,
-    buyerEmailHint: maskEmail(order.buyer.email),
+    // Masked from where the order is actually going rather than from what the
+    // buyer typed: somebody whose address WeCreate has corrected is looking for
+    // the address their receipt went to.
+    buyerEmailHint: maskEmail(deliveryAddress(order.buyer, correctionOf(order))),
     acceptedLegal: order.acceptedLegal,
     paymentState: order.paymentState,
     fulfillmentState: order.fulfillmentState,
@@ -302,6 +367,7 @@ function toOrderAccess(
               sku: line.sku,
               title: line.title,
               paidDeliverableVersion: line.paidDeliverableVersion,
+              deliveredVersion: grantedVersionNumber(dataset, line, grant),
               downloadsAllowed: grant.downloadsAllowed,
               downloadsRemaining: grant.downloadsAllowed - grant.downloadsUsed,
             },
@@ -309,6 +375,32 @@ function toOrderAccess(
         : [];
     }),
   };
+}
+
+/**
+ * Which Paid Deliverable Version one grant opens, and the whole of that rule.
+ *
+ * The order line's own version unless a Commerce Operator granted a later one.
+ * Written once, because everything that hands a buyer a file has to agree with
+ * everything that tells them what they have: `commerce.granted_version_id` is
+ * its twin — change one and change the other.
+ */
+function grantedVersion(
+  dataset: CommerceFixtureDataset,
+  line: { paidDeliverableVersionId: string },
+  grant: Pick<StoredGrant, "upgradedVersionId">,
+): PaidDeliverableVersion | undefined {
+  const wanted = grant.upgradedVersionId ?? line.paidDeliverableVersionId;
+  return dataset.versions.find((one) => one.id === wanted);
+}
+
+/** The same as a number, falling back to what the order recorded. */
+function grantedVersionNumber(
+  dataset: CommerceFixtureDataset,
+  line: { paidDeliverableVersionId: string; paidDeliverableVersion: number },
+  grant: Pick<StoredGrant, "upgradedVersionId">,
+): number {
+  return grantedVersion(dataset, line, grant)?.version ?? line.paidDeliverableVersion;
 }
 
 /**
@@ -528,6 +620,7 @@ export const fixtureCommerceProvider: CommerceProvider = {
         actorEmail: staff.email,
         action: "paid-deliverable-version.created",
         sku: version.sku,
+        orderReference: null,
         before: null,
         after: auditMetadata(version),
       });
@@ -560,6 +653,7 @@ export const fixtureCommerceProvider: CommerceProvider = {
         actorEmail: staff.email,
         action: "paid-deliverable-version.activated",
         sku,
+        orderReference: null,
         before: auditMetadata(previous),
         after: auditMetadata(version),
       });
@@ -576,6 +670,311 @@ export const fixtureCommerceProvider: CommerceProvider = {
     // order it was written in *is* the order things happened, including for two
     // entries that share a millisecond.
     return [...dataset.audit].reverse().slice(0, limit);
+  },
+
+  async readOrders(credentials, { search, limit }): Promise<OrderSummary[]> {
+    const dataset = await readCommerceFixture();
+    requireOperator(dataset, credentials);
+
+    // Newest first, which `commerce_orders` says as `order by created_at desc`.
+    // Reversed rather than sorted, for the reason the audit trail is: orders
+    // are appended, so the order they were written in *is* the order they were
+    // placed in — including for two that share a millisecond, which a moment
+    // cannot tell apart on either side.
+    return [...dataset.orders]
+      .reverse()
+      .filter((order) =>
+        matchesOrderSearch(
+          {
+            reference: order.reference,
+            buyerEmail: order.buyer.email,
+            correctedEmail: correctionOf(order)?.email ?? null,
+          },
+          search,
+        ),
+      )
+      .slice(0, limit)
+      .map((order) => ({
+        reference: order.reference,
+        createdAt: order.createdAt,
+        totalXof: order.totalXof,
+        buyerEmailHint: maskEmail(
+          deliveryAddress(order.buyer, correctionOf(order)),
+        ),
+        paymentState: order.paymentState,
+        fulfillmentState: order.fulfillmentState,
+        outstanding: outstandingKinds(anomaliesOf(dataset, order.reference)),
+      }));
+  },
+
+  async readOrderDossier(credentials, reference): Promise<OrderDossier | undefined> {
+    const dataset = await readCommerceFixture();
+    requireOperator(dataset, credentials);
+
+    const order = dataset.orders.find((one) => one.reference === reference);
+    if (!order) return undefined;
+
+    const correction = correctionOf(order);
+    return {
+      order: toOrderSnapshot(dataset, order),
+      buyer: order.buyer,
+      correction,
+      deliverTo: deliveryAddress(order.buyer, correction),
+      // The order they belong to is what this was looked up by, and repeating
+      // it on every event would be the only thing on them that is not the
+      // provider's own.
+      events: dataset.paymentEvents
+        .filter((event) => event.orderReference === reference)
+        .map((event) => ({
+          id: event.id,
+          provider: event.provider,
+          providerEventId: event.providerEventId,
+          providerEventType: event.providerEventType,
+          providerTransactionId: event.providerTransactionId,
+          occurredAt: event.occurredAt,
+          receivedAt: event.receivedAt,
+          outcome: event.outcome,
+          effect: event.effect,
+        })),
+      // Expired access included, deliberately: an operator answering "why can
+      // this buyer no longer open their files" needs to be shown that it ran
+      // out rather than that there is nothing there.
+      access: findOrderAccess(dataset, reference) ?? null,
+      anomalies: anomaliesOf(dataset, reference),
+      audit: [...dataset.audit]
+        .reverse()
+        .filter((entry) => entry.orderReference === reference),
+    };
+  },
+
+  async correctBuyerContact(
+    credentials,
+    input: CorrectContactRequest,
+  ): Promise<SupportOutcome> {
+    return changeCommerceFixture((dataset) => {
+      const staff = requireOperator(dataset, credentials);
+
+      const order = dataset.orders.find(
+        (one) => one.reference === input.reference,
+      );
+      if (!order) return { status: "refused", reason: "unknownOrder" };
+
+      const previous = correctionOf(order);
+      const current = {
+        email: deliveryAddress(order.buyer, previous),
+        telephone: deliveryTelephone(order.buyer, previous),
+      };
+      const submission = readContactCorrection(input, current);
+      if (submission.refusal) {
+        return { status: "refused", reason: submission.refusal };
+      }
+
+      // Nothing of `order.buyer` is touched. What the buyer typed is what the
+      // Order Snapshot says they typed, for ever; this is the fact beside it.
+      order.correction = {
+        // Carried forward, so correcting a telephone today does not undo an
+        // address corrected last week.
+        email: submission.email ?? previous?.email ?? null,
+        telephone: submission.telephone ?? previous?.telephone ?? null,
+        reason: submission.reason,
+        correctedAt: new Date().toISOString(),
+        correctedByEmail: staff.email,
+      };
+
+      record(dataset, {
+        actorEmail: staff.email,
+        action: "order-contact.corrected",
+        sku: null,
+        orderReference: order.reference,
+        // Masked on both sides: the trail records that an address changed and
+        // which one it was, and never keeps a copy of either in full.
+        before: {
+          emailHint: maskEmail(current.email),
+          telephoneHint: maskTelephone(current.telephone),
+        },
+        after: {
+          emailHint: maskEmail(
+            deliveryAddress(order.buyer, order.correction),
+          ),
+          telephoneHint: maskTelephone(
+            deliveryTelephone(order.buyer, order.correction),
+          ),
+          note: submission.reason,
+        },
+      });
+
+      return { status: "recorded" };
+    });
+  },
+
+  async reissueOrderAccess(
+    credentials,
+    input: ReissueAccessRequest,
+  ): Promise<ReissueAccessOutcome> {
+    return changeCommerceFixture((dataset) => {
+      const staff = requireOperator(dataset, credentials);
+
+      const order = dataset.orders.find(
+        (one) => one.reference === input.reference,
+      );
+      if (!order) return { status: "refused", reason: "unknownOrder" };
+
+      const refusal = reasonRefusal(input.reason);
+      if (refusal) return { status: "refused", reason: refusal };
+
+      if (order.fulfillmentState === "processing") {
+        return { status: "refused", reason: "deliveryInProgress" };
+      }
+      const held = dataset.access.find(
+        (one) => one.orderReference === order.reference,
+      );
+      if (!held) return { status: "refused", reason: "noAccessToReissue" };
+
+      const previouslyIssued = held.issuedAt;
+      // The grants are not touched, and neither is the deadline: what is being
+      // replaced is the credential, not what it opens or for how long.
+      held.tokenDigest = input.tokenDigest;
+      held.issuedAt = new Date().toISOString();
+
+      record(dataset, {
+        actorEmail: staff.email,
+        action: "order-access.reissued",
+        sku: null,
+        orderReference: order.reference,
+        before: { issuedAt: previouslyIssued },
+        after: {
+          issuedAt: held.issuedAt,
+          note: normaliseReason(input.reason),
+        },
+      });
+
+      return {
+        status: "reissued",
+        order: toOrderSnapshot(dataset, order),
+        access: toOrderAccess(dataset, held),
+        deliverTo: deliveryAddress(order.buyer, correctionOf(order)),
+      };
+    });
+  },
+
+  async upgradeGrantVersion(
+    credentials,
+    input: UpgradeGrantRequest,
+  ): Promise<SupportOutcome> {
+    return changeCommerceFixture((dataset) => {
+      const staff = requireOperator(dataset, credentials);
+
+      const order = dataset.orders.find(
+        (one) => one.reference === input.reference,
+      );
+      if (!order) return { status: "refused", reason: "unknownOrder" };
+
+      const refusal = reasonRefusal(input.reason);
+      if (refusal) return { status: "refused", reason: refusal };
+
+      const line = order.lines.find((one) => one.sku === input.sku);
+      const grant = dataset.grants.find(
+        (one) => one.orderReference === order.reference && one.sku === input.sku,
+      );
+      if (!line || !grant) {
+        return { status: "refused", reason: "unknownGrant" };
+      }
+
+      const current = grantedVersion(dataset, line, grant);
+      const wanted = dataset.versions.find(
+        (one) => one.id === input.versionId && one.sku === input.sku,
+      );
+      // Forwards only. Taking a version away from somebody is not an upgrade,
+      // and this is not the surface for it.
+      if (!wanted || !current || wanted.version <= current.version) {
+        return { status: "refused", reason: "notAnUpgrade" };
+      }
+
+      // The order line is untouched: `paidDeliverableVersion` still says what
+      // this buyer bought, and the grant beside it says what they may open.
+      grant.upgradedVersionId = wanted.id;
+
+      record(dataset, {
+        actorEmail: staff.email,
+        action: "order-access.upgraded",
+        sku: input.sku,
+        orderReference: order.reference,
+        before: auditMetadata(current),
+        after: {
+          ...(auditMetadata(wanted) ?? {}),
+          note: normaliseReason(input.reason),
+        },
+      });
+
+      return { status: "recorded" };
+    });
+  },
+
+  async annotateOrder(
+    credentials,
+    input: AnnotateOrderRequest,
+  ): Promise<SupportOutcome> {
+    return changeCommerceFixture((dataset) => {
+      const staff = requireOperator(dataset, credentials);
+
+      const order = dataset.orders.find(
+        (one) => one.reference === input.reference,
+      );
+      if (!order) return { status: "refused", reason: "unknownOrder" };
+
+      const refusal = reasonRefusal(input.note);
+      if (refusal) return { status: "refused", reason: refusal };
+      const note = normaliseReason(input.note);
+
+      let settled: StoredOrderAnomaly | undefined;
+      if (input.anomalyId) {
+        settled = dataset.anomalies.find(
+          (one) =>
+            one.id === input.anomalyId &&
+            one.orderReference === order.reference,
+        );
+        if (!settled) return { status: "refused", reason: "unknownAnomaly" };
+        if (settled.resolvedAt) {
+          return { status: "refused", reason: "anomalyAlreadySettled" };
+        }
+
+        // Settled once and never rewritten, which is what the Postgres trigger
+        // enforces: what was decided about an anomaly is as append-only as the
+        // anomaly itself.
+        settled.resolvedAt = new Date().toISOString();
+        settled.resolution = note;
+        settled.resolvedByEmail = staff.email;
+      }
+
+      record(dataset, {
+        actorEmail: staff.email,
+        action: "order.annotated",
+        sku: null,
+        orderReference: order.reference,
+        before: null,
+        after: settled ? { note, anomaly: settled.kind } : { note },
+      });
+
+      return { status: "recorded" };
+    });
+  },
+
+  async noteDeliveryRetry(
+    credentials,
+    input: DeliveryRetryNote,
+  ): Promise<void> {
+    await changeCommerceFixture((dataset) => {
+      const staff = requireOperator(dataset, credentials);
+
+      record(dataset, {
+        actorEmail: staff.email,
+        action: "order-delivery.retried",
+        sku: null,
+        orderReference: input.reference,
+        before: { fulfillment: input.before },
+        after: { fulfillment: input.after },
+      });
+    });
   },
 
   async readActiveSkus(): Promise<string[]> {
@@ -629,6 +1028,7 @@ export const fixtureCommerceProvider: CommerceProvider = {
         fulfillmentState: "not_started",
         fulfillmentClaimId: null,
         fulfillmentClaimedAt: null,
+        correction: null,
         attempts: [attempt],
       };
 
@@ -833,6 +1233,7 @@ export const fixtureCommerceProvider: CommerceProvider = {
             downloadsAllowed: request.downloadsAllowed,
             downloadsUsed: 0,
             linkExpiresAt: null,
+            upgradedVersionId: null,
           })),
       ];
 
@@ -875,7 +1276,7 @@ export const fixtureCommerceProvider: CommerceProvider = {
         order: toOrderSnapshot(dataset, order),
         access: toOrderAccess(dataset, held),
         claimId,
-        deliverTo: order.buyer.email,
+        deliverTo: deliveryAddress(order.buyer, correctionOf(order)),
       };
     });
   },
@@ -956,9 +1357,7 @@ export const fixtureCommerceProvider: CommerceProvider = {
         return { status: "refused", reason: "exhausted" };
       }
 
-      const version = dataset.versions.find(
-        (one) => one.id === line.paidDeliverableVersionId,
-      );
+      const version = grantedVersion(dataset, line, grant);
       const url =
         version &&
         (await signPrivateAddress(

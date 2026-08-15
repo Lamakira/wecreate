@@ -17,6 +17,16 @@ import { useFormStatus } from "react-dom";
  * Without JavaScript `useFormStatus` never reports a pending submission, so the
  * button renders as an ordinary submit and the form posts the way it always
  * did.
+ *
+ * The same is true of the Order Dossier's forms, which post to a route handler
+ * rather than to a Server Function: React does not manage those submissions, so
+ * nothing here reports pending and the browser's own progress is what says the
+ * page is going somewhere. Nothing there is protected from a second press by
+ * this button, and nothing there needs to be — a correction that changes
+ * nothing, a version already granted, a delivery already claimed and an anomaly
+ * already settled are each refused by the data plane. The two that would happen
+ * twice are a second access message and a second note, and both of those are
+ * things an operator can see they have done.
  */
 export function CommerceButton({
   children,

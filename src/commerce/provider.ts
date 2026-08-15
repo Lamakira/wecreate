@@ -1,14 +1,18 @@
 import type { PaymentEvent, PaymentProviderId } from "@/payments/types";
 
+import type { SupportRefusal } from "./support";
 import type {
   AcceptedLegalRevision,
   BuyerContact,
   CommerceAuditEntry,
   CommerceOperator,
+  FulfillmentState,
   OperatorCredentials,
   OrderAccess,
+  OrderDossier,
   OrderSnapshot,
   OrderState,
+  OrderSummary,
   PaidDeliverable,
   PaidDeliverableVersion,
   PaymentAttempt,
@@ -97,6 +101,107 @@ export interface CommerceProvider {
     credentials: OperatorCredentials,
     limit: number,
   ): Promise<CommerceAuditEntry[]>;
+
+  /*
+   * Everything below is the back office resolving a buyer's problem (issue
+   * #15), and every one of them carries a staff session for the reason the
+   * deliverable functions do: these read a buyer's contact details and change
+   * what WeCreate owes them, so they are bounded by an individual identity at
+   * assurance level 2 rather than by an order reference.
+   *
+   * Each writes its own Commerce Audit Entry in the same transaction as the
+   * change it records — an entry written separately is one a failure can leave
+   * out — and none of them can reach a payment event, a provider identifier, a
+   * Payment State, an Order Snapshot or a stored version. Those are not
+   * refused here; they are absent.
+   */
+
+  /** Orders newest first, narrowed to what an operator typed. */
+  readOrders(
+    credentials: OperatorCredentials,
+    input: { search: string; limit: number },
+  ): Promise<OrderSummary[]>;
+
+  /** Everything about one order, or nothing if no order carries that reference. */
+  readOrderDossier(
+    credentials: OperatorCredentials,
+    reference: string,
+  ): Promise<OrderDossier | undefined>;
+
+  /**
+   * Record that the address or telephone the buyer wrote is not where their
+   * order should go.
+   *
+   * It adds a fact and rewrites none: the Order Snapshot keeps what the buyer
+   * typed, and a delivery reads the correction instead (`ContactCorrection`).
+   */
+  correctBuyerContact(
+    credentials: OperatorCredentials,
+    input: CorrectContactRequest,
+  ): Promise<SupportOutcome>;
+
+  /**
+   * Replace the token that opens one order, and stop the last one working.
+   *
+   * A lost message, an address only now discovered to be wrong. It touches the
+   * grants and the allowance on them not at all — those are the buyer's, and
+   * what is being replaced is only the credential — and it leaves the deadline
+   * where it is, because thirty days belong to the approval rather than to
+   * whichever message finally carried them.
+   *
+   * It hands back what the caller needs to write to the buyer, and the caller
+   * is what sends it: this boundary stores the digest of a token it is given
+   * and never learns the token, exactly as `beginFulfillment` does.
+   */
+  reissueOrderAccess(
+    credentials: OperatorCredentials,
+    input: ReissueAccessRequest,
+  ): Promise<ReissueAccessOutcome>;
+
+  /**
+   * Grant one purchased product a later Paid Deliverable Version than the order
+   * bought.
+   *
+   * The Order Snapshot is not touched: what the buyer paid for is what it
+   * records, for ever, and this is the separate decision that they may open
+   * something newer. Only forwards — a version earlier than the one bought is
+   * refused, because taking something away is not an upgrade and is not what
+   * this is for.
+   */
+  upgradeGrantVersion(
+    credentials: OperatorCredentials,
+    input: UpgradeGrantRequest,
+  ): Promise<SupportOutcome>;
+
+  /**
+   * Write down what a person decided about an order, and settle the Order
+   * Anomaly they decided it about.
+   *
+   * The whole of what this application does about a duplicate or unusual
+   * payment: it is recorded, a person reads it, and what they conclude is
+   * written down under their name. No refund is issued here and none ever will
+   * be — money is returned in the payment provider's own dashboard, by somebody
+   * who decided to (issue #15).
+   */
+  annotateOrder(
+    credentials: OperatorCredentials,
+    input: AnnotateOrderRequest,
+  ): Promise<SupportOutcome>;
+
+  /**
+   * Record that a Commerce Operator took up a failed delivery, and how it went.
+   *
+   * The one audit entry not written in the same transaction as the change it
+   * describes, because the change is not this boundary's to make: a delivery is
+   * claimed and settled through `beginFulfillment`, which carries no staff
+   * identity and never will — it is reached from a webhook. So what is recorded
+   * here is the operator's own act, which is asking for the delivery to be
+   * taken up again, and the Fulfillment State on either side of it.
+   */
+  noteDeliveryRetry(
+    credentials: OperatorCredentials,
+    input: DeliveryRetryNote,
+  ): Promise<void>;
 
   /**
    * The SKUs a buyer could be sold today.
@@ -267,6 +372,67 @@ export interface CommerceProvider {
    * which is what makes a fifteen-minute address safe to hand out.
    */
   openDownload(request: OpenDownloadRequest): Promise<OpenDownloadOutcome>;
+}
+
+/**
+ * Two answers, and no third.
+ *
+ * A support action either happened or was refused for a reason an operator can
+ * read and act on. Anything else — a data plane that will not answer — is a
+ * failure rather than an outcome, and is thrown, so it cannot be mistaken for
+ * "WeCreate declined to do this".
+ */
+export type SupportOutcome =
+  | { status: "recorded" }
+  | { status: "refused"; reason: SupportRefusal };
+
+export interface CorrectContactRequest {
+  reference: string;
+  /** The corrected address, or empty to leave the buyer's own alone. */
+  email: string;
+  /** The corrected telephone, or empty to leave the buyer's own alone. */
+  telephone: string;
+  /** Why, in the operator's words. Recorded with their name and the moment. */
+  reason: string;
+}
+
+export interface ReissueAccessRequest {
+  reference: string;
+  /** SHA-256 of the token about to be emailed, hexadecimal. */
+  tokenDigest: string;
+  reason: string;
+}
+
+export type ReissueAccessOutcome =
+  | {
+      status: "reissued";
+      order: OrderSnapshot;
+      access: OrderAccess;
+      /** Where to write, which is the correction if there is one. */
+      deliverTo: string;
+    }
+  | { status: "refused"; reason: SupportRefusal };
+
+export interface UpgradeGrantRequest {
+  reference: string;
+  sku: string;
+  /** The version to grant, which has to be later than the one bought. */
+  versionId: string;
+  reason: string;
+}
+
+export interface AnnotateOrderRequest {
+  reference: string;
+  /** The Order Anomaly this settles, or `null` to write about the order alone. */
+  anomalyId: string | null;
+  note: string;
+}
+
+export interface DeliveryRetryNote {
+  reference: string;
+  /** The Fulfillment State before the operator asked, and after it was tried. */
+  before: FulfillmentState;
+  after: FulfillmentState;
 }
 
 export interface BeginFulfillmentRequest {

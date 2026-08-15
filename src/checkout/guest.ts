@@ -1,3 +1,9 @@
+import {
+  isWellFormedEmail,
+  isWellFormedTelephone,
+  normaliseName,
+  normaliseTelephone,
+} from "@/commerce/contact";
 import type { BuyerContact } from "@/commerce/types";
 import type { EffectiveLegalRevision } from "@/managed-content/legal";
 
@@ -60,27 +66,14 @@ export const GUEST_REFUSAL_FIELDS: Record<GuestRefusal, GuestField> = {
 
 /** Long enough for any real name, short enough to be a bound. */
 const MAX_NAME_LENGTH = 120;
-/** The longest address RFC 5321 allows. */
-const MAX_EMAIL_LENGTH = 254;
 
-/**
- * One `@`, something either side of it, a dot in the domain, and no spaces.
- *
- * Deliberately not an attempt at RFC 5322: the addresses that pattern accepts
- * and this one does not are addresses nobody has, and the only real proof an
- * email works is sending to it — which is what the receipt does, and why a
- * delivery that could not be sent is a Fulfillment State a buyer is shown.
+/*
+ * What an address and a telephone have to look like is in `commerce/contact.ts`
+ * rather than here, because the checkout is not the only place they are read:
+ * a Commerce Operator correcting a mistyped address months later has to be held
+ * to exactly the same shapes, or a correction would put a value in the delivery
+ * path this form would have refused (issue #15).
  */
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/;
-
-/**
- * `+` and then eight to fifteen digits, which is what E.164 allows.
- *
- * International form is required rather than preferred: the number is what a
- * Mobile Money payment is collected against, and a national number is ambiguous
- * the moment it leaves the country it was written in.
- */
-const TELEPHONE_PATTERN = /^\+[1-9]\d{7,14}$/;
 
 /** What the form sent, before any of it is believed. */
 export interface GuestFormValues {
@@ -102,16 +95,6 @@ export interface GuestSubmission {
   details: BuyerContact;
   /** At most one refusal per field, so a form can print each beside its input. */
   refusals: Partial<Record<GuestField, GuestRefusal>>;
-}
-
-/** Spaces of every kind, and the punctuation people write telephone numbers with. */
-function normaliseTelephone(value: string): string {
-  return value.replace(/[\s.\-()/  ]/g, "");
-}
-
-/** One run of whitespace between words, and none at either end. */
-function normaliseName(value: string): string {
-  return value.trim().replace(/\s+/g, " ");
 }
 
 /**
@@ -140,12 +123,10 @@ export function readGuestDetails(
   else if (fullName.length > MAX_NAME_LENGTH) refuse("fullNameTooLong");
 
   const email = values.email.trim();
-  if (email.length > MAX_EMAIL_LENGTH || !EMAIL_PATTERN.test(email)) {
-    refuse("emailMalformed");
-  }
+  if (!isWellFormedEmail(email)) refuse("emailMalformed");
 
   const telephone = normaliseTelephone(values.telephone);
-  if (!TELEPHONE_PATTERN.test(telephone)) refuse("telephoneMalformed");
+  if (!isWellFormedTelephone(telephone)) refuse("telephoneMalformed");
 
   const company = normaliseName(values.company);
   if (company.length > MAX_NAME_LENGTH) refuse("companyTooLong");

@@ -22,8 +22,10 @@ import { formatXof } from "@/lib/format";
  */
 
 /** What the buyer's mail client shows in the list. */
-function subject(order: OrderSnapshot): string {
-  return `Reçu de paiement — commande ${order.reference}`;
+function subject(order: OrderSnapshot, reissued: boolean): string {
+  return reissued
+    ? `Vos accès — commande ${order.reference}`
+    : `Reçu de paiement — commande ${order.reference}`;
 }
 
 /**
@@ -54,6 +56,16 @@ export interface ReceiptInput {
   accessUrl: string;
   /** WeCreate's own administrative address, from Managed Content. */
   supportEmail: string;
+  /**
+   * Whether a Commerce Operator asked for this to be sent again (issue #15).
+   *
+   * The same facts either way — this is the receipt, and re-sending it is the
+   * whole point — but it opens by saying so. A buyer who lost their first
+   * message and receives a second one headed *Reçu de paiement* has every
+   * reason to think they have been charged twice, which is precisely the
+   * telephone call this feature exists to end.
+   */
+  reissued?: boolean;
 }
 
 export function composeReceipt({
@@ -62,6 +74,7 @@ export function composeReceipt({
   deliverTo,
   accessUrl,
   supportEmail,
+  reissued = false,
 }: ReceiptInput): TransactionalEmail {
   const lines = order.lines
     .map((line) => `- ${line.title} — ${formatXof(line.unitPriceXof)}`)
@@ -71,11 +84,21 @@ export function composeReceipt({
     .map((grant) => `- ${grant.title} : ${allowanceLabel(grant)}`)
     .join("\n");
 
+  const opening = reissued
+    ? [
+        `Voici de nouveau vos accès à la commande ${order.reference}, à votre demande.`,
+        `Rien n'a été encaissé une seconde fois : votre paiement de ${formatXof(order.totalXof)} reste le seul.`,
+        "Le lien envoyé précédemment ne fonctionne plus ; celui ci-dessous le remplace.",
+      ]
+    : [
+        `Nous avons bien reçu votre paiement de ${formatXof(order.totalXof)} pour la commande ${order.reference}.`,
+        "Ce message est votre reçu de paiement et la confirmation de votre commande. Ce n'est pas une facture fiscale.",
+      ];
+
   const body = [
     "Bonjour,",
     "",
-    `Nous avons bien reçu votre paiement de ${formatXof(order.totalXof)} pour la commande ${order.reference}.`,
-    "Ce message est votre reçu de paiement et la confirmation de votre commande. Ce n'est pas une facture fiscale.",
+    ...opening,
     "",
     "Vos produits numériques",
     lines,
@@ -97,7 +120,7 @@ export function composeReceipt({
 
   return {
     to: deliverTo,
-    subject: subject(order),
+    subject: subject(order, reissued),
     body,
     idempotencyKey: idempotencyKey(order, access),
   };

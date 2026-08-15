@@ -15,19 +15,27 @@ import type {
   OpenAttemptOutcome,
   OpenDownloadOutcome,
   PaymentAttemptOutcome,
+  ReissueAccessOutcome,
   SignInOutcome,
+  SupportOutcome,
   VerificationOutcome,
 } from "../provider";
+import type { SupportRefusal } from "../support";
 import type {
+  AuditMetadata,
   CommerceAuditEntry,
   CommerceOperator,
   OrderAccess,
+  OrderAnomaly,
+  OrderDossier,
   OrderSnapshot,
   OrderState,
+  OrderSummary,
   PaidDeliverable,
   PaidDeliverableVersion,
   PaymentAttempt,
   PaymentEventRecord,
+  RecordedPaymentEvent,
 } from "../types";
 import {
   DELIVERABLES_BUCKET,
@@ -75,9 +83,23 @@ interface AuditRow {
   occurred_at: string;
   actor_email: string;
   action: CommerceAuditEntry["action"];
-  sku: string;
-  before: { version: number; file_name: string; checksum: string } | null;
-  after: { version: number; file_name: string; checksum: string } | null;
+  sku: string | null;
+  order_reference: string | null;
+  before: AuditMetadataRow | null;
+  after: AuditMetadataRow | null;
+}
+
+/** The safe half of what changed, as Postgres names its fields. */
+interface AuditMetadataRow {
+  version?: number;
+  file_name?: string;
+  checksum?: string;
+  email_hint?: string;
+  telephone_hint?: string;
+  fulfillment?: AuditMetadata["fulfillment"];
+  issued_at?: string;
+  anomaly?: AuditMetadata["anomaly"];
+  note?: string;
 }
 
 function toVersion(row: VersionRow): PaidDeliverableVersion {
@@ -94,24 +116,40 @@ function toVersion(row: VersionRow): PaidDeliverableVersion {
   };
 }
 
-function toAuditEntry(row: AuditRow): CommerceAuditEntry {
-  const metadata = (value: AuditRow["before"]) =>
-    value
-      ? {
-          version: value.version,
-          fileName: value.file_name,
-          checksum: value.checksum,
-        }
-      : null;
+/**
+ * The safe half of what changed, in the application's own names.
+ *
+ * Every field is optional on both sides, so an entry about an address carries
+ * no version and one about a version carries no address — see `AuditMetadata`.
+ * Absent stays absent rather than becoming `undefined` under a key nothing
+ * reads.
+ */
+function toAuditMetadata(row: AuditMetadataRow | null): AuditMetadata | null {
+  if (!row) return null;
 
+  return {
+    ...(row.version !== undefined ? { version: row.version } : {}),
+    ...(row.file_name ? { fileName: row.file_name } : {}),
+    ...(row.checksum ? { checksum: row.checksum } : {}),
+    ...(row.email_hint ? { emailHint: row.email_hint } : {}),
+    ...(row.telephone_hint ? { telephoneHint: row.telephone_hint } : {}),
+    ...(row.fulfillment ? { fulfillment: row.fulfillment } : {}),
+    ...(row.issued_at ? { issuedAt: row.issued_at } : {}),
+    ...(row.anomaly ? { anomaly: row.anomaly } : {}),
+    ...(row.note ? { note: row.note } : {}),
+  };
+}
+
+function toAuditEntry(row: AuditRow): CommerceAuditEntry {
   return {
     id: row.id,
     occurredAt: row.occurred_at,
     actorEmail: row.actor_email,
     action: row.action,
     sku: row.sku,
-    before: metadata(row.before),
-    after: metadata(row.after),
+    orderReference: row.order_reference,
+    before: toAuditMetadata(row.before),
+    after: toAuditMetadata(row.after),
   };
 }
 
@@ -194,6 +232,8 @@ interface AccessRow {
     sku: string;
     title: string;
     paid_deliverable_version: number;
+    /** What this grant opens today, which `commerce.granted_version` decides. */
+    delivered_version: number;
     downloads_allowed: number;
     downloads_remaining: number;
   }>;
@@ -208,11 +248,138 @@ function toAccess(row: AccessRow): OrderAccess {
       sku: grant.sku,
       title: grant.title,
       paidDeliverableVersion: grant.paid_deliverable_version,
+      deliveredVersion:
+        grant.delivered_version ?? grant.paid_deliverable_version,
       downloadsAllowed: grant.downloads_allowed,
       downloadsRemaining: grant.downloads_remaining,
     })),
   };
 }
+
+interface AnomalyRow {
+  id: string;
+  kind: OrderAnomaly["kind"];
+  reference: string;
+  detected_at: string;
+  provider: string | null;
+  provider_transaction_id: string | null;
+  provider_event_id: string | null;
+  detail: string | null;
+  resolved_at: string | null;
+  resolution: string | null;
+  resolved_by_email: string | null;
+}
+
+function toAnomaly(row: AnomalyRow): OrderAnomaly {
+  return {
+    id: row.id,
+    kind: row.kind,
+    reference: row.reference,
+    detectedAt: row.detected_at,
+    provider: row.provider,
+    providerTransactionId: row.provider_transaction_id,
+    providerEventId: row.provider_event_id,
+    detail: row.detail,
+    resolvedAt: row.resolved_at,
+    resolution: row.resolution,
+    resolvedByEmail: row.resolved_by_email,
+  };
+}
+
+interface EventRow {
+  id: string;
+  provider: string;
+  provider_event_id: string;
+  provider_event_type: string;
+  provider_transaction_id: string;
+  occurred_at: string;
+  received_at: string;
+  outcome: OrderSnapshot["paymentState"];
+  effect: RecordedPaymentEvent["effect"];
+}
+
+function toRecordedEvent(row: EventRow): RecordedPaymentEvent {
+  return {
+    id: row.id,
+    provider: row.provider,
+    providerEventId: row.provider_event_id,
+    providerEventType: row.provider_event_type,
+    providerTransactionId: row.provider_transaction_id,
+    occurredAt: row.occurred_at,
+    receivedAt: row.received_at,
+    outcome: row.outcome,
+    effect: row.effect,
+  };
+}
+
+interface OrderSummaryRow {
+  reference: string;
+  created_at: string;
+  total_xof: number;
+  buyer_email_hint: string;
+  payment_state: OrderSnapshot["paymentState"];
+  fulfillment_state: OrderSnapshot["fulfillmentState"];
+  outstanding: OrderAnomaly["kind"][];
+}
+
+interface DossierRow {
+  order: OrderRow;
+  buyer: {
+    full_name: string;
+    email: string;
+    telephone: string;
+    company: string | null;
+  };
+  correction: {
+    email: string | null;
+    telephone: string | null;
+    reason: string;
+    corrected_at: string;
+    corrected_by_email: string;
+  } | null;
+  deliver_to: string;
+  events: EventRow[];
+  access: AccessRow | null;
+  anomalies: AnomalyRow[];
+  audit: AuditRow[];
+}
+
+function toDossier(row: DossierRow): OrderDossier {
+  return {
+    order: toOrder(row.order),
+    buyer: {
+      fullName: row.buyer.full_name,
+      email: row.buyer.email,
+      telephone: row.buyer.telephone,
+      company: row.buyer.company ?? null,
+    },
+    correction: row.correction
+      ? {
+          email: row.correction.email,
+          telephone: row.correction.telephone,
+          reason: row.correction.reason,
+          correctedAt: row.correction.corrected_at,
+          correctedByEmail: row.correction.corrected_by_email,
+        }
+      : null,
+    deliverTo: row.deliver_to,
+    events: (row.events ?? []).map(toRecordedEvent),
+    access: row.access ? toAccess(row.access) : null,
+    anomalies: (row.anomalies ?? []).map(toAnomaly),
+    audit: (row.audit ?? []).map(toAuditEntry),
+  };
+}
+
+/**
+ * What a support function answered, in Postgres's own words.
+ *
+ * The refusals are the `SupportRefusal` strings themselves rather than a
+ * translation of them, so the two sides cannot drift: a rule added to
+ * `support.ts` that Postgres does not know about is a compile error here.
+ */
+type SupportAnswer =
+  | { status: "recorded" }
+  | { status: "refused"; reason: SupportRefusal };
 
 async function call<T>(
   supabase: SupabaseClient,
@@ -403,6 +570,99 @@ export const supabaseCommerceProvider: CommerceProvider = {
     });
 
     return (rows ?? []).map(toAuditEntry);
+  },
+
+  async readOrders(credentials, { search, limit }): Promise<OrderSummary[]> {
+    const supabase = await operatorCommerceClient(credentials);
+    const rows = await call<OrderSummaryRow[]>(supabase, "commerce_orders", {
+      p_search: search,
+      p_limit: limit,
+    });
+
+    return (rows ?? []).map((row) => ({
+      reference: row.reference,
+      createdAt: row.created_at,
+      totalXof: row.total_xof,
+      buyerEmailHint: row.buyer_email_hint,
+      paymentState: row.payment_state,
+      fulfillmentState: row.fulfillment_state,
+      outstanding: row.outstanding ?? [],
+    }));
+  },
+
+  async readOrderDossier(credentials, reference): Promise<OrderDossier | undefined> {
+    const supabase = await operatorCommerceClient(credentials);
+    const row = await call<DossierRow | null>(
+      supabase,
+      "commerce_order_dossier",
+      { p_reference: reference },
+    );
+
+    return row ? toDossier(row) : undefined;
+  },
+
+  async correctBuyerContact(credentials, input): Promise<SupportOutcome> {
+    const supabase = await operatorCommerceClient(credentials);
+    return call<SupportAnswer>(supabase, "commerce_correct_buyer_contact", {
+      p_reference: input.reference,
+      p_email: input.email,
+      p_telephone: input.telephone,
+      p_reason: input.reason,
+    });
+  },
+
+  async reissueOrderAccess(credentials, input): Promise<ReissueAccessOutcome> {
+    const supabase = await operatorCommerceClient(credentials);
+    const answer = await call<
+      | {
+          status: "reissued";
+          order: OrderRow;
+          access: AccessRow;
+          deliver_to: string;
+        }
+      | { status: "refused"; reason: SupportRefusal }
+    >(supabase, "commerce_reissue_order_access", {
+      p_reference: input.reference,
+      p_token_digest: input.tokenDigest,
+      p_reason: input.reason,
+    });
+
+    return answer.status === "reissued"
+      ? {
+          status: "reissued",
+          order: toOrder(answer.order),
+          access: toAccess(answer.access),
+          deliverTo: answer.deliver_to,
+        }
+      : answer;
+  },
+
+  async upgradeGrantVersion(credentials, input): Promise<SupportOutcome> {
+    const supabase = await operatorCommerceClient(credentials);
+    return call<SupportAnswer>(supabase, "commerce_upgrade_grant_version", {
+      p_reference: input.reference,
+      p_sku: input.sku,
+      p_version_id: input.versionId,
+      p_reason: input.reason,
+    });
+  },
+
+  async annotateOrder(credentials, input): Promise<SupportOutcome> {
+    const supabase = await operatorCommerceClient(credentials);
+    return call<SupportAnswer>(supabase, "commerce_annotate_order", {
+      p_reference: input.reference,
+      p_anomaly_id: input.anomalyId,
+      p_note: input.note,
+    });
+  },
+
+  async noteDeliveryRetry(credentials, input): Promise<void> {
+    const supabase = await operatorCommerceClient(credentials);
+    await call<void>(supabase, "commerce_note_delivery_retry", {
+      p_reference: input.reference,
+      p_before: input.before,
+      p_after: input.after,
+    });
   },
 
   async readActiveSkus(): Promise<string[]> {

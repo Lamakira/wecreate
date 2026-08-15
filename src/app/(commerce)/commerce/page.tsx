@@ -1,22 +1,15 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 
-import { ACCESS_REFUSAL_LABELS, accessRefusal } from "@/commerce/operators";
-import { getCommerceProvider } from "@/commerce/provider";
-import { readOperatorCredentials, readSignedInOperator } from "@/commerce/session";
+import { reachBackOffice } from "@/commerce/back-office";
+import { AccessRefused } from "@/components/commerce/access-refused";
 import { AuditTrail } from "@/components/commerce/audit-trail";
-import { CommerceButton } from "@/components/commerce/commerce-button";
-import {
-  CommerceNotice,
-  CommercePanel,
-} from "@/components/commerce/commerce-form";
+import { CommerceNotice } from "@/components/commerce/commerce-form";
 import {
   DeliverablesPanel,
   type DeliverableView,
 } from "@/components/commerce/deliverables-panel";
+import { OperatorBar } from "@/components/commerce/operator-bar";
 import { readBoutique } from "@/managed-content";
-
-import { signOutAction } from "@/commerce/actions";
 
 /** Enough history to answer a support question without becoming a page of its own. */
 const AUDIT_ENTRIES_SHOWN = 50;
@@ -42,43 +35,11 @@ interface CommerceRouteProps {
 export default async function CommercePage({ searchParams }: CommerceRouteProps) {
   const { message } = await searchParams;
 
-  const operator = await readSignedInOperator();
-  const refusal = accessRefusal(operator);
-
-  if (refusal === "notSignedIn" || refusal === "secondFactorNotVerified") {
-    redirect("/commerce/connexion");
+  const entry = await reachBackOffice();
+  if (entry.status === "refused") {
+    return <AccessRefused refusal={entry.refusal} />;
   }
-  if (refusal === "noSecondFactor") {
-    redirect("/commerce/securite");
-  }
-
-  if (refusal || !operator) {
-    // A staff member who is fully authenticated and still may not be here:
-    // Content Editor and Commerce Operator are separate permissions, even when
-    // the same person holds both. Nothing about the files is rendered — not a
-    // count, not a SKU.
-    return (
-      <>
-        <h1 className="mt-0 mb-8 text-section font-light">Espace commerce</h1>
-        <CommercePanel title="Accès refusé">
-          <p data-testid="commerce-refusal" className="m-0 text-body font-light">
-            {ACCESS_REFUSAL_LABELS[refusal ?? "notSignedIn"]}
-          </p>
-          <form action={signOutAction} className="mt-5">
-            <CommerceButton secondary pendingLabel="Déconnexion…">
-            Se déconnecter
-          </CommerceButton>
-          </form>
-        </CommercePanel>
-      </>
-    );
-  }
-
-  const provider = await getCommerceProvider();
-  const credentials = await readOperatorCredentials();
-  if (!provider || !credentials) {
-    redirect("/commerce/connexion");
-  }
+  const { operator, provider, credentials } = entry;
 
   const [deliverables, boutique, audit] = await Promise.all([
     provider.readPaidDeliverables(credentials),
@@ -103,17 +64,7 @@ export default async function CommercePage({ searchParams }: CommerceRouteProps)
 
   return (
     <>
-      <div className="mb-8 flex flex-wrap items-baseline justify-between gap-4">
-        <h1 className="m-0 text-section font-light">Fichiers livrés</h1>
-        <form action={signOutAction} className="flex items-baseline gap-4">
-          <span className="text-body-sm font-light text-wc-muted-2">
-            {operator.email}
-          </span>
-          <CommerceButton secondary pendingLabel="Déconnexion…">
-            Se déconnecter
-          </CommerceButton>
-        </form>
-      </div>
+      <OperatorBar title="Fichiers livrés" operatorEmail={operator.email} />
       <CommerceNotice message={message} />
 
       <DeliverablesPanel deliverables={[...catalogue, ...unlisted]} />

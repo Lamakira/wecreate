@@ -169,6 +169,29 @@ export interface StoredCommerce {
     reference: string;
     paymentState: string;
     fulfillmentState: string;
+    /**
+     * What the buyer typed, and what the order recorded.
+     *
+     * Read here because issue #15 asks for something no page can show: that a
+     * Commerce Operator correcting a mistyped address changes where the next
+     * message goes and changes *nothing* about the Order Snapshot — the same
+     * lines, the same prices, the same Paid Deliverable Versions, the same
+     * contact details the buyer wrote. A surface can be made to print the old
+     * value; only storage can say it is still the stored one.
+     */
+    buyer: { fullName: string; email: string; telephone: string };
+    lines: {
+      sku: string;
+      unitPriceXof: number;
+      paidDeliverableVersion: number;
+    }[];
+    /** The separate, later fact recorded beside the snapshot, or nothing. */
+    correction: {
+      email: string | null;
+      telephone: string | null;
+      reason: string;
+      correctedByEmail: string;
+    } | null;
   }[];
   paymentEvents: {
     providerEventId: string;
@@ -182,9 +205,12 @@ export interface StoredCommerce {
     sku: string;
     downloadsAllowed: number;
     downloadsUsed: number;
+    /** A later version a Commerce Operator granted, or nothing (issue #15). */
+    upgradedVersionId: string | null;
   }[];
-  /** What a Commerce Operator will be asked to look at (issue #15). */
+  /** What a Commerce Operator is asked to look at (issue #15). */
   anomalies: {
+    id: string;
     kind: string;
     orderReference: string;
     provider: string | null;
@@ -193,6 +219,16 @@ export interface StoredCommerce {
     /** Words this application wrote, where it had any to write. */
     detail: string | null;
     resolvedAt: string | null;
+    /** What a person decided about it, once one has. */
+    resolution: string | null;
+    resolvedByEmail: string | null;
+  }[];
+  /** The append-only trail, which no support action may rewrite. */
+  audit: {
+    action: string;
+    actorEmail: string;
+    sku: string | null;
+    orderReference: string | null;
   }[];
 }
 

@@ -134,7 +134,8 @@ export const PAYMENT_STATE_MARKS: Record<PaymentState, string> = {
  *
  * The rule, in one place, because two systems answer to it: Postgres enforces
  * it inside `commerce_record_payment_event` and the fixture applies it in
- * JavaScript — change one and change the other, as `maskEmail` says of itself.
+ * JavaScript — change one and change the other, as `maskEmail` says of itself
+ * in `contact.ts`.
  *
  * Four answers, and the order of the questions is the whole rule:
  *
@@ -289,25 +290,4 @@ function isAwaitingPayment(order: OrderSnapshot): boolean {
   return order.attempts.some(
     (attempt) => attempt.state !== "failed" && attempt.outcome === null,
   );
-}
-
-/**
- * The delivery address, masked: `a***@exemple.com`.
- *
- * Enough for the buyer to recognise their own, and not enough for anyone
- * holding a reference to learn one.
- *
- * Postgres masks it in `commerce.mask_email`, because the whole point is that
- * the unmasked address never leaves the database. This is the fixture's half of
- * the same rule, and the two are written to agree: change one and change the
- * other.
- */
-export function maskEmail(email: string): string {
-  const at = email.lastIndexOf("@");
-  if (at <= 0) {
-    // Not an address this application would have accepted. Nothing of it is
-    // shown rather than guessing which half was the local part.
-    return "***";
-  }
-  return `${email.slice(0, 1)}***${email.slice(at)}`;
 }

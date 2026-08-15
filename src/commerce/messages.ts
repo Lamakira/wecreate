@@ -1,4 +1,5 @@
 import { UPLOAD_REFUSAL_LABELS, type UploadRefusal } from "./paid-deliverables";
+import { SUPPORT_REFUSAL_LABELS, type SupportRefusal } from "./support";
 
 /**
  * What the back office says after an action, and how it says it.
@@ -14,6 +15,7 @@ import { UPLOAD_REFUSAL_LABELS, type UploadRefusal } from "./paid-deliverables";
 
 export type CommerceMessageKey =
   | UploadRefusal
+  | SupportRefusal
   | "signInRefused"
   | "codeRefused"
   | "sessionExpired"
@@ -22,7 +24,14 @@ export type CommerceMessageKey =
   | "versionActivated"
   | "activationRefused"
   | "factorAdded"
-  | "factorRefused";
+  | "factorRefused"
+  | "contactCorrected"
+  | "accessReissued"
+  | "accessReissuedUnsent"
+  | "grantUpgraded"
+  | "orderAnnotated"
+  | "deliveryRetried"
+  | "deliveryStillFailing";
 
 export interface CommerceMessage {
   tone: "error" | "success";
@@ -36,6 +45,16 @@ export const COMMERCE_MESSAGES: Record<CommerceMessageKey, CommerceMessage> = {
       { tone: "error", text },
     ]),
   ) as Record<UploadRefusal, CommerceMessage>),
+
+  // Every way a support action can be refused, in the words that live beside
+  // the rule that refused it. They are errors to a person and not to a system:
+  // each one names what to do next.
+  ...(Object.fromEntries(
+    Object.entries(SUPPORT_REFUSAL_LABELS).map(([key, text]) => [
+      key,
+      { tone: "error", text },
+    ]),
+  ) as Record<SupportRefusal, CommerceMessage>),
 
   signInRefused: {
     tone: "error",
@@ -69,6 +88,35 @@ export const COMMERCE_MESSAGES: Record<CommerceMessageKey, CommerceMessage> = {
   factorRefused: {
     tone: "error",
     text: "Code refusé. Le facteur n'a pas été enregistré.",
+  },
+
+  contactCorrected: {
+    tone: "success",
+    text: "Correction enregistrée. Le bon de commande garde ce que l'acheteuse ou l'acheteur avait écrit ; les prochains envois partent vers les coordonnées corrigées.",
+  },
+  accessReissued: {
+    tone: "success",
+    text: "Nouveaux accès envoyés. L'adresse précédente ne fonctionne plus ; les téléchargements restants n'ont pas bougé.",
+  },
+  accessReissuedUnsent: {
+    tone: "error",
+    text: "Les accès ont été remplacés, mais l'e-mail n'est pas parti. L'adresse précédente ne fonctionne plus : renvoyez les accès.",
+  },
+  grantUpgraded: {
+    tone: "success",
+    text: "Version accordée. Le bon de commande garde la version achetée ; l'acheteuse ou l'acheteur peut désormais ouvrir la nouvelle.",
+  },
+  orderAnnotated: {
+    tone: "success",
+    text: "Note enregistrée au journal, à votre nom. Aucun remboursement n'est déclenché ici : il se fait chez le fournisseur de paiement.",
+  },
+  deliveryRetried: {
+    tone: "success",
+    text: "Livraison reprise. Le reçu est reparti vers l'adresse de livraison, avec de nouveaux accès.",
+  },
+  deliveryStillFailing: {
+    tone: "error",
+    text: "La livraison n'a toujours pas abouti. Le paiement reste approuvé et les accès sont intacts : réessayez, puis écrivez à l'acheteuse ou l'acheteur.",
   },
 };
 
