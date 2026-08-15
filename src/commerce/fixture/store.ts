@@ -6,6 +6,7 @@ import type {
   AssuranceLevel,
   BuyerContact,
   CommerceAuditEntry,
+  ContactCorrection,
   FulfillmentState,
   OrderAnomaly,
   OrderSnapshotLine,
@@ -78,6 +79,17 @@ export interface StoredOrder {
    */
   fulfillmentClaimId: string | null;
   fulfillmentClaimedAt: string | null;
+  /**
+   * What a Commerce Operator has corrected about where this order goes, or
+   * nothing.
+   *
+   * Beside the buyer's own details rather than over them: the four fields above
+   * are what the buyer typed and are never rewritten, and this is the later,
+   * attributable fact a delivery reads instead (issue #15). Postgres keeps the
+   * same five columns, and its trigger goes on refusing any change to the
+   * buyer's own.
+   */
+  correction: ContactCorrection | null;
   attempts: StoredPaymentAttempt[];
 }
 
@@ -153,6 +165,16 @@ export interface StoredGrant {
   downloadsAllowed: number;
   downloadsUsed: number;
   linkExpiresAt: string | null;
+  /**
+   * A later Paid Deliverable Version a Commerce Operator granted, or nothing.
+   *
+   * The one field here that decides which file is opened, and it is deliberately
+   * on the grant rather than on the order line: the line records what was
+   * bought and may never change, and this records what WeCreate has since
+   * decided this buyer may have (issue #15). `commerce.order_access_grants`
+   * keeps the same column.
+   */
+  upgradedVersionId: string | null;
 }
 
 /**

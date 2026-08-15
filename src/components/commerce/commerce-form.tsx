@@ -54,14 +54,20 @@ export function CommerceField({ label, name, hint, ...input }: FieldProps) {
 export function CommercePanel({
   title,
   description,
+  testId,
   children,
 }: {
   title: string;
   description?: string;
+  /** Names this block where a scenario has to speak about the whole of it. */
+  testId?: string;
   children: ReactNode;
 }) {
   return (
-    <section className="border border-wc-line-dark bg-wc-surface-2 p-5">
+    <section
+      data-testid={testId}
+      className="border border-wc-line-dark bg-wc-surface-2 p-5"
+    >
       <h2 className="m-0 text-product-title font-light">{title}</h2>
       {description ? (
         <p className="mt-2 mb-0 max-w-prose text-body-sm font-light text-wc-muted-2">

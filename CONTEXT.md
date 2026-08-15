@@ -104,3 +104,26 @@ state an order is in and never changes one — it records that a person has
 something to decide, and holds the provider's own identifiers rather than
 anything the provider sent.
 _Avoid_: Error, exception, failed order, alert
+
+**Order Dossier**:
+Everything WeCreate knows about one order, assembled for the Commerce Operator
+resolving a problem with it: the Order Snapshot, both states, every attempt and
+event, the grants, where messages go, and what is outstanding. It is read under
+an individual staff identity rather than by holding the order's reference, and
+is the only place a buyer's contact details are shown in full.
+_Avoid_: Customer record, order detail page, account
+
+**Contact Correction**:
+A Commerce Operator's record that the address or telephone a buyer wrote is not
+where their order should go. It is kept beside the Order Snapshot rather than
+written into it — deliveries read the correction, the snapshot keeps what the
+buyer typed — and it names its motive, its moment and the individual who made
+it.
+_Avoid_: Edit, update the customer, fix the order
+
+**Deliverable Upgrade**:
+An explicit grant of a later Paid Deliverable Version to an order that bought an
+earlier one. It changes which file that buyer may open and never what their
+Order Snapshot recorded, so what was paid for and what has since been given
+stay separately answerable.
+_Avoid_: Re-issue the file, update the order's version, replace the deliverable

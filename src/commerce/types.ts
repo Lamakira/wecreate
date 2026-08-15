@@ -94,33 +94,76 @@ export interface PaidDeliverable {
   activeVersionId: string | null;
 }
 
-/** What a Commerce Operator did, recorded so it cannot be denied or rewritten. */
+/**
+ * What a Commerce Operator did, recorded so it cannot be denied or rewritten.
+ *
+ * Two of them are about the file behind a product and five are about one
+ * buyer's order, and every one of them is a thing a person chose to do. What is
+ * deliberately absent is any action that would rewrite payment truth, an Order
+ * Snapshot or a historical Paid Deliverable Version: those are not audited
+ * because they cannot be done (issue #15).
+ */
 export type CommerceAuditAction =
   | "paid-deliverable-version.created"
-  | "paid-deliverable-version.activated";
+  | "paid-deliverable-version.activated"
+  | "order-contact.corrected"
+  | "order-access.reissued"
+  | "order-access.upgraded"
+  | "order-delivery.retried"
+  | "order.annotated";
 
 /**
  * One entry in the append-only audit trail.
  *
  * Staff identity, when, what was targeted, and safe before/after metadata —
- * version numbers, file names, checksums. Never a secret, a token or a storage
- * address (issue #1).
+ * version numbers, file names, checksums, masked contact details. Never a
+ * secret, a token or a storage address (issue #1).
+ *
+ * An entry names a product, an order, or both: a version is activated for a
+ * SKU and nobody's order, a delivery is taken up again for an order and no
+ * particular SKU, and a version upgrade granted to one buyer is about both.
  */
 export interface CommerceAuditEntry {
   id: string;
   occurredAt: string;
   actorEmail: string;
   action: CommerceAuditAction;
-  sku: string;
+  /** The Digital Product this was about, when it was about one. */
+  sku: string | null;
+  /** The order this was about, when it was about one. */
+  orderReference: string | null;
   before: AuditMetadata | null;
   after: AuditMetadata | null;
 }
 
-/** The safe half of what changed: what a version is, never where it is kept. */
+/**
+ * The safe half of what changed.
+ *
+ * Every field is optional because what is worth recording differs by action: a
+ * version has a number and a checksum, a corrected address has a masked
+ * address, a settled anomaly has what a person wrote about it. What none of
+ * them ever carries is a secret, a token or the address of a stored file — and
+ * no contact detail in full, because this trail may never be deleted and a copy
+ * of somebody's address that outlives every other copy is the thing issue #1
+ * refuses to keep.
+ */
 export interface AuditMetadata {
-  version: number;
-  fileName: string;
-  checksum: string;
+  /** A Paid Deliverable Version's number. */
+  version?: number;
+  fileName?: string;
+  checksum?: string;
+  /** A delivery address, masked: `a***@exemple.com`. */
+  emailHint?: string;
+  /** A telephone, masked: `+229•••80`. */
+  telephoneHint?: string;
+  /** A Fulfillment State, for an entry about a delivery. */
+  fulfillment?: FulfillmentState;
+  /** When the Order Access being replaced was issued. */
+  issuedAt?: string;
+  /** Which Order Anomaly this settled, by kind. */
+  anomaly?: OrderAnomalyKind;
+  /** Why, in the words the operator wrote. */
+  note?: string;
 }
 
 /**
@@ -244,6 +287,7 @@ export type OrderAnomalyKind =
  * table nobody reads until something has gone wrong (issue #1).
  */
 export interface OrderAnomaly {
+  id: string;
   kind: OrderAnomalyKind;
   /** The order it is about, which is what an operator quotes back to a buyer. */
   reference: string;
@@ -255,6 +299,17 @@ export interface OrderAnomaly {
   detail: string | null;
   /** When a Commerce Operator settled it, or `null` while it is outstanding. */
   resolvedAt: string | null;
+  /**
+   * What they decided, in their own words, and who they are.
+   *
+   * The other half of settling one, and the reason an anomaly carries it rather
+   * than leaving it to the trail alone: the next person to open this order is
+   * looking at the anomaly, and "somebody has dealt with this" without saying
+   * what they did is a row that gets dealt with twice. Written once, with
+   * `resolvedAt`, and never rewritten afterwards.
+   */
+  resolution: string | null;
+  resolvedByEmail: string | null;
 }
 
 export interface PaymentEventRecord {
@@ -308,6 +363,17 @@ export interface OrderAccessGrant {
   /** The title the order recorded, so an archived or retitled product still reads. */
   title: string;
   paidDeliverableVersion: number;
+  /**
+   * The version this grant actually opens today.
+   *
+   * The same number as the one above, until a Commerce Operator deliberately
+   * grants a later one (issue #15). It is a second field rather than a
+   * correction of the first because the two answer different questions and both
+   * have to stay answerable: what this buyer bought is what their Order
+   * Snapshot recorded and may never change, and what WeCreate has since decided
+   * they may open is this.
+   */
+  deliveredVersion: number;
   /** Successful downloads this grant started with. */
   downloadsAllowed: number;
   downloadsRemaining: number;
@@ -432,4 +498,112 @@ export interface OrderSnapshot {
   fulfillmentState: FulfillmentState;
   /** Every attempt made on this order, oldest first. */
   attempts: PaymentAttempt[];
+}
+
+/**
+ * A Commerce Operator's record that what the buyer wrote is not where their
+ * order should go.
+ *
+ * A mistyped address, a number nobody answers on. It sits *beside* the Order
+ * Snapshot rather than in it: the snapshot keeps what the buyer typed, for ever
+ * and whatever anyone discovers about it afterwards, and this is the separate,
+ * later, attributable fact that a delivery reads instead (issue #15). Which of
+ * the two is used is `deliveryAddress()`'s decision, in `contact.ts`.
+ *
+ * One correction stands at a time — the most recent — and the audit trail keeps
+ * every one of them, so a second correction is a new entry rather than a lost
+ * one.
+ */
+export interface ContactCorrection {
+  /** The corrected address, or `null` when only the telephone was wrong. */
+  email: string | null;
+  telephone: string | null;
+  /** Why, in the operator's own words. */
+  reason: string;
+  correctedAt: string;
+  /** The individual who recorded it. There is no shared account to point at. */
+  correctedByEmail: string;
+}
+
+/**
+ * One verified provider event, as the trail kept it.
+ *
+ * Read by the back office and nowhere else, because it is the only surface that
+ * ever needs to explain *why* a Payment State is where it is: a provider's own
+ * identifiers, when it says the thing happened, when WeCreate heard about it,
+ * what it said, and what that was allowed to do. No payload, and nothing of the
+ * buyer — the same rule `OrderAnomaly` keeps.
+ */
+export interface RecordedPaymentEvent {
+  id: string;
+  provider: string;
+  providerEventId: string;
+  providerEventType: string;
+  providerTransactionId: string;
+  /** When the provider says it happened. */
+  occurredAt: string;
+  /** When WeCreate recorded it, which is what the thirty days run from. */
+  receivedAt: string;
+  outcome: PaymentState;
+  effect: PaymentEventEffect;
+}
+
+/**
+ * One order in the Commerce Operator's list.
+ *
+ * Enough to find the order somebody is telephoning about and to see which
+ * orders have something wrong with them, and no more: the contact details, the
+ * events and the grants are on the Order Dossier, which is one order at a time
+ * and one deliberate navigation away.
+ */
+export interface OrderSummary {
+  reference: string;
+  createdAt: string;
+  totalXof: number;
+  /** `a***@exemple.com`: where the receipt goes, masked. */
+  buyerEmailHint: string;
+  paymentState: PaymentState;
+  fulfillmentState: FulfillmentState;
+  /** The kinds of Order Anomaly still outstanding on it, oldest first. */
+  outstanding: OrderAnomalyKind[];
+}
+
+/**
+ * Everything WeCreate knows about one order, assembled for the Commerce
+ * Operator resolving a problem with it.
+ *
+ * The one read in this application that returns a buyer's contact details, and
+ * the reason it may: it is bounded by an individual staff member's session at
+ * assurance level 2 with the Commerce Operator role, rather than by an order
+ * reference (`OrderSnapshot` says why that difference matters). Postgres asks
+ * the same question again before it reads a row.
+ *
+ * It is deliberately whole. An operator with a buyer on the telephone is
+ * answering "what did they pay, did it arrive, did we deliver it, and what is
+ * open on it" — four questions across four tables — and a surface that made
+ * them navigate between four pages to answer one call would be a surface that
+ * gets its answers from somewhere else.
+ */
+export interface OrderDossier {
+  order: OrderSnapshot;
+  /** As the buyer wrote it at checkout. Never rewritten. */
+  buyer: BuyerContact;
+  /** What an operator has since corrected, or `null`. */
+  correction: ContactCorrection | null;
+  /**
+   * Where a receipt for this order goes now.
+   *
+   * The correction if there is one, the buyer's own address otherwise. Read
+   * back rather than recomputed by each surface, so what an operator is shown
+   * is the address a delivery would actually use.
+   */
+  deliverTo: string;
+  /** Every verified provider event about it, oldest first. */
+  events: RecordedPaymentEvent[];
+  /** What the buyer may still open, or `null` when nothing was ever granted. */
+  access: OrderAccess | null;
+  /** Every Order Anomaly on it, outstanding or settled, oldest first. */
+  anomalies: OrderAnomaly[];
+  /** What staff have done to this order, newest first. */
+  audit: CommerceAuditEntry[];
 }

@@ -176,6 +176,50 @@ export function deliverablePanel(page: Page, sku: string) {
 }
 
 /**
+ * Open one order's dossier the way an operator opens it: by finding it.
+ *
+ * Through the list and its search rather than by typing an address, because
+ * finding the order somebody is telephoning about is half of what issue #15
+ * asks for — and a helper that jumped straight to the dossier would leave the
+ * only way in untested.
+ */
+export async function openDossier(page: Page, reference: string): Promise<void> {
+  await page.goto("/commerce/commandes");
+  await searchOrders(page, reference);
+  await page.getByRole("link", { name: reference }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(reference);
+}
+
+/**
+ * Narrow the order list to what an operator typed.
+ *
+ * A plain `GET` form, so this waits for the address to carry the query rather
+ * than for a submission: `press()` is for the actions, which post.
+ */
+export async function searchOrders(page: Page, query: string): Promise<void> {
+  await page.getByLabel("Référence ou e-mail").fill(query);
+  await page.getByRole("button", { name: "Chercher" }).click();
+  await page.waitForURL(
+    (url) => url.pathname === "/commerce/commandes" && url.searchParams.get("q") === query,
+  );
+}
+
+/** One purchased product's row on the dossier. */
+export function dossierGrant(page: Page, sku: string) {
+  return page.locator(`[data-testid="dossier-grant"][data-sku="${sku}"]`);
+}
+
+/** One order's row in the list. */
+export function orderRow(page: Page, reference: string) {
+  return page.locator(`[data-testid="order-row"][data-reference="${reference}"]`);
+}
+
+/** Audit entries for one action, newest first. */
+export function auditEntries(page: Page, action: string) {
+  return page.locator(`[data-testid="audit-entry"][data-action="${action}"]`);
+}
+
+/**
  * Put Digital Products on sale: a file for each, and the decision to sell that
  * version of it.
  *

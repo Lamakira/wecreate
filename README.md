@@ -770,15 +770,21 @@ through one boundary of the same shape Managed Content has (ADR-0008):
 src/commerce/
 ├── types.ts             Paid Deliverable Version, Commerce Operator, audit
 │                        entry, Order Snapshot, Payment State, order state,
-│                        Order Anomaly
+│                        Order Anomaly, Order Dossier, Contact Correction
 ├── provider.ts          the interface, and which data plane is in use
 ├── paid-deliverables.ts what may be uploaded, and where its bytes are addressed
 ├── orders.ts            how an order is named, how long it may still be paid,
 │                        what a verified event does to its Payment State, and
 │                        what it leaves for a person to settle
+├── contact.ts           what a buyer's details look like, how they are masked,
+│                        and which of them a delivery uses
+├── support.ts           what an operator may do to an order, and what they must
+│                        have written down before they may do it
 ├── operators.ts         who may see and change commerce data
 ├── session.ts           the operator's session, in an http-only cookie
-├── actions.ts           everything an operator can do, as form submissions
+├── back-office.ts       the gate every page and every write passes through
+├── actions.ts           uploading, activating, signing in, as form submissions
+├── support-operations.ts everything an operator does to one order
 ├── messages.ts          what the back office says after one, in French
 ├── tag.ts               the cache tag the public read carries
 ├── index.ts             the cached public read, and the purchase context
@@ -821,6 +827,45 @@ touches no version at all, so an Order Snapshot keeps exactly the file it
 recorded. Both actions write an audit entry naming the individual, the moment,
 the product and the safe half of what changed on either side: version numbers,
 file names, checksums, and never a secret, a token or a storage address.
+
+**The other half of the back office is one buyer's problem.** `/commerce/commandes`
+lists and searches orders by reference or address; `/commerce/commande` opens
+one Order Dossier — the Order Snapshot, both states, every attempt and every
+verified event, the grants and what is left of them, where messages go, and
+whatever is outstanding. It is the only surface in this application that shows a
+buyer's contact details in full, and it is bounded by an individual staff
+identity at assurance level 2 rather than by holding the order's reference.
+
+Five things can be done there, and every one of them **adds a fact rather than
+rewriting one** (issue #15). A failed delivery is taken up again through the
+same idempotent boundary a webhook uses (ADR-0010). A Contact Correction is
+recorded beside the Order Snapshot, which goes on saying what the buyer typed,
+while deliveries follow the correction. Order Access is replaced — the previous
+address stops working, the grants and the allowance on them do not move, and the
+thirty days stay measured from the approval. A Deliverable Upgrade grants a
+later version than the order bought without touching the version the order
+recorded. And an Order Anomaly is settled with what a person decided about it —
+which is the whole of what happens to a duplicate payment here, because **no
+refund is issued from this application and none ever will be**: money is
+returned in FedaPay's own dashboard, by somebody who chose to.
+
+Each of those asks for a motive and writes an append-only audit entry naming the
+individual, with safe before/after metadata — masked addresses, version numbers,
+Fulfillment States, and never a contact detail in full, because that trail may
+never be deleted. What the back office deliberately cannot do is edit a payment
+event, a provider identifier, a Payment State approval, an Order Snapshot or a
+stored Paid Deliverable Version: those are not refused, they are absent, and
+Postgres refuses them anyway against a request that never rendered a page. There
+is no control anywhere on the dossier that offers a second payment, for any
+order — a payment is the buyer's to make, from their own order page (issue #13).
+
+The five forms post to `/commerce/commande/operation`, a route handler, rather
+than to Server Functions. Each of them ends by sending the operator back to the
+dossier with a French sentence in the address, and a redirect returned from a
+Server Function is applied by the client router, which on this route keeps the
+address it is already on and drops the sentence with it. A `303` from a route
+handler is a navigation the browser performs itself, so the answer survives —
+with or without JavaScript, like the `POST` behind *Télécharger*.
 
 **Supabase stays off the public browsing path** (ADR-0003). The one thing the
 Boutique needs — which SKUs have an activated version — is read through
@@ -1253,6 +1298,13 @@ tests/e2e/
 ├── commerce.spec.ts                  staff sign-in and MFA, backup factors,
 │                                     role separation, upload, activation,
 │                                     the audit trail, private deliverables
+├── commerce-support.spec.ts          finding an order and reading its dossier,
+│                                     an approved payment whose delivery failed,
+│                                     taking that delivery up again, correcting
+│                                     where an order goes, replacing the address
+│                                     that opens it, granting a later version,
+│                                     settling a duplicate payment, and what no
+│                                     support action may touch
 ├── site-shell.spec.ts                header, navigation, cart, footer, fonts
 ├── managed-content-publishing.spec.ts draft, preview, publish, revalidate
 ├── resilience.spec.ts                reduced motion, no JS, nothing published
