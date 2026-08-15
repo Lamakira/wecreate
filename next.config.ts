@@ -155,6 +155,22 @@ const BASELINE_HEADERS = [
 
 const nextConfig: NextConfig = {
   /**
+   * Emit `.next/standalone`: the server, plus only the parts of `node_modules`
+   * the build traced as reachable.
+   *
+   * This is what makes ADR-0011's deployment an artifact swap. The server it
+   * runs on has two cores and somebody else's site on them, so `next build`
+   * must never happen there — but neither should `pnpm install`, which is
+   * minutes of CPU and a network dependency at the worst possible moment. A
+   * standalone bundle needs neither: CI builds it, the deployment unpacks it,
+   * and a rollback is a symlink pointing at the previous one.
+   *
+   * It changes nothing locally. `pnpm build` still produces the same `.next`
+   * it always did and `pnpm start` still serves it, which is what the
+   * acceptance suite runs; the standalone tree is written alongside.
+   */
+  output: "standalone",
+  /**
    * Two rules, deliberately overlapping. Next.js applies every rule whose
    * source matches and lets a later rule override an earlier one for the same
    * header key, so `/studio` picks up the baseline from the first rule and
