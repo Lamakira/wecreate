@@ -59,5 +59,9 @@ next-env.d.ts
 # a code index one agent builds from the source, rebuilt rather than shared
 /.codegraph/
 
+# one-off files generated to be looked at or pasted somewhere, never committed —
+# concatenated migrations for a SQL editor, a captured payload, a scratch query
+/.scratch/
+
 # editor
 /.idea/
