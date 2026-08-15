@@ -145,6 +145,8 @@ interface AttemptRow {
   provider: PaymentAttempt["provider"];
   provider_transaction_id: string | null;
   failure_reason: string | null;
+  /** Derived from the recorded events by `commerce.attempt_json`. */
+  outcome: PaymentAttempt["outcome"];
 }
 
 function toAttempt(row: AttemptRow): PaymentAttempt {
@@ -155,6 +157,7 @@ function toAttempt(row: AttemptRow): PaymentAttempt {
     provider: row.provider,
     providerTransactionId: row.provider_transaction_id,
     failureReason: row.failure_reason,
+    outcome: row.outcome ?? null,
   };
 }
 
@@ -525,12 +528,17 @@ export const supabaseCommerceProvider: CommerceProvider = {
     const row = await call<{
       payment_state: OrderSnapshot["paymentState"];
       fulfillment_state: OrderSnapshot["fulfillmentState"];
+      awaiting: boolean;
     } | null>(anonymousCommerceClient(), "commerce_order_state", {
       p_reference: reference,
     });
 
     return row
-      ? { payment: row.payment_state, fulfillment: row.fulfillment_state }
+      ? {
+          payment: row.payment_state,
+          fulfillment: row.fulfillment_state,
+          awaiting: row.awaiting,
+        }
       : undefined;
   },
 

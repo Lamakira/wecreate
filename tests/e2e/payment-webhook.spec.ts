@@ -413,16 +413,19 @@ test.describe("What the browser cannot claim", () => {
 });
 
 test.describe("The order-state boundary", () => {
-  test("answers the two states this browser's order is in, and nothing else", async ({
+  test("answers where this browser's order stands, and nothing else", async ({
     page,
     request,
   }) => {
     const transaction = await payFor(page);
     await page.goto("/commande/retour");
 
+    // The two states, and whether anything is still coming — which is the one
+    // thing the page polling this is actually waiting on.
     expect(await readOrderState(page)).toEqual({
       payment: "pending",
       fulfillment: "not_started",
+      awaiting: true,
     });
 
     await deliverPaymentEvent(request, {
@@ -433,15 +436,19 @@ test.describe("The order-state boundary", () => {
     expect(await readOrderState(page)).toEqual({
       payment: "approved",
       fulfillment: "delivered",
+      awaiting: false,
     });
   });
 
   test("tells a browser carrying no order nothing at all", async ({ page }) => {
     await page.goto("/commande/retour");
 
+    // An answer it does not have is not a reason to stop waiting for one, so
+    // the order it cannot find is still outstanding as far as this says.
     expect(await readOrderState(page)).toEqual({
       payment: "unknown",
       fulfillment: "unknown",
+      awaiting: true,
     });
   });
 
@@ -451,8 +458,8 @@ test.describe("The order-state boundary", () => {
 
     const { body, cacheControl } = await fetchOrderState(page);
 
-    // Two states and nothing else. No reference, no email, no total, no
-    // product: a status poll is not a way to read an order.
+    // Nothing *about the order*. No reference, no email, no total, no product:
+    // a status poll is not a way to read an order.
     expect(body).not.toContain("WC-");
     expect(body).not.toContain("exemple.test");
     expect(body).not.toContain("14000");

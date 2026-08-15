@@ -20,9 +20,10 @@ import type { FulfillmentState, PaymentState } from "@/commerce/types";
  * scoped. A reference in a URL is a reference in an access log, a referrer and
  * a browser history.
  *
- * **It answers two words.** Not an order with two fields read off it — see
- * `OrderState`. A surface polled every few seconds is the last place to hand
- * back a total, a product or an address, even a masked one.
+ * **It answers where the payment stands and whether anything is still coming.**
+ * Not an order with three fields read off it — see `OrderState`. A surface
+ * polled every few seconds is the last place to hand back a total, a product or
+ * an address, even a masked one, and there is nowhere in it for one to appear.
  *
  * **Uncertainty is `unknown`, never a failure.** A browser with no order, an
  * order nobody here has heard of and a data plane that cannot be reached all
@@ -36,14 +37,21 @@ import type { FulfillmentState, PaymentState } from "@/commerce/types";
  * `unknown` lives here and only here: it is not a fifth Payment State but this
  * boundary saying it cannot tell — a browser with no order, an order nobody
  * knows, a data plane that did not answer. The page reading it treats all three
- * as "keep waiting", and never as a failure.
+ * as "keep waiting", and never as a failure, which is why `awaiting` stays true
+ * alongside them: an answer this boundary does not have is not a reason to stop
+ * waiting for one.
  */
 interface OrderStateBody {
   payment: PaymentState | "unknown";
   fulfillment: FulfillmentState | "unknown";
+  awaiting: boolean;
 }
 
-const NOTHING: OrderStateBody = { payment: "unknown", fulfillment: "unknown" };
+const NOTHING: OrderStateBody = {
+  payment: "unknown",
+  fulfillment: "unknown",
+  awaiting: true,
+};
 
 export async function GET(): Promise<Response> {
   return NextResponse.json(await orderState(), {

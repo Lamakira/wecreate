@@ -113,48 +113,57 @@ export function GuestForm({ totalXof, mustAccept }: GuestFormProps) {
         />
       </div>
 
-      <fieldset className="m-0 border-0 p-0">
-        <legend className="m-0 mb-4 p-0 text-micro tracking-26 uppercase text-wc-muted-on-light">
-          Conditions de la vente
-        </legend>
+      {/*
+        Absent rather than empty when there is nothing to accept. That happens
+        on one surface: an order being paid again, which recorded the Legal
+        Revisions its buyer accepted and keeps them (issue #13). A legend over
+        no checkboxes would suggest a step that is not there, and a checkbox
+        would collect an acceptance the retry cannot record.
+      */}
+      {mustAccept.length === 0 ? null : (
+        <fieldset className="m-0 border-0 p-0">
+          <legend className="m-0 mb-4 p-0 text-micro tracking-26 uppercase text-wc-muted-on-light">
+            Conditions de la vente
+          </legend>
 
-        <div className="flex flex-col gap-4">
-          {mustAccept.map((revision) => (
-            <div key={revision.revisionId} className="flex items-start gap-3">
-              <input
-                id={`accept-${revision.kind}`}
-                type="checkbox"
-                name="accept"
-                value={revision.revisionId}
-                data-testid="legal-acceptance"
-                aria-required="true"
-                aria-describedby={
-                  state.refusals.legal ? "error-legal" : undefined
-                }
-                className="mt-1 size-4 shrink-0 accent-wc-pure"
-              />
-              <p className="m-0 text-body font-light text-wc-ink">
-                <label htmlFor={`accept-${revision.kind}`}>
-                  J&apos;accepte «&nbsp;{revision.title}&nbsp;» en vigueur.
-                </label>{" "}
-                <Link
-                  href={revision.path}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="border-b border-wc-muted-on-light pb-0.5 transition-colors duration-300 hover:border-wc-pure"
-                >
-                  Lire {revision.title}
-                  <span className="sr-only"> — nouvel onglet</span>
-                </Link>
-              </p>
-            </div>
-          ))}
-        </div>
+          <div className="flex flex-col gap-4">
+            {mustAccept.map((revision) => (
+              <div key={revision.revisionId} className="flex items-start gap-3">
+                <input
+                  id={`accept-${revision.kind}`}
+                  type="checkbox"
+                  name="accept"
+                  value={revision.revisionId}
+                  data-testid="legal-acceptance"
+                  aria-required="true"
+                  aria-describedby={
+                    state.refusals.legal ? "error-legal" : undefined
+                  }
+                  className="mt-1 size-4 shrink-0 accent-wc-pure"
+                />
+                <p className="m-0 text-body font-light text-wc-ink">
+                  <label htmlFor={`accept-${revision.kind}`}>
+                    J&apos;accepte «&nbsp;{revision.title}&nbsp;» en vigueur.
+                  </label>{" "}
+                  <Link
+                    href={revision.path}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="border-b border-wc-muted-on-light pb-0.5 transition-colors duration-300 hover:border-wc-pure"
+                  >
+                    Lire {revision.title}
+                    <span className="sr-only"> — nouvel onglet</span>
+                  </Link>
+                </p>
+              </div>
+            ))}
+          </div>
 
-        {state.refusals.legal ? (
-          <FieldError field="legal" refusal={state.refusals.legal} />
-        ) : null}
-      </fieldset>
+          {state.refusals.legal ? (
+            <FieldError field="legal" refusal={state.refusals.legal} />
+          ) : null}
+        </fieldset>
+      )}
 
       <p
         data-testid="checkout-no-marketing"

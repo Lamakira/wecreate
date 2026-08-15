@@ -100,9 +100,22 @@ export async function submitCheckout(page: Page): Promise<void> {
   await press(page, "checkout-submit");
 }
 
+/**
+ * A checkout element on the page the buyer is actually looking at.
+ *
+ * Following a link between two checkout surfaces is a client-side navigation,
+ * and Next.js keeps the page being left mounted and hidden so that going back
+ * is instant. Two of these pages print an order reference and every one of them
+ * prints a heading, so an assertion made after one has to say which page it
+ * means — and "the visible one" is what a buyer would answer.
+ */
+export function onScreen(page: Page, testId: string) {
+  return page.getByTestId(testId).filter({ visible: true });
+}
+
 /** The order reference the black ticket is printing. */
 export async function ticketReference(page: Page): Promise<string> {
-  return (await page.getByTestId("ticket-reference").innerText()).trim();
+  return (await onScreen(page, "ticket-reference").innerText()).trim();
 }
 
 /** Everything the browser was served while loading this page. */
@@ -126,5 +139,5 @@ export function collectResponseBodies(page: Page): { bodies: string[] } {
 
 /** Assert that a checkout surface is showing this heading. */
 export async function expectHeading(page: Page, heading: string): Promise<void> {
-  await expect(page.getByTestId("checkout-heading")).toHaveText(heading);
+  await expect(onScreen(page, "checkout-heading")).toHaveText(heading);
 }

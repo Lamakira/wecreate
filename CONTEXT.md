@@ -84,6 +84,14 @@ _Avoid_: Deleted product, unpublished order item
 The independently tracked outcome of collecting money for a Digital Product order.
 _Avoid_: Order status, fulfillment status
 
+**Payment Prospect**:
+What can still happen to an order's payment: a payment awaiting a verified
+outcome, one that may be attempted again against the same Order Snapshot, or an
+order nothing more will be collected for. It is a separate question from the
+Payment State, because the same recorded refusal may be retried today and be a
+dead end tomorrow.
+_Avoid_: Payment status, retry state, order state
+
 **Fulfillment State**:
 The independently tracked progress of granting access or delivering confirmation after an approved payment.
 _Avoid_: Payment state, order status

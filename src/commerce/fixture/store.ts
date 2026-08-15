@@ -66,8 +66,18 @@ export interface StoredOrder {
   acceptedLegal: AcceptedLegalRevision[];
   paymentState: PaymentState;
   fulfillmentState: FulfillmentState;
-  attempts: PaymentAttempt[];
+  attempts: StoredPaymentAttempt[];
 }
+
+/**
+ * One attempt as this fixture keeps it.
+ *
+ * Everything `PaymentAttempt` carries except what the provider said about it:
+ * that is in the events, and the boundary reads it back out of them. A copy
+ * here would be a second place for it to be wrong, which is exactly what
+ * `commerce.attempt_json` avoids by deriving it too.
+ */
+export type StoredPaymentAttempt = Omit<PaymentAttempt, "outcome">;
 
 /**
  * One event a payment provider delivered, kept exactly as it was read.

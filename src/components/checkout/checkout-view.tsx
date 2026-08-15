@@ -6,6 +6,7 @@ import {
   type CheckoutClosure,
   type CheckoutState,
 } from "@/checkout/checkout";
+import { paymentProspect } from "@/commerce/orders";
 import type { OrderSnapshot } from "@/commerce/types";
 import {
   BoutiqueLink,
@@ -65,6 +66,11 @@ function PayableCheckout({
   mustAccept: EffectiveLegalRevision[];
   resuming: OrderSnapshot | null;
 }) {
+  // Which of the two retries this is. Asked of the rule rather than read off
+  // the Payment State here, so this surface and the one that decided to show it
+  // cannot end up disagreeing about what a buyer is looking at.
+  const retried = resuming ? paymentProspect(resuming) === "retryable" : false;
+
   return (
     <CheckoutSplit
       ticket={
@@ -92,26 +98,95 @@ function PayableCheckout({
         heading="Où devons-nous livrer vos fichiers ?"
         lede="Votre email reçoit le reçu et l'accès aux téléchargements. Le téléphone au format international sert au paiement Mobile Money. Aucun compte n'est créé."
       >
-        {resuming ? (
-          <p
-            data-testid="checkout-resuming"
-            className="m-0 mb-7 border border-wc-muted-on-light p-5 text-body font-light text-wc-ink"
-          >
-            <strong className="font-semibold text-wc-pure">
-              Votre commande est déjà enregistrée
-            </strong>{" "}
-            sous la référence {resuming.reference}, et rien n&apos;a été
-            débité. Continuer relance son paiement : cela ne crée pas de seconde
-            commande.
-          </p>
-        ) : null}
+        {resuming ? <ResumingNotice retried={retried} order={resuming} /> : null}
 
         <GuestForm
           totalXof={resuming ? resuming.totalXof : cart.totalXof}
           mustAccept={mustAccept}
         />
+
+        {/*
+          An order FedaPay refused must not be a trap. This surface offers no
+          way past it otherwise: what is being paid is the Order Snapshot, so
+          emptying the cart or adding something to it changes nothing here.
+          Leaving ends this browser's claim to the order; the order itself stays
+          recorded. An attempt that never reached the provider needs no such
+          control — that one *is* resolved against the cart, so changing the
+          cart is already the way out of it.
+        */}
+        {retried ? <AbandonOrder /> : null}
       </CheckoutStage>
     </CheckoutSplit>
+  );
+}
+
+/**
+ * What continuing means, when there is already an order behind this form.
+ *
+ * Two ways a buyer gets here and they are not the same sentence: a payment page
+ * that never opened, where nothing has happened yet, and a payment FedaPay
+ * refused, where something has. Both end the same way, because it is the thing
+ * a buyer most needs to know: pressing the button again does not create a
+ * second order.
+ */
+function ResumingNotice({
+  retried,
+  order,
+}: {
+  retried: boolean;
+  order: OrderSnapshot;
+}) {
+  return (
+    <p
+      data-testid="checkout-resuming"
+      className="m-0 mb-7 border border-wc-muted-on-light p-5 text-body font-light text-wc-ink"
+    >
+      {retried ? (
+        <>
+          <strong className="font-semibold text-wc-pure">
+            Le paiement de cette commande n&apos;a pas abouti
+          </strong>{" "}
+          et rien n&apos;a été débité. Reprendre le paiement utilise la commande{" "}
+          {order.reference} telle qu&apos;elle a été enregistrée — ses produits,
+          ses prix et les conditions que vous avez acceptées : cela ne crée pas
+          de seconde commande.
+        </>
+      ) : (
+        <>
+          <strong className="font-semibold text-wc-pure">
+            Votre commande est déjà enregistrée
+          </strong>{" "}
+          sous la référence {order.reference}, et rien n&apos;a été débité.
+          Continuer relance son paiement : cela ne crée pas de seconde commande.
+        </>
+      )}
+    </p>
+  );
+}
+
+/**
+ * Stop carrying this order, and get the checkout back.
+ *
+ * On both surfaces that hold a buyer to one order — a payment already with the
+ * provider, and one being paid again — for the same reason: an order kept for
+ * twenty-four hours must not stand between somebody and buying something else.
+ * The order itself is untouched, and stays diagnosable under its reference.
+ */
+function AbandonOrder() {
+  return (
+    <form action={abandonOrderAction} className="mt-8">
+      <button
+        type="submit"
+        data-testid="order-abandon"
+        className="border-b border-wc-muted-on-light pb-1 text-micro tracking-20 uppercase text-wc-muted-on-light transition-colors duration-300 hover:border-wc-pure hover:text-wc-pure"
+      >
+        Commander autre chose
+      </button>
+      <p className="m-0 mt-3 text-body-sm font-light text-wc-muted-on-light">
+        Cette commande reste enregistrée sous sa référence. Nous
+        n&apos;encaisserons rien pour elle sans confirmation de FedaPay.
+      </p>
+    </form>
   );
 }
 
@@ -189,9 +264,10 @@ function ClosedCheckout({ reason }: { reason: CheckoutClosure }) {
  * webhook may say so (issue #11) — and a second payment page for the same order
  * is how somebody pays twice. So this points at the verification page and stops.
  *
- * Leaving is offered beside it, because an order kept for a day must not be a
- * trap for a buyer who has decided to order something else instead. Abandoning
- * ends this browser's claim to the order; the order itself stays recorded.
+ * It is where an order sits while a payment is outstanding, whether that is its
+ * first or the one a buyer relaunched (issue #13): what makes a second payment
+ * dangerous is that nothing has answered the last one, and that is the same
+ * either way.
  */
 function AwaitingPayment({ order }: { order: OrderSnapshot }) {
   return (
@@ -220,19 +296,7 @@ function AwaitingPayment({ order }: { order: OrderSnapshot }) {
           </Link>
         </p>
 
-        <form action={abandonOrderAction} className="mt-8">
-          <button
-            type="submit"
-            data-testid="order-abandon"
-            className="border-b border-wc-muted-on-light pb-1 text-micro tracking-20 uppercase text-wc-muted-on-light transition-colors duration-300 hover:border-wc-pure hover:text-wc-pure"
-          >
-            Commander autre chose
-          </button>
-          <p className="m-0 mt-3 text-body-sm font-light text-wc-muted-on-light">
-            Cette commande reste enregistrée sous sa référence. Nous
-            n&apos;encaisserons rien pour elle sans confirmation de FedaPay.
-          </p>
-        </form>
+        <AbandonOrder />
       </CheckoutStage>
     </CheckoutSplit>
   );

@@ -117,6 +117,8 @@ export function transactionFromHostedPage(page: Page): string {
 export interface OrderState {
   payment: string;
   fulfillment: string;
+  /** Whether a payment on this order is still waiting on a verified event. */
+  awaiting: boolean;
 }
 
 /**

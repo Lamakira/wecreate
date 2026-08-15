@@ -26,6 +26,12 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "
  * page keeps saying *Vérification du paiement*. Issue #1 is explicit that
  * connectivity uncertainty must never become a failed payment.
  *
+ * **It watches for the waiting to end, not for a word to change.** The server
+ * says whether anything is still coming, and that is the whole of what this
+ * asks: once a buyer may pay again (issue #13), a refused retry leaves the
+ * Payment State exactly as it was, so a watcher comparing that state would go
+ * on saying *Vérification du paiement* over a payment already refused twice.
+ *
  * **Offline is said out loud, and is not a failure.** A buyer whose connection
  * dropped is told the check will resume, not that their payment did not work.
  *
@@ -34,7 +40,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "
  * `visibilitychange` events start it again, which is faster than any interval
  * would have been anyway.
  *
- * When the answer changes it refreshes the route rather than rendering the new
+ * When the waiting ends it refreshes the route rather than rendering the new
  * state itself. The server owns what a buyer is told about their money — this
  * component's whole job is knowing when to ask again.
  */
@@ -45,7 +51,7 @@ const BACKOFF_MS = [2_000, 3_000, 5_000, 8_000, 13_000, 20_000];
 /** How many checks before this stops asking. Roughly twenty minutes. */
 const MAX_CHECKS = 60;
 
-/** Where the server answers with two words and nothing else. */
+/** Where the server says where the payment stands, and nothing else. */
 const ORDER_STATE_URL = "/commande/etat";
 
 /**
@@ -123,10 +129,11 @@ export function PaymentVerification() {
         const response = await fetch(ORDER_STATE_URL, { cache: "no-store" });
         if (!response.ok) throw new Error(`${response.status}`);
 
-        const { payment } = (await response.json()) as { payment?: string };
-        // `unknown` is the server saying it cannot tell — an unreachable data
-        // plane, or a browser no longer carrying an order. Neither is news.
-        if (payment && payment !== "pending" && payment !== "unknown") {
+        const { awaiting } = (await response.json()) as { awaiting?: boolean };
+        // An unreachable data plane and a browser no longer carrying an order
+        // both answer `true` — this boundary saying it cannot tell is not a
+        // reason to stop waiting, and never a failure.
+        if (awaiting === false) {
           cancelled = true;
           clear();
           router.refresh();
