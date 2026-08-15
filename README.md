@@ -439,6 +439,16 @@ nothing about how (ADR-0008). Without `FEDAPAY_WEBHOOK_SECRET` nothing verifies,
 which leaves every order pending: the safe failure, and one to notice before
 going live.
 
+**It carries a `maxDuration`, and that is a deployment fact rather than a
+preference.** A delivery runs inside this request rather than after it, because
+work still in flight when a serverless invocation ends is work that never
+happened — so a slow mail provider is a slow webhook, and a platform default of
+ten or fifteen seconds would stop the invocation part-way through. What that
+leaves is an order claimed and unfinished, which the stale-claim rule makes
+survivable rather than permanent (ADR-0010) and which is still a buyer waiting
+for a receipt. Sixty seconds is the ceiling on every plan this could be deployed
+to, and is only reached when something is badly wrong.
+
 **Events are the record; the Payment State is a conclusion drawn from them.**
 Every verified delivery is written to `commerce.payment_events` with FedaPay's
 own identity and timestamp on it, and nothing edits or deletes one.

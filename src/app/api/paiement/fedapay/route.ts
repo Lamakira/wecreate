@@ -37,6 +37,25 @@ import { getPaymentProvider } from "@/payments/provider";
  */
 
 /**
+ * How long this handler may take before the platform stops it.
+ *
+ * Longer than anything here should need, and set because of what is on the
+ * other side of it. A delivery runs inside this request rather than after it —
+ * work still in flight when a serverless invocation ends is work that never
+ * happened — so a slow mail provider is a slow webhook. A platform default of
+ * ten or fifteen seconds would kill the invocation part-way through, leaving an
+ * order claimed and unfinished.
+ *
+ * That is survivable now rather than permanent: the claim goes stale and the
+ * next delivery takes it up (ADR-0010). Survivable is not the same as fine —
+ * the buyer waits for a receipt nobody is sending until something else arrives
+ * for that transaction, and until issue #15 nothing here does. Sixty seconds is
+ * the ceiling on every plan this could be deployed to, and only reached when
+ * something is badly wrong.
+ */
+export const maxDuration = 60;
+
+/**
  * The most a payment event can weigh.
  *
  * FedaPay's transaction events are a few kilobytes. Sixty-four leaves room for
