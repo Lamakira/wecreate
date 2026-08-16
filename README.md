@@ -74,10 +74,17 @@ it belongs to.
    may drop the content cache.
 8. **Acceptance-test hooks** — set by `playwright.config.ts`, never by hand.
 
-Secrets are server-only and live in the deployment platform's secret management.
-Anything named `NEXT_PUBLIC_*` is compiled into the browser bundle, so nothing
-sensitive may ever carry that prefix. Local, staging and production use separate
-datasets and separate secrets throughout.
+Secrets are server-only. On a deployment they live in two places, and which one
+decides which: `NEXT_PUBLIC_*` is compiled into the bundle by `next build`, so
+those are set in the GitHub Environment CI builds against and cannot be
+corrected on the server afterwards; everything else is read at runtime from
+`/srv/wecreate/shared/env`. Two variables are read in both. See *Deploying*
+below, which is also where the exceptions are spelled out.
+
+Nothing sensitive may ever carry the `NEXT_PUBLIC_` prefix, because it ends up
+in the browser bundle. Every environment has its own secrets. Datasets are the
+one thing that cannot be separated three ways — Sanity caps a project at two —
+so production has one to itself and the rest share the other.
 
 ## Managed Content
 
@@ -1114,7 +1121,13 @@ do the same.
 ## Setting up Sanity
 
 1. Create a project at [sanity.io/manage](https://www.sanity.io/manage) with a
-   `production` dataset, plus a separate dataset per non-production environment.
+   `production` dataset and a `development` one. Two is the limit — Sanity
+   allows two datasets on the free plan and two on the first paid tier, so
+   paying does not buy a third. Production therefore gets a dataset to itself
+   and every non-production environment shares `development`: local work and
+   the staging deployment read the same content, which is harmless with one
+   editor and makes a publish visible on staging immediately. What must not be
+   shared is real client content, and it is not.
 2. Put the project id and dataset in `.env.local`
    (`NEXT_PUBLIC_SANITY_PROJECT_ID`, `NEXT_PUBLIC_SANITY_DATASET`).
 3. Create a **Viewer** token and set it as `SANITY_API_READ_TOKEN`. It is what
@@ -1543,6 +1556,284 @@ render a `javascript:` href at all.
 `.github/workflows/audit.yml` runs `pnpm audit` on every pull request, on pushes
 to `main`, and weekly, failing on a high or critical advisory. The weekly run is
 what catches an advisory published against a dependency nobody has touched.
+
+## Deploying
+
+WeCreate serves this application itself, as one `next start`-equivalent process
+on a Paris VPS behind the nginx that already fronts two other sites, with a CDN
+in front of that. ADR-0011 records why, and what it costs. Everything below is
+what somebody other than the author needs in order to operate it.
+
+Everything the server needs is in [`deploy/`](./deploy), and the values that
+differ between deployments are in one file,
+[`deploy/deployment.env`](./deploy/deployment.env) — the origin, the system
+user, the port, how many releases to keep. Each script lets the environment
+win, so a second deployment is `SITE_HOST=… ./provision.sh` rather than a second
+copy of anything.
+
+### What is on the server
+
+| Path | What it is |
+| ---- | ---------- |
+| `/srv/wecreate/releases/<id>/` | Unpacked releases, newest `KEEP_RELEASES` kept |
+| `/srv/wecreate/current` | Symlink to the release being served |
+| `/srv/wecreate/previous` | Symlink to the release a rollback goes to |
+| `/srv/wecreate/shared/env` | Secrets, `0640 root:wecreate`, never in a release |
+| `/srv/wecreate/bin/release.sh` | The only thing the deploy key may run |
+| `/opt/wecreate-deploy/` | A copy of `deploy/`, so the way back lives on the machine |
+| `/etc/systemd/system/wecreate.service` | The supervised process |
+| `/etc/nginx/sites-available/wecreate` | The virtual host |
+| `/etc/nginx/snippets/wecreate-origin.conf` | Restores the visitor's IP, refuses non-CDN traffic |
+| `/etc/nginx/conf.d/wecreate-cdn.conf` | The `geo` block that decides which peers are the CDN |
+| `/etc/letsencrypt/renewal-hooks/deploy/reload-nginx` | Makes a renewed certificate actually get served |
+| `/var/log/wecreate-deploy/baseline-*.txt` | `nginx -T` before provisioning, for diffing |
+
+The application runs as `wecreate`, a system account with no login shell that
+owns nothing but its own release tree. Nothing irreplaceable is on that machine:
+the state is in Supabase, Sanity and Mux, and a rebuild from this repository
+plus `shared/env` restores the deployment entirely.
+
+### Provisioning, the first time
+
+Take a snapshot of the VPS first. The weekly backup is not a rollback plan.
+
+```bash
+rsync -a deploy/ root@<host>:/opt/wecreate-deploy/
+ssh root@<host>
+/opt/wecreate-deploy/bin/preflight.sh          # read-only; records a baseline
+DRY_RUN=1 /opt/wecreate-deploy/bin/provision.sh  # prints every command, changes nothing
+DEPLOY_PUBKEY="ssh-ed25519 AAAA… deploy" /opt/wecreate-deploy/bin/provision.sh
+```
+
+`preflight.sh` refuses to bless a machine that is not ready and writes
+`nginx -T` to `/var/log/wecreate-deploy/` before anything changes;
+`provision.sh` will not run until it has. That baseline is the evidence for the
+part of this that matters most — that the two sites already here are not changed
+by the addition:
+
+```bash
+diff <(nginx -T 2>/dev/null) /var/log/wecreate-deploy/baseline-*.txt
+```
+
+Everything provisioning does is a new file. It installs no package, changes no
+Node, edits neither neighbour's virtual host, and never runs `certbot --nginx`,
+which would rewrite server blocks in place. It checks that both neighbours still
+answer after every step that touches nginx and stops on the step that broke one.
+To undo all of it: `/opt/wecreate-deploy/bin/unprovision.sh`, or with `--purge`
+to delete the release tree and its secrets too.
+
+Then fill in `/srv/wecreate/shared/env` from
+[`deploy/env.server.example`](./deploy/env.server.example), and apply
+`supabase/migrations/` to the target project before the deployment serves
+commerce — the back office's functions do not exist in a project that has not
+had them.
+
+**Verify that they landed rather than assuming it.** No test in this repository
+ever runs that SQL: the acceptance suite drives the fixture, so the migrations
+and the Supabase adapter are the one part of the system with no automated
+coverage. Ask the project itself, with nothing but the anonymous key the
+deployment uses:
+
+```bash
+curl -s -X POST \
+  "$SUPABASE_URL/rest/v1/rpc/commerce_active_paid_deliverable_skus" \
+  -H "apikey: $SUPABASE_ANON_KEY" \
+  -H "Content-Type: application/json" -d '{}'
+```
+
+A JSON array — `[]` on an empty project, `["PT-1"]` on a seeded one — means the
+functions and their grants are there. `404` means the migrations have not been
+applied; `401` or `permission denied` means they have been applied but the
+grants have not, which is the failure that looks like a working deployment
+until a Commerce Operator signs in. Repeat it after every migration.
+
+### Building and shipping
+
+`next build` never runs on the server. It saturates both cores for minutes and
+the site next door would feel it, so `.github/workflows/deploy.yml` builds in CI
+and ships only the output: Next.js' standalone bundle, which carries the traced
+subset of `node_modules` and needs no install step at the other end.
+
+The workflow runs from *Actions → Deploy* with an environment chosen, and only
+from there. There is deliberately no push trigger: issue #42 asks that the build
+happen in CI and that a deployment swap an artifact, not that every merge deploy
+itself, and nothing in CI runs the acceptance suite to gate one. Adding
+`push: branches: [main]` is the whole change if that becomes wanted.
+
+It needs, per GitHub Environment:
+
+| Kind | Name | Why |
+| ---- | ---- | --- |
+| Variable | `NEXT_PUBLIC_SITE_URL` | The origin actually served. Compiled in; see below |
+| Variable | `NEXT_PUBLIC_SANITY_PROJECT_ID`, `NEXT_PUBLIC_SANITY_DATASET` | Which content this deployment reads |
+| Variable | `NEXT_PUBLIC_SANITY_API_VERSION`, `NEXT_PUBLIC_MUX_ENV_KEY` | Optional |
+| Variable | `WECREATE_COMMERCE_PROVIDER` | Read at build time *and* runtime — set in both places |
+| Variable | `WECREATE_ALLOW_INDEXING` | Production only. Build-time despite the name — see below |
+| Secret | `SUPABASE_URL` | Also read at build time — see below |
+| Secret | `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY` | Where to ship and as whom |
+| Secret | `DEPLOY_KNOWN_HOSTS` | `ssh-keyscan <host>`. Pinned, not learned |
+
+**Anything `NEXT_PUBLIC_*` is compiled into the bundle and cannot be corrected
+on the server.** Setting it in `shared/env` does nothing at all. That matters
+most for `NEXT_PUBLIC_SITE_URL`, which every canonical URL and every emailed
+Order Access address carries: a deployment built with the wrong value puts an
+address in a buyer's inbox that has to keep resolving for ever. Each bundle
+records the origin it was built for and `release.sh` refuses one that does not
+match the host it is being deployed to, which is the cheapest place to catch
+that mistake.
+
+**`WECREATE_ALLOW_INDEXING` is build-time too, despite the missing prefix.**
+`/robots.txt` is prerendered, so `isIndexable()` runs once during the build and
+its answer is baked into a static file. It belongs in the GitHub Environment
+with the rest, unset everywhere but production; setting it on the server has no
+effect at all.
+
+Two variables are read in *both* places and have to agree, because
+`next.config.ts` reads them at build time to derive the Content-Security-Policy
+that a buyer's download redirect travels through: `SUPABASE_URL` and
+`WECREATE_COMMERCE_PROVIDER`. Change one and not the other and the deployment
+serves a policy that blocks its own file handover.
+
+**CI builds on a newer Node than the server runs, deliberately.** pnpm 11
+declares `engines.node >= 22.13` and will not start on Node 20, while the
+server's Node 20.20.0 is fixed — changing it would mean reinstalling and
+rebuilding `weact` and `askive` against the new version first, because their
+toolchains carry native binaries. That asymmetry is safe and is checked rather
+than assumed: `next` and `sharp` both declare `>= 20.9.0`, the only compiled
+artefact in the bundle is `@img/sharp-linux-x64` (a Node-API binary, ABI-stable
+across majors), and each bundle records the minimum Node it needs so the server
+refuses one it cannot satisfy.
+
+**The deploy key can do exactly one thing.** It is named as a forced command in
+the `wecreate` account's `authorized_keys`, so an `ssh` with it runs
+`release.sh` and nothing else — no shell, no port forwarding, no arbitrary
+write. `release.sh` accepts four verbs and refuses everything else.
+
+### Operating it
+
+Every command below is that same key, or root on the box.
+
+```bash
+ssh wecreate@<host> status      # what is serving, since when, which build
+ssh wecreate@<host> restart     # restart the current release
+ssh wecreate@<host> rollback    # go back to the previous one
+ssh wecreate@<host> < bundle.tar.zst   # deploy (what CI does)
+```
+
+**A failed deployment leaves the previous release serving.** `release.sh` moves
+the symlink, restarts, and then asks the origin for a page; if nothing usable
+answers within sixty seconds it puts the symlink back, restarts again, deletes
+the release that failed, and exits non-zero. It does that itself rather than
+leaving it to the workflow, so a cancelled CI run cannot strand a half
+deployment. Rolling back twice keeps going backwards rather than toggling.
+
+As root, the ordinary systemd verbs work and are the right ones for anything
+release.sh does not cover. One thing a deployment does cost: the Next.js cache
+lives inside the release directory, so a swap starts with an empty one and the
+first request to each page renders rather than being served from it. That is
+the trade for a rollback being a symlink move — and with a CDN in front, most
+visitors never see the difference.
+
+```bash
+systemctl status wecreate
+journalctl -u wecreate -f            # the application's own output
+journalctl -u wecreate --since "1 hour ago"
+```
+
+Logs live in the journal — the process writes to stdout and systemd keeps it —
+and nginx's are the usual `/var/log/nginx/access.log` and `error.log`, shared
+with the other sites. The unit restarts on failure and comes back after a
+reboot; five failures in a minute is treated as a broken release rather than a
+transient fault, so it stops and leaves a failed unit to find.
+
+**Certificates.** Issued with `certbot certonly --webroot`, so certbot has never
+written a line of nginx configuration here or anywhere else on the machine.
+Renewal is the `certbot.timer` that was already running for the two certificates
+that came first; this one joined them and there is no new schedule to forget.
+The port-80 server block keeps its `/.well-known/acme-challenge/` location for
+exactly that reason.
+
+Renewing the file is only half of it. certbot writes the new certificate and
+stops; nginx goes on serving the one it loaded at startup, and with no installer
+plugin involved nothing would ever reload it — the failure arrives sixty days
+later as an expired certificate on a site nobody touched. So provisioning
+installs `/etc/letsencrypt/renewal-hooks/deploy/reload-nginx`, which tests the
+configuration and reloads when anything on the machine renews, the neighbours
+included. To check: `certbot certificates`, and `certbot renew --dry-run`.
+
+**There is no CDN in front of staging, and that is a decision.** Cloudflare's
+free plan offers only the full setup: it will not proxy one subdomain and leave
+the rest of the DNS where it is — that is a Business-plan feature. So putting a
+CDN in front of `wecreate.weact.bj` means moving the whole `weact.bj` zone's
+nameservers away from Netim, which changes how `weact.bj` and `askive.weact.bj`
+are resolved. A staging site with no visitors is a poor reason to reshuffle the
+DNS two live sites depend on, and edge caching is worth nothing to an audience
+of one. So staging is served straight from the origin, the CDN criterion of
+issue #42 stays open, and it is settled for the production domain instead —
+which is the deployment that will actually have visitors, and the point at
+which the nameserver move has to happen anyway.
+
+Everything below is written and tested for that day; none of it is running now.
+
+**The CDN and the origin.** `deploy/bin/refresh-cloudflare-ips.sh` writes two
+files — a `geo` block in `conf.d` and a snippet the vhost includes — that
+together restore the visitor's real IP from `CF-Connecting-IP` and refuse
+anything that did not arrive through the CDN. It installs a weekly cron to keep
+the range list current, because an allowlist nobody refreshes becomes an outage
+the day Cloudflare adds a range. Run it with `--off` to open the origin again;
+until it is run at all the origin is open and that criterion is not met.
+Turning it on before DNS is proxied makes the site unreachable, so proxy first.
+
+**Why it is a `geo` block and not `allow`/`deny`.** The obvious spelling is
+silently backwards. nginx's realip module runs before the access module, so by
+the time `allow`/`deny` is evaluated `$remote_addr` has already been replaced by
+the `CF-Connecting-IP` header — the allowlist then compares Cloudflare's ranges
+against the visitor's own address, refuses every genuine request, and lets a
+forged header through. The decision is therefore made against
+`$realip_remote_addr`, the address the connection actually came from.
+
+**Serving cached pages without reaching Node is Cloudflare's half, and it is not
+configured by anything here.** Cloudflare does not cache HTML by default however
+correct the origin's `Cache-Control` is, so a Cache Rule has to be added in the
+dashboard — match the public paths, *Eligible for cache*, and respect the
+origin's headers, which Next.js already sets to `public` on a prerendered page
+and `private, no-cache` on a dynamic one. Without that rule the CDN is a proxy
+and every visitor still reaches the Node process.
+
+**The upload ceiling.** Three numbers have to agree, and they are checked at the
+26 MiB boundary: `MAX_DELIVERABLE_BYTES` (25 MiB) in
+`src/commerce/paid-deliverables.ts` is what the application refuses above,
+`serverActions.bodySizeLimit` in `next.config.ts` and `client_max_body_size` in
+the virtual host both sit one megabyte higher because they bound the whole
+multipart body rather than the file inside it. Set the nginx one too low and a
+Commerce Operator gets nginx's own 413, in English, with no explanation — the
+application never sees the request.
+
+### Staging first
+
+What is deployed is staging, at `wecreate.weact.bj`, and it stays that way until
+WeCreate owns the domain it will launch on. `WECREATE_ALLOW_INDEXING` is unset
+there, so `/robots.txt` answers `Disallow: /` and the deployment is refused to
+crawlers. It runs against the FedaPay sandbox and never production
+credentials. Its content comes from the `development` dataset, shared with local
+work because Sanity caps a project at two datasets and `production` keeps the
+other; its orders come from the same Supabase project that serves production
+today, which is safe only while no real order exists and is the first thing to
+separate before the Commerce Launch Gate opens.
+
+Production waits for the domain, and the reason is the one above: the canonical
+origin is compiled in and is what every emailed Order Access address carries, so
+a production deployment on a provisional domain would put an address in buyers'
+inboxes that has to keep resolving for ever. It is free to change today because
+no order exists yet.
+
+**The acceptance suite cannot be run against a deployment.** Every `/api/test/*`
+hook answers 404 unless its own provider is the fixture, which is exactly the
+point — none can be reached on a deployment backed by a real Sanity project, a
+real Supabase project or a real mail account. So a deployment is exercised by
+hand, and the result recorded: public browsing, a Service Enquiry link, the
+Studio, the back office behind MFA, and a sandbox purchase through to Order
+Access.
 
 ## Before this goes live
 

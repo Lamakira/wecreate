@@ -1,0 +1,101 @@
+# The WeCreate application, as a supervised system service.
+#
+# A template: `deploy/bin/provision.sh` substitutes the @NAME@ placeholders from
+# `deploy/deployment.env` and installs the result at
+# /etc/systemd/system/wecreate.service. Reading it here is reading what lands
+# there.
+#
+# This is the whole of "hosting" in ADR-0011. Next.js states its requirement as
+# a Node.js server and nothing else, and one supervised process is what that
+# means: Server Components, Cache Components, Server Functions, the proxy and
+# `after()` all work here exactly as the framework documents them.
+
+[Unit]
+Description=WeCreate — Next.js application server
+Documentation=https://github.com/Lamakira/wecreate/blob/main/README.md
+# The process itself makes no outbound call at boot, but the first request it
+# serves reaches Sanity and Supabase, and a resolver that is not up yet turns
+# that into a confusing first failure rather than a slow first response.
+After=network-online.target nginx.service
+Wants=network-online.target
+
+# These two live in [Unit], not [Service] — systemd moved them in v230 and
+# silently ignores them in the wrong section, which would turn the restart
+# policy below into an unbounded loop. Five failures in a minute is a broken
+# release, not a transient fault, and giving up is the right answer: it leaves
+# a clear failed unit for the deploy script's health check to find instead of a
+# restart loop that looks like life.
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=@APP_USER@
+Group=@APP_USER@
+
+# The symlink, not the release it points at. systemd resolves it at start, so
+# repointing it and restarting is the whole of a deployment — and the whole of
+# a rollback.
+WorkingDirectory=@APP_ROOT@/current
+
+# Refuse to start on a release that was never unpacked, rather than starting
+# and failing at the first request with something less obvious.
+ExecStartPre=/usr/bin/test -f @APP_ROOT@/current/server.js
+
+# `server.js` rather than `next start`: the build is shipped as Next's
+# standalone output, which carries its own minimal server and the traced subset
+# of node_modules it needs. That is what lets a deployment be an artifact swap
+# with no install step — and it is why `next build` never has to run on this
+# machine, which on two cores would take the site next door down with it.
+ExecStart=/usr/bin/node server.js
+
+# Secrets and per-environment configuration. Written by hand, once, root-owned
+# and group-readable by this user only; never in the repository, never in the
+# release tree, so a rollback cannot resurrect an old credential.
+EnvironmentFile=@APP_ROOT@/shared/env
+Environment=NODE_ENV=production
+Environment=PORT=@APP_PORT@
+# Loopback only. nginx is the sole thing that may reach this process; binding
+# it to 0.0.0.0 would expose an origin with no TLS and no body limit.
+Environment=HOSTNAME=127.0.0.1
+
+Restart=always
+RestartSec=2
+
+# Next.js finishes in-flight requests and runs pending `after()` callbacks on
+# SIGTERM. Thirty seconds is the drain period its self-hosting guide asks for.
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+# The machine has 8 GB and two cores, and PHP-FPM, MySQL and a Postgres
+# container were here first. These are not tuning: they are the promise that a
+# runaway render cannot take the neighbours down.
+MemoryHigh=1G
+MemoryMax=1536M
+CPUQuota=150%
+
+# Hardening. The process reads its own release tree and writes only the Next.js
+# cache inside it; it has no business anywhere else on this filesystem.
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=@APP_ROOT@
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+LockPersonality=true
+# AF_NETLINK belongs here even though nothing in this application speaks it
+# directly. glibc's resolver uses a netlink socket to enumerate local interfaces
+# before it picks a source address, so blocking the family can make every
+# outbound hostname lookup fail — Sanity, Supabase, Mux, Resend, FedaPay, all of
+# it. The failure is nasty precisely because it is partial: the process starts,
+# the deploy health check asks 127.0.0.1 for a prerendered page and gets one, and
+# the deployment reports success while nothing it depends on is reachable.
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+
+[Install]
+WantedBy=multi-user.target

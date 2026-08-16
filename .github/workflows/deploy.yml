@@ -1,0 +1,256 @@
+# Build here, swap there.
+#
+# ADR-0011 puts the build in CI and only its output on the server, and the
+# reason is not tidiness: `next build` saturates both cores of that machine for
+# minutes, and the two sites already on it would feel every deployment. So this
+# workflow produces one artifact — Next.js' standalone bundle, which carries the
+# traced subset of node_modules and needs no install step — and hands it to a
+# script on the server that unpacks it, moves a symlink and restarts one unit.
+#
+# The deploy key can do nothing else. It is named as a forced command in the
+# wecreate user's authorized_keys, so `ssh` runs `release.sh` and only that: no
+# shell, no port forwarding, no arbitrary write. See deploy/bin/release.sh.
+#
+# A failed deployment leaves the previous release serving. release.sh health
+# checks the new one and puts the symlink back itself before returning non-zero,
+# rather than trusting this workflow to notice.
+
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Which deployment to build and ship
+        type: environment
+        required: true
+        default: staging
+# Deliberately no `push:` trigger. Issue #42 asks that the build happen in CI
+# and that the deployment swap an artifact; it does not ask for continuous
+# deployment, and this repository has no test job to gate one — `audit.yml`
+# checks advisories, and the acceptance suite is not run in CI at all. An
+# unattended deploy on every merge would be a policy nobody chose. Adding
+# `push: branches: [main]` here is the whole change if that becomes wanted.
+
+concurrency:
+  # One deployment at a time per environment, and never cancel one in flight:
+  # a run killed between the symlink move and the health check would leave the
+  # rollback undone.
+  group: deploy-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build the release bundle
+    # Pinned rather than `ubuntu-latest`. The bundle carries compiled
+    # dependencies — sharp, and whatever else the trace pulls in — and they are
+    # linked against the runner's glibc. The server is Ubuntu 24.04, so the
+    # builder is too, and `ubuntu-latest` moving on is not allowed to be the
+    # thing that breaks a deployment.
+    runs-on: ubuntu-24.04
+    environment: ${{ inputs.environment }}
+    outputs:
+      release: ${{ steps.identify.outputs.release }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # **Deliberately not the server's Node.** pnpm 11.13.1 — the version
+          # `package.json` pins — declares `engines.node >= 22.13` and dies on
+          # Node 20 with ERR_UNKNOWN_BUILTIN_MODULE, so the build cannot happen
+          # there. The server runs 20.20.0 and is not going to change, because
+          # changing it means rebuilding weact and askive against a new version
+          # first.
+          #
+          # That asymmetry is safe here, and the reason is checkable rather
+          # than hopeful: `next` and `sharp` both declare `>= 20.9.0`, and the
+          # only compiled artefact the standalone trace pulls in is
+          # `@img/sharp-linux-x64`, which is a Node-API binary and therefore
+          # ABI-stable across majors. Everything else in the bundle is
+          # JavaScript.
+          #
+          # release.sh enforces it rather than trusting this comment: the
+          # bundle records the minimum Node it needs, and the server refuses
+          # anything it cannot satisfy.
+          node-version: "24"
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - id: identify
+        run: |
+          echo "release=$(date -u +%Y%m%dT%H%M%SZ)-${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        env:
+          # Compiled into the bundle. Nothing on the server can change these
+          # afterwards, which is the whole reason they are here rather than in
+          # /srv/wecreate/shared/env.
+          #
+          # NEXT_PUBLIC_SITE_URL is the load-bearing one: it names the origin in
+          # every canonical URL and in every emailed Order Access address, so a
+          # deployment built with the wrong value puts an address in a buyer's
+          # inbox that has to keep resolving for ever.
+          NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL }}
+          NEXT_PUBLIC_SANITY_PROJECT_ID: ${{ vars.NEXT_PUBLIC_SANITY_PROJECT_ID }}
+          NEXT_PUBLIC_SANITY_DATASET: ${{ vars.NEXT_PUBLIC_SANITY_DATASET }}
+          NEXT_PUBLIC_SANITY_API_VERSION: ${{ vars.NEXT_PUBLIC_SANITY_API_VERSION }}
+          NEXT_PUBLIC_MUX_ENV_KEY: ${{ vars.NEXT_PUBLIC_MUX_ENV_KEY }}
+          # Build-time despite the missing NEXT_PUBLIC_ prefix, which is why it
+          # is here and not in the server's environment file. `/robots.txt` is
+          # prerendered — it appears in `.next/prerender-manifest.json` — so
+          # `isIndexable()` in `src/site-config.ts` is evaluated once, during
+          # the build, and baked into a static file. Setting it on the server
+          # changes nothing.
+          #
+          # Unset on staging, which is what refuses that deployment to
+          # crawlers. Only production ever sets it, and until this was passed
+          # here production could not have been made indexable at all.
+          WECREATE_ALLOW_INDEXING: ${{ vars.WECREATE_ALLOW_INDEXING }}
+          # Read at build time by next.config.ts, which derives the
+          # Content-Security-Policy's `form-action` from the data plane's own
+          # origin — that is the directive a buyer's download redirect travels
+          # through. It has to be the same value as the one in the server's
+          # environment file, or the deployment serves a policy that blocks its
+          # own file handover.
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          WECREATE_COMMERCE_PROVIDER: ${{ vars.WECREATE_COMMERCE_PROVIDER }}
+        run: |
+          test -n "$NEXT_PUBLIC_SITE_URL" || { echo "::error::NEXT_PUBLIC_SITE_URL is not set for this environment. Everything canonical, and every Order Access address, would be wrong."; exit 1; }
+          pnpm build
+
+      - name: Assemble the bundle
+        env:
+          RELEASE: ${{ steps.identify.outputs.release }}
+          NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL }}
+        run: |
+          set -euo pipefail
+
+          # Where the standalone tree put its server. Found rather than assumed:
+          # the path nests when Next.js decides the project has a workspace root
+          # above it, and this repository has a pnpm-workspace.yaml.
+          # `-not -path '*/node_modules/*'`: find walks in readdir order, so
+          # without it a `server.js` belonging to a traced dependency could be
+          # returned before the real one at the top of the tree.
+          server="$(find .next/standalone -maxdepth 4 -name server.js -not -path '*/node_modules/*' -print -quit)"
+          test -n "$server" || { echo "::error::no server.js under .next/standalone — is output:'standalone' still set in next.config.ts?"; exit 1; }
+          root="$(dirname "$server")"
+          echo "standalone root: $root"
+
+          rm -rf bundle && mkdir bundle
+          cp -a "$root"/. bundle/
+
+          # The fixture providers read `.wecreate/` from the working directory,
+          # so file tracing pulls it into the standalone output on a machine
+          # where a developer has one — and it holds published staff
+          # credentials. It does not exist on a CI runner, because it is
+          # gitignored, but a bundle's contents should not depend on that.
+          rm -rf bundle/.wecreate
+
+          # Neither of these is traced into the standalone output, because a
+          # platform would normally serve them from a CDN. Here nginx proxies
+          # everything to the one process, so the process needs them on disk.
+          cp -a public bundle/public
+          mkdir -p bundle/.next
+          cp -a .next/static bundle/.next/static
+
+          # What release.sh reads before it will touch anything.
+          #
+          # NODE_MIN is read out of the framework's own `engines` field rather
+          # than written down, so the number the server checks against moves
+          # when Next.js moves it and nobody has to remember.
+          # ORIGIN is recorded because NEXT_PUBLIC_SITE_URL is compiled in and
+          # cannot be corrected on the server. Writing it down lets release.sh
+          # refuse a bundle built for a different host than the one it is being
+          # deployed to — the mistake that would otherwise be discovered in a
+          # buyer's inbox, in a link that has to keep resolving for ever.
+          #
+          # NODE_MIN is read out of the framework's own `engines` field rather
+          # than written down, so the number the server checks against moves
+          # when Next.js moves it and nobody has to remember. Matched as a
+          # single x.y.z rather than stripped of non-digits: `>=20.9.0` and a
+          # future `^20.9.0 || >=22` both have to yield one usable version, and
+          # a blind strip turns the second into `20.9.022`.
+          cat > bundle/BUILD_INFO <<EOF
+          RELEASE=${RELEASE}
+          ORIGIN=${NEXT_PUBLIC_SITE_URL}
+          NODE_MIN=$(node -p 'const m=require("next/package.json").engines.node.match(/\d+(\.\d+){0,2}/); if(!m) throw new Error("cannot read a version out of next engines.node"); m[0]')
+          NODE_BUILD=$(node -p 'process.versions.node')
+          COMMIT=${GITHUB_SHA}
+          REF=${GITHUB_REF}
+          RUN=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+          BUILT_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          EOF
+          cat bundle/BUILD_INFO
+
+          tar --zstd -cf release.tar.zst -C bundle .
+          ls -lh release.tar.zst
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ steps.identify.outputs.release }}
+          path: release.tar.zst
+          retention-days: 14
+
+  deploy:
+    name: Ship it
+    needs: build
+    runs-on: ubuntu-24.04
+    # The same GitHub Environment as the build, so its protection rules apply
+    # here too. A required reviewer on the `production` environment is how the
+    # Commerce Launch Gate becomes something the pipeline enforces rather than
+    # something a person remembers.
+    environment:
+      name: ${{ inputs.environment }}
+      url: ${{ vars.NEXT_PUBLIC_SITE_URL }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-${{ needs.build.outputs.release }}
+
+      - name: Open the channel
+        env:
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          set -euo pipefail
+          test -n "$KEY"         || { echo "::error::DEPLOY_SSH_KEY is not set for this environment"; exit 1; }
+          test -n "$KNOWN_HOSTS" || { echo "::error::DEPLOY_KNOWN_HOSTS is not set. Generate it with: ssh-keyscan <host>"; exit 1; }
+          test -n "$HOST"        || { echo "::error::DEPLOY_HOST is not set for this environment"; exit 1; }
+          test -n "$USER"        || { echo "::error::DEPLOY_USER is not set for this environment"; exit 1; }
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
+          # Pinned, not learned. StrictHostKeyChecking=accept-new would trust
+          # whatever answers on the day, and the thing this key is handed to is
+          # a server that can serve buyers a download link.
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts && chmod 600 ~/.ssh/known_hosts
+
+      - name: Deploy
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          set -euo pipefail
+          # No command: the forced command on this key is release.sh, and the
+          # bundle arrives on its stdin. There is nothing else this line could
+          # be made to run.
+          ssh -i ~/.ssh/deploy -o BatchMode=yes -o IdentitiesOnly=yes \
+              "${USER}@${HOST}" < release.tar.zst
+
+      # Informational. Never the reason a deployment is reported as failed —
+      # release.sh has already decided that, and has already put the previous
+      # release back if it needed to.
+      - name: What is serving now
+        if: always()
+        continue-on-error: true
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          ssh -i ~/.ssh/deploy -o BatchMode=yes -o IdentitiesOnly=yes \
+              "${USER}@${HOST}" status
