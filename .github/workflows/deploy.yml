@@ -84,11 +84,24 @@ jobs:
         run: |
           echo "release=$(date -u +%Y%m%dT%H%M%SZ)-${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
 
-      - name: Build
+      # Only the values that were actually configured, and nothing else.
+      #
+      # `${{ vars.X }}` for a variable nobody has set does not omit it — it
+      # renders as the empty string, so the build sees the name *defined* and
+      # empty. That defeats every `process.env.X ?? "default"` in the source,
+      # because `??` falls back on undefined and not on "". It cost a build:
+      # `NEXT_PUBLIC_SANITY_API_VERSION` was never set here, arrived as "", and
+      # Sanity refused it with "Invalid API version string" — while the same
+      # code built fine locally, where the variable is genuinely absent.
+      #
+      # So the optional ones are filtered here and only the non-empty survive
+      # into the build's environment. A CI run should reproduce a developer's
+      # machine, not invent configuration it never had.
+      - name: Collect the build environment
         env:
-          # Compiled into the bundle. Nothing on the server can change these
-          # afterwards, which is the whole reason they are here rather than in
-          # /srv/wecreate/shared/env.
+          # Everything below is compiled into the bundle. Nothing on the server
+          # can change any of it afterwards, which is the whole reason these are
+          # here rather than in /srv/wecreate/shared/env.
           #
           # NEXT_PUBLIC_SITE_URL is the load-bearing one: it names the origin in
           # every canonical URL and in every emailed Order Access address, so a
@@ -99,33 +112,49 @@ jobs:
           NEXT_PUBLIC_SANITY_DATASET: ${{ vars.NEXT_PUBLIC_SANITY_DATASET }}
           NEXT_PUBLIC_SANITY_API_VERSION: ${{ vars.NEXT_PUBLIC_SANITY_API_VERSION }}
           NEXT_PUBLIC_MUX_ENV_KEY: ${{ vars.NEXT_PUBLIC_MUX_ENV_KEY }}
-          # Build-time despite the missing NEXT_PUBLIC_ prefix, which is why it
-          # is here and not in the server's environment file. `/robots.txt` is
-          # prerendered — it appears in `.next/prerender-manifest.json` — so
-          # `isIndexable()` in `src/site-config.ts` is evaluated once, during
-          # the build, and baked into a static file. Setting it on the server
-          # changes nothing.
-          #
-          # Unset on staging, which is what refuses that deployment to
-          # crawlers. Only production ever sets it, and until this was passed
-          # here production could not have been made indexable at all.
+          # Build-time despite the missing NEXT_PUBLIC_ prefix. `/robots.txt` is
+          # prerendered, so `isIndexable()` in `src/site-config.ts` runs once
+          # during the build and its answer is baked into a static file; setting
+          # it on the server changes nothing. Unset on staging, which is what
+          # refuses that deployment to crawlers.
           WECREATE_ALLOW_INDEXING: ${{ vars.WECREATE_ALLOW_INDEXING }}
           # Read at build time by next.config.ts, which derives the
           # Content-Security-Policy's `form-action` from the data plane's own
-          # origin — that is the directive a buyer's download redirect travels
-          # through. It has to be the same value as the one in the server's
-          # environment file, or the deployment serves a policy that blocks its
-          # own file handover.
+          # origin — the directive a buyer's download redirect travels through.
+          # It has to match the server's environment file, or the deployment
+          # serves a policy that blocks its own file handover.
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           WECREATE_COMMERCE_PROVIDER: ${{ vars.WECREATE_COMMERCE_PROVIDER }}
         run: |
-          test -n "$NEXT_PUBLIC_SITE_URL" || { echo "::error::NEXT_PUBLIC_SITE_URL is not set for this environment. Everything canonical, and every Order Access address, would be wrong."; exit 1; }
+          set -euo pipefail
+          for name in NEXT_PUBLIC_SITE_URL NEXT_PUBLIC_SANITY_PROJECT_ID \
+                      NEXT_PUBLIC_SANITY_DATASET NEXT_PUBLIC_SANITY_API_VERSION \
+                      NEXT_PUBLIC_MUX_ENV_KEY WECREATE_ALLOW_INDEXING \
+                      WECREATE_COMMERCE_PROVIDER SUPABASE_URL; do
+            value="${!name}"
+            if [ -n "$value" ]; then
+              printf '%s=%s\n' "$name" "$value" >> "$GITHUB_ENV"
+              echo "  set  $name"
+            else
+              echo "  ---  $name (not configured; the application's own default applies)"
+            fi
+          done
+
+      # No `env:` block here, deliberately. A step-level `env:` takes precedence
+      # over what the step above wrote to $GITHUB_ENV, so repeating the list
+      # would put the empty strings straight back.
+      - name: Build
+        run: |
+          test -n "${NEXT_PUBLIC_SITE_URL:-}" || { echo "::error::NEXT_PUBLIC_SITE_URL is not set for this environment. Everything canonical, and every Order Access address, would be wrong."; exit 1; }
           pnpm build
 
       - name: Assemble the bundle
         env:
+          # NEXT_PUBLIC_SITE_URL is not repeated here: it arrives from
+          # $GITHUB_ENV, so the origin recorded in BUILD_INFO is by construction
+          # the one the bundle was built with rather than a second reading of
+          # the same variable that could drift from it.
           RELEASE: ${{ steps.identify.outputs.release }}
-          NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL }}
         run: |
           set -euo pipefail
 

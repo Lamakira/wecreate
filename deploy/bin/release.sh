@@ -121,9 +121,16 @@ prune() {
   [[ -z "${stale}" ]] && return 0
   while read -r old; do
     [[ -n "${old}" ]] || continue
-    rm -rf "${RELEASES:?}/${old}"
-    log "  pruned ${old}"
+    if rm -rf "${RELEASES:?}/${old}" 2>/dev/null; then
+      log "  pruned ${old}"
+    else
+      # Deleting inside a directory somebody else owns needs write permission
+      # on that directory, which the deploy account does not have if a release
+      # was ever unpacked by root. Worth saying, not worth failing over.
+      log "  could not prune ${old} (owned by $(stat -c '%U' "${RELEASES}/${old}" 2>/dev/null || echo unknown)?)"
+    fi
   done <<<"${stale}"
+  return 0
 }
 
 deploy() {
@@ -214,7 +221,11 @@ deploy() {
       ln -sfn "${RELEASES}/${previous}" "${PREVIOUS}.new"
       mv -Tf "${PREVIOUS}.new" "${PREVIOUS}"
     fi
-    prune
+    # Housekeeping, and explicitly not part of the verdict. A prune that fails
+    # after a release is serving must not report the deployment as failed —
+    # that invites a rollback of something that is working, which is a worse
+    # outcome than a full disk.
+    prune || log "  pruning did not complete; the deployment itself succeeded"
     exit 0
   fi
 
@@ -288,6 +299,20 @@ main() {
 
 # One deployment at a time. Two overlapping symlink swaps would leave the
 # service running a release neither of them thinks it activated.
+#
+# Checked before the `exec` rather than by catching its failure, and the
+# distinction is not stylistic. `exec` with redirections and no command applies
+# them to the shell *permanently* — so `exec 9>"${LOCK}" 2>/dev/null`, written
+# to keep a failed open quiet, silently discards every message this script
+# writes for the rest of its life. It costs nothing visible: `status` prints to
+# stdout and still works, while every `log` and every `die` vanishes, and a
+# deployment reports its exit code with no account of what it did.
+#
+# The failure being guarded against is somebody having run this once as root,
+# leaving a root-owned lock the deploy account can no longer open.
+if [[ -e "${LOCK}" && ! -w "${LOCK}" ]]; then
+  die "cannot write ${LOCK} (owned by $(stat -c '%U' "${LOCK}" 2>/dev/null || echo unknown), running as $(id -un)). If that owner is root, this script was run as root at some point: chown ${APP_USER} ${LOCK}"
+fi
 exec 9>"${LOCK}"
 flock -n 9 || die "another deployment is in progress"
 main
