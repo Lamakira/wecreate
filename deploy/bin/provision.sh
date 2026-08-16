@@ -138,16 +138,54 @@ fi
 # ---------------------------------------------------------------------------
 step "The system user"
 # ---------------------------------------------------------------------------
+# The shell is /bin/bash and not /usr/sbin/nologin, which is the opposite of
+# what it should obviously be, so it is worth saying why.
+#
+# A forced command in authorized_keys is still executed *by the account's login
+# shell* — sshd runs `$SHELL -c "<the forced command>"`. Give the account
+# nologin and sshd refuses everything, including the one command the key exists
+# to run, with "This account is currently not available." The deployment then
+# cannot deploy.
+#
+# Nothing is given away by this. The account has no password, so no password
+# login is possible; the only key in its authorized_keys carries `command=` and
+# `restrict`, so presenting it runs release.sh and never a shell. A usable
+# shell without a way to reach it interactively is not a way in.
+readonly APP_SHELL="/bin/bash"
+
 if id -u "${APP_USER}" >/dev/null 2>&1; then
   log "  ${APP_USER} already exists (uid $(id -u "${APP_USER}"))"
+  current_shell="$(getent passwd "${APP_USER}" | cut -d: -f7)"
+  if [[ "${current_shell}" != "${APP_SHELL}" ]]; then
+    warn "${APP_USER}'s shell is ${current_shell}; a forced command cannot run under it"
+    run usermod --shell "${APP_SHELL}" "${APP_USER}"
+    ok "shell set to ${APP_SHELL}"
+  fi
 else
   # --system: no ageing, no mail spool, an id below 1000, out of the way of the
-  # human accounts. nologin, because nothing should ever sit at a shell as this
-  # user; CI reaches it through a forced command instead.
-  run useradd --system --shell /usr/sbin/nologin \
+  # human accounts.
+  run useradd --system --shell "${APP_SHELL}" \
       --home-dir "${APP_ROOT}" --no-create-home \
       --comment "WeCreate application" "${APP_USER}"
   ok "created ${APP_USER}"
+fi
+
+# `*` in the password field rather than the `!` useradd leaves behind. Both
+# mean no password will ever authenticate, so nothing is loosened — but they
+# are not read the same way. `!` marks the account *locked*, and sshd built
+# with `UsePAM no` refuses a locked account outright, valid key or not. This
+# machine happens to run the default `UsePAM yes` and would not care; a
+# deployment that works only because of a setting nobody chose is a deployment
+# waiting to break on the next machine, or on the next time somebody hardens
+# this one.
+if [[ "${DRY_RUN}" != "1" ]]; then
+  pw_field="$(getent shadow "${APP_USER}" | cut -d: -f2)"
+  if [[ "${pw_field}" != "*" ]]; then
+    usermod --password '*' "${APP_USER}"
+    ok "password field set to '*' (no password can ever match; the account is not 'locked')"
+  fi
+else
+  log "${DIM}  would run: usermod --password '*' ${APP_USER}${OFF}"
 fi
 
 # ---------------------------------------------------------------------------
@@ -157,6 +195,21 @@ run install -d -m 0755 -o "${APP_USER}" -g "${APP_USER}" "${APP_ROOT}"
 run install -d -m 0755 -o "${APP_USER}" -g "${APP_USER}" "${APP_ROOT}/releases"
 run install -d -m 0755 -o "${APP_USER}" -g "${APP_USER}" "${APP_ROOT}/bin"
 run install -d -m 0750 -o root         -g "${APP_USER}" "${APP_ROOT}/shared"
+# Created here, and owned by the deploy account, so that the first thing
+# release.sh does cannot fail on it. Left to chance, this file is created by
+# whoever runs a deployment first — and if that is ever root doing one by hand,
+# every later run by the deploy account is refused with a permission error that
+# points at the lock rather than at who made it.
+if [[ "${DRY_RUN}" != "1" ]]; then
+  [[ -e "${APP_ROOT}/.deploy.lock" ]] || install -m 0644 -o "${APP_USER}" -g "${APP_USER}" /dev/null "${APP_ROOT}/.deploy.lock"
+  lock_owner="$(stat -c '%U' "${APP_ROOT}/.deploy.lock")"
+  if [[ "${lock_owner}" != "${APP_USER}" ]]; then
+    warn "the deploy lock is owned by ${lock_owner}; handing it back to ${APP_USER}"
+    chown "${APP_USER}:${APP_USER}" "${APP_ROOT}/.deploy.lock"
+  fi
+else
+  log "${DIM}  would create ${APP_ROOT}/.deploy.lock owned by ${APP_USER}${OFF}"
+fi
 ok "${APP_ROOT}/{releases,bin,shared}"
 
 if [[ ! -f "${APP_ROOT}/shared/env" ]]; then
@@ -223,9 +276,30 @@ if [[ "${DRY_RUN}" == "1" ]]; then
 else
   install -m 0755 -o root -g "${APP_USER}" \
     "${DEPLOY_DIR}/bin/release.sh" "${APP_ROOT}/bin/release.sh"
-  install -m 0644 -o root -g "${APP_USER}" \
-    "${DEPLOY_DIR}/deployment.env" "${APP_ROOT}/bin/deployment.env"
-  ok "installed ${APP_ROOT}/bin/release.sh"
+
+  # The values this run actually used, written out — not a copy of the
+  # template. release.sh is reached through a forced command, so it inherits no
+  # environment at all and reads only this file. Copying the template verbatim
+  # meant that provisioning with, say, `SITE_HOST=other.example ./provision.sh`
+  # left release.sh believing the default, and it would then refuse every
+  # bundle built for the host it was actually serving — the origin check firing
+  # on correct bundles, which is worse than not having one.
+  tmp="$(mktemp)"
+  {
+    echo "# Written by provision.sh on $(date -u +%Y-%m-%dT%H:%M:%SZ)."
+    echo "# The values that provisioning actually used. release.sh reads this and"
+    echo "# nothing else: a forced command inherits no environment."
+    echo "#"
+    echo "# Do not edit by hand — re-run provision.sh instead, so that the machine"
+    echo "# and this file cannot disagree."
+    echo
+    for name in SITE_HOST APP_USER APP_ROOT APP_PORT KEEP_RELEASES SERVER_DEPLOY_DIR; do
+      printf '%s=%q\n' "${name}" "${!name}"
+    done
+  } > "${tmp}"
+  install -m 0644 -o root -g "${APP_USER}" "${tmp}" "${APP_ROOT}/bin/deployment.env"
+  rm -f "${tmp}"
+  ok "installed ${APP_ROOT}/bin/release.sh and the settings it reads (SITE_HOST=${SITE_HOST})"
 fi
 
 if [[ -n "${DEPLOY_PUBKEY:-}" ]]; then
