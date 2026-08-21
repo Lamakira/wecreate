@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import { ManagedContent } from "./support/managed-content";
 import { SAMPLE_PORTFOLIO_PROJECTS } from "./support/sample-content";
+import { thirdPartyRequests } from "./support/third-party";
 
 let content: ManagedContent;
 
@@ -134,7 +135,7 @@ test.describe("Homepage", () => {
 
     const finalCta = page.getByRole("region", { name: /Parlons de votre projet/ });
     await expect(
-      finalCta.getByRole("link", { name: "WhatsApp", exact: true }),
+      finalCta.getByRole("link", { name: /^WhatsApp/ }),
     ).toHaveAttribute("href", "https://wa.me/2290167366726");
     await expect(
       finalCta.getByRole("link", { name: "Nous contacter" }),
@@ -191,18 +192,16 @@ test.describe("Homepage", () => {
     baseURL,
   }) => {
     // Public browsing must stay off Supabase and every other transactional
-    // dependency (ADR-0003), and must not hand a third party the visitor's
-    // connection either. Everything the page needs comes from our own origin.
+    // dependency (ADR-0003). Cloudflare Web Analytics is the CDN's own
+    // measurement (ADR-0011), not a transactional service, and is ignored here.
     const origin = new URL(baseURL!).origin;
-    const foreignRequests: string[] = [];
+    const seen: string[] = [];
     page.on("request", (request) => {
-      if (!request.url().startsWith(origin)) {
-        foreignRequests.push(request.url());
-      }
+      seen.push(request.url());
     });
 
     await page.goto("/", { waitUntil: "networkidle" });
 
-    expect(foreignRequests).toEqual([]);
+    expect(thirdPartyRequests(seen, origin)).toEqual([]);
   });
 });

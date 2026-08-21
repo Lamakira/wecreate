@@ -60,19 +60,22 @@ it belongs to.
    Sanity project, dataset and read token when that is Sanity.
 3. **Video platform** — Mux's environment key, for anonymous aggregate playback
    measurement. Mux's API token is not here: the Studio keeps it in the dataset.
-4. **Commerce data plane** — which one this process talks to, the Supabase
+4. **Measurement** — Cloudflare Web Analytics' site token, for anonymous page
+   views and field Core Web Vitals. Custom events go through Zaraz, which the
+   CDN injects in production. Leave the token unset to serve the site uncounted.
+5. **Commerce data plane** — which one this process talks to, the Supabase
    project and anonymous key when that is Supabase, and the secret that lets
    this deployment record a payment event. There is no service role key: see
    *The commerce data plane* below.
-5. **Payments** — which provider takes the money, FedaPay's secret key, the
+6. **Payments** — which provider takes the money, FedaPay's secret key, the
    endpoint secret its webhooks are signed with, and which of its two
    environments this deployment uses. Sandbox unless something explicitly names
    the live one.
-6. **Transactional email** — which provider carries a buyer's receipt, its key,
+7. **Transactional email** — which provider carries a buyer's receipt, its key,
    and the verified address that receipt comes from.
-7. **Preview and revalidation secrets** — who may open a preview session and who
+8. **Preview and revalidation secrets** — who may open a preview session and who
    may drop the content cache.
-8. **Acceptance-test hooks** — set by `playwright.config.ts`, never by hand.
+9. **Acceptance-test hooks** — set by `playwright.config.ts`, never by hand.
 
 Secrets are server-only. On a deployment they live in two places, and which one
 decides which: `NEXT_PUBLIC_*` is compiled into the bundle by `next build`, so
@@ -1417,7 +1420,7 @@ rather than falling back to this one.
 Content and commerce are each a single shared dataset, so the suite runs
 serially. Later tickets that bring per-worker persistence can lift that.
 
-Browsers are installed once with `pnpm exec playwright install chromium`.
+Browsers are installed once with `pnpm exec playwright install chromium firefox webkit`. WebKit also needs the host libraries Playwright lists (`pnpm exec playwright install-deps webkit`); without `libevent-2.1-7t64` those journeys fail to launch.
 
 **One suite is deliberately not part of it.** `pnpm test:contract` runs
 `tests/contract/` against a real vendor sandbox, with its own configuration, no
@@ -1495,6 +1498,67 @@ Inter and Playfair Display are self-hosted from `public/fonts` with
 `font-display: swap` and a real fallback stack. See
 [`public/fonts/README.md`](./public/fonts/README.md).
 
+## Measurement
+
+Anonymous measurement is the CDN's, not a hosting platform's (ADR-0011).
+
+**Cloudflare Web Analytics** collects page views and field Core Web Vitals
+through a cookie-less beacon (`NEXT_PUBLIC_CF_BEACON_TOKEN`). Create a Web
+Analytics property in the Cloudflare dashboard, put the token in the GitHub
+Environment the production build uses, and do **not** also enable automatic JS
+injection on the zone — the application already emits the snippet, and two
+beacons would double-count.
+
+**Cloudflare Zaraz** records the custom events issue #16 asks for: a Service
+Enquiry destination (`whatsapp` or `discovery_call`), a product addition (the
+catalogue identity, never a title or a person), and a checkout start (the event
+name, nothing else). Enable Zaraz on the production zone. Staging has no CDN, so
+those events queue in the browser until Zaraz is present; page views and CWV
+still reach Web Analytics from the beacon on any host with a token.
+
+Neither product is attached to a name, an email, a telephone, an Order Access
+token, or a viewing history. Mux's own aggregate playback measurement
+(`NEXT_PUBLIC_MUX_ENV_KEY`) is the same rule: the film's title, never who
+watched it.
+
+A blocked or missing analytics script must not take a page down. Service Enquiry
+links remain plain `href`s; the click listener never calls `preventDefault`.
+
+## Public discovery quality
+
+The acceptance suite covers automated accessibility (axe on representative
+states, plus the existing contrast, keyboard, dialog, filter and table
+assertions), visual references for the six public views, structured data,
+robots/sitemap, caching, and Firefox/WebKit walks of the critical public
+journeys.
+
+These remain a **manual** pass before launch, and are the Commerce Launch Gate
+evidence for the numbers a lab run cannot speak for:
+
+1. **Screen reader** — Accueil, Portfolio (dialog and filters), Services
+   (comparison table), Boutique (product and cart drawer), Contact, one legal
+   document, checkout errors. VoiceOver on macOS or iOS, and TalkBack on
+   Android.
+2. **Zoom and reflow** — 200% zoom and a 320 CSS-pixel width on each of the six
+   public views. The suite already checks 320px overflow; a person still has to
+   confirm that reading order and controls survive 200% zoom.
+3. **Field Core Web Vitals** — LCP ≤ 2.5s, INP ≤ 200ms, CLS ≤ 0.1 at the 75th
+   percentile on mobile and desktop, read from Cloudflare Web Analytics once
+   real visits exist. Measured against the Paris origin behind the CDN
+   (ADR-0011), not against a globally distributed platform.
+4. **Constrained networks** — one pass on MTN and one on Moov, on a low-memory
+   Android, of Accueil → Portfolio playback → a Service Enquiry → a product
+   page. Decorative motion, the beacon and playback must fail independently of
+   navigation and contact.
+5. **Real Mobile Safari and a physical Android** — Playwright covers Desktop
+   Chrome, Pixel 7, Firefox and WebKit. The remainder is the GitHub Student
+   Pack offers on issue #16: LambdaTest Live for interactive Safari/Firefox,
+   BrowserStack Automate Mobile (1 parallel) for real iOS/Android. Redeem them
+   when running this pass, not earlier — each clock is twelve months.
+
+Intentional visual divergence from the design handoff is documented in
+*Greys and contrast*: tertiary greys were lifted to meet WCAG 2.2 AA.
+
 ## Security headers
 
 Every response carries `X-Content-Type-Options`, `Referrer-Policy`,
@@ -1536,6 +1600,11 @@ font host, analytics script or payment widget will be blocked until its origin
 is added to the right directive — which is the point, but it means the failure
 looks like "the thing silently does not load". Check the browser console for a
 CSP violation before looking anywhere else.
+
+Cloudflare Web Analytics is the one analytics origin the public policy names:
+`static.cloudflareinsights.com` in `script-src`, `cloudflareinsights.com` in
+`connect-src`. Zaraz is same-origin (`/cdn-cgi/zaraz/`) once the CDN proxies
+the site, so it needs no extra host.
 
 **Why Mux is a wildcard and Sanity is not.** A playback URL starts at
 `stream.mux.com`, but the manifest and segments are then served from whichever
@@ -1666,7 +1735,7 @@ It needs, per GitHub Environment:
 | ---- | ---- | --- |
 | Variable | `NEXT_PUBLIC_SITE_URL` | The origin actually served. Compiled in; see below |
 | Variable | `NEXT_PUBLIC_SANITY_PROJECT_ID`, `NEXT_PUBLIC_SANITY_DATASET` | Which content this deployment reads |
-| Variable | `NEXT_PUBLIC_SANITY_API_VERSION`, `NEXT_PUBLIC_MUX_ENV_KEY` | Optional |
+| Variable | `NEXT_PUBLIC_SANITY_API_VERSION`, `NEXT_PUBLIC_MUX_ENV_KEY`, `NEXT_PUBLIC_CF_BEACON_TOKEN` | Optional |
 | Variable | `WECREATE_COMMERCE_PROVIDER` | Read at build time *and* runtime — set in both places |
 | Variable | `WECREATE_ALLOW_INDEXING` | Production only. Build-time despite the name — see below |
 | Secret | `SUPABASE_URL` | Also read at build time — see below |

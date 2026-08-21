@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import { ManagedContent, enterPreview, leavePreview } from "./support/managed-content";
+import { thirdPartyRequests } from "./support/third-party";
 
 /**
  * Contact: three approved channels, and nothing that submits.
@@ -170,18 +171,17 @@ test.describe("Contact", () => {
     baseURL,
   }) => {
     const origin = new URL(baseURL!).origin;
-    const foreignRequests: string[] = [];
+    const seen: string[] = [];
     page.on("request", (request) => {
-      if (!request.url().startsWith(origin)) {
-        foreignRequests.push(request.url());
-      }
+      seen.push(request.url());
     });
 
     await page.goto("/contact", { waitUntil: "networkidle" });
 
     // Calendly is a URL, not an integration: no widget, no iframe, nothing on
-    // the critical path of a Benin mobile connection.
-    expect(foreignRequests).toEqual([]);
+    // the critical path of a Benin mobile connection. Cloudflare Web Analytics
+    // is the CDN's own beacon (ADR-0011), not a scheduling widget.
+    expect(thirdPartyRequests(seen, origin)).toEqual([]);
     await expect(page.locator("iframe")).toHaveCount(0);
   });
 

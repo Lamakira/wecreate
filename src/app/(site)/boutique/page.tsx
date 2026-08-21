@@ -4,6 +4,7 @@ import { draftMode } from "next/headers";
 import { readPurchaseContext } from "@/commerce";
 import { BoutiqueCatalogue } from "@/components/boutique/boutique-catalogue";
 import { readBoutique } from "@/managed-content";
+import { pageOpenGraph } from "@/seo/open-graph";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { seo } = await readBoutique();
@@ -12,11 +13,11 @@ export async function generateMetadata(): Promise<Metadata> {
     title: seo.title,
     description: seo.description,
     alternates: { canonical: "/boutique" },
-    openGraph: {
+    openGraph: await pageOpenGraph({
       title: seo.title,
       description: seo.description,
-      images: seo.openGraphImageUrl ? [seo.openGraphImageUrl] : undefined,
-    },
+      imageUrl: seo.openGraphImageUrl,
+    }),
   };
 }
 

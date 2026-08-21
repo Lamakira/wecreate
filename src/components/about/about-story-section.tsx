@@ -22,7 +22,7 @@ export function AboutStorySection({ story }: AboutStorySectionProps) {
   return (
     <section
       data-testid="about-story"
-      className="wc-container grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] items-start gap-[clamp(28px,4vw,72px)] pb-section-sm"
+      className="wc-container grid grid-cols-[repeat(auto-fit,minmax(min(300px,100%),1fr))] items-start gap-[clamp(28px,4vw,72px)] pb-section-sm"
     >
       <Reveal>
         <MediaFrame

@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { ProjectDetails } from "@/components/portfolio/project-details";
 import { ProjectPlayback } from "@/components/portfolio/project-playback";
 import { readPortfolioProject } from "@/managed-content";
+import { pageOpenGraph } from "@/seo/open-graph";
 
 /**
  * This route is not held to the instant-navigation bar.
@@ -38,10 +39,10 @@ export async function generateMetadata({
     title: project.title,
     description: project.description,
     alternates: { canonical: `/portfolio/${project.slug}` },
-    openGraph: {
+    openGraph: await pageOpenGraph({
       title: project.title,
       description: project.description,
-    },
+    }),
   };
 }
 

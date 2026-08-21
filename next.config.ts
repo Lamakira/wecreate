@@ -69,7 +69,7 @@ const PUBLIC_CONTENT_SECURITY_POLICY = [
   ["form-action 'self' https://*.fedapay.com", privateStoreOrigin()]
     .filter(Boolean)
     .join(" "),
-  "script-src 'self' 'unsafe-inline'",
+  "script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com",
   // Tailwind's utilities are a stylesheet, but the poster frame in
   // `src/video-playback/video-player.tsx` and Mux's player element both set
   // style attributes from JavaScript.
@@ -88,7 +88,10 @@ const PUBLIC_CONTENT_SECURITY_POLICY = [
   // suite run on.
   "media-src 'self' blob: https://*.mux.com",
   // `*.litix.io` is Mux's playback telemetry, which the player sends on its own.
-  "connect-src 'self' https://cdn.sanity.io https://*.mux.com https://*.litix.io",
+  // Cloudflare Web Analytics' beacon is `static.cloudflareinsights.com` (script)
+  // posting to `cloudflareinsights.com` (the rum collector). Zaraz custom events
+  // are same-origin `/cdn-cgi/zaraz/` once the CDN proxies the site.
+  "connect-src 'self' https://cdn.sanity.io https://*.mux.com https://*.litix.io https://cloudflareinsights.com https://static.cloudflareinsights.com",
   // `public/fonts`, and nowhere else. The site loads no hosted font service.
   "font-src 'self'",
   "frame-src 'self'",

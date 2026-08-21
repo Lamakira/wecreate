@@ -42,6 +42,15 @@ export const TEST_FEDAPAY_SECRET = "sk_sandbox_acceptance_never_leaves_the_serve
  * the same secret the application verifies against.
  */
 export const TEST_PAYMENT_WEBHOOK_SECRET = "acceptance-webhook-secret";
+/**
+ * Cloudflare Web Analytics' public token, compiled into the test build.
+ *
+ * A real deployment gets this from a Web Analytics property. The suite sets
+ * one so it can assert the beacon is present, that custom events carry no
+ * personal data, and that a blocked analytics script does not take the page
+ * down with it.
+ */
+export const TEST_CF_BEACON_TOKEN = "acceptance-cf-beacon";
 
 const serverEnv: Record<string, string> = {
   ...(process.env as Record<string, string>),
@@ -83,6 +92,7 @@ const serverEnv: Record<string, string> = {
     "outbox.json",
   ),
   NEXT_PUBLIC_SITE_URL: BASE_URL,
+  NEXT_PUBLIC_CF_BEACON_TOKEN: TEST_CF_BEACON_TOKEN,
   // Crawlable, like production and unlike every other environment. What the
   // site keeps out of search results is then a decision the suite can check —
   // an unapproved legal text, a superseded revision, a preview session — rather
@@ -117,6 +127,26 @@ export default defineConfig({
     {
       name: "mobile",
       use: { ...devices["Pixel 7"] },
+    },
+    // Firefox and WebKit cover the public journeys the Chromium matrix does
+    // not. They run a dedicated spec rather than the whole suite: issue #1
+    // asks for the broader engines according to execution cost, and the
+    // commerce scenarios already take the Chromium pair several minutes.
+    {
+      name: "firefox",
+      use: {
+        ...devices["Desktop Firefox"],
+        viewport: { width: 1440, height: 900 },
+      },
+      testMatch: "**/public-journeys.spec.ts",
+    },
+    {
+      name: "webkit",
+      use: {
+        ...devices["Desktop Safari"],
+        viewport: { width: 1440, height: 900 },
+      },
+      testMatch: "**/public-journeys.spec.ts",
     },
   ],
 

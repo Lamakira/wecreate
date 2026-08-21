@@ -15,7 +15,10 @@ import {
   DIGITAL_PRODUCT_LICENCE_KIND,
   productPath,
 } from "@/managed-content/digital-products";
-import { keepOutOfSearchResults } from "@/site-config";
+import { digitalProductJsonLd } from "@/seo/json-ld";
+import { JsonLdScript } from "@/seo/json-ld-script";
+import { pageOpenGraph } from "@/seo/open-graph";
+import { keepOutOfSearchResults, siteUrl } from "@/site-config";
 
 /**
  * Not held to the instant-navigation bar, for the reason `/portfolio/[slug]` is
@@ -48,11 +51,11 @@ export async function generateMetadata({
     // arrived at a former slug, so a moved product does not compete with itself
     // in search.
     alternates: { canonical: productPath(product.slug) },
-    openGraph: {
+    openGraph: await pageOpenGraph({
       title: product.title,
       description: product.summary,
-      images: product.cover.imageUrl ? [product.cover.imageUrl] : undefined,
-    },
+      imageUrl: product.cover.imageUrl,
+    }),
     // Two pages that must stay out of search results, and neither is about the
     // route: a preview is one editor's unpublished draft, and an archived
     // product is one WeCreate has withdrawn — its page exists for the orders
@@ -96,15 +99,24 @@ export default async function ProductRoute({ params }: ProductRouteProps) {
   const { isEnabled: isPreview } = await draftMode();
 
   return (
-    <ProductView
-      product={product}
-      boutique={boutique}
-      purchase={purchase}
-      contact={settings.contact}
-      licence={inForce.find(
-        (revision) => revision.kind === DIGITAL_PRODUCT_LICENCE_KIND,
-      )}
-      showRequirements={isPreview}
-    />
+    <>
+      <JsonLdScript
+        data={digitalProductJsonLd({
+          product,
+          purchase,
+          origin: siteUrl(),
+        })}
+      />
+      <ProductView
+        product={product}
+        boutique={boutique}
+        purchase={purchase}
+        contact={settings.contact}
+        licence={inForce.find(
+          (revision) => revision.kind === DIGITAL_PRODUCT_LICENCE_KIND,
+        )}
+        showRequirements={isPreview}
+      />
+    </>
   );
 }

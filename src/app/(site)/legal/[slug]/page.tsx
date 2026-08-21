@@ -9,6 +9,7 @@ import {
   readLegalSlugRedirect,
 } from "@/managed-content";
 import { legalPath } from "@/managed-content/legal";
+import { pageOpenGraph } from "@/seo/open-graph";
 import { keepOutOfSearchResults } from "@/site-config";
 
 /**
@@ -41,10 +42,10 @@ export async function generateMetadata({
     title: document.title,
     description: document.summary,
     alternates: { canonical: legalPath(document.slug) },
-    openGraph: {
+    openGraph: await pageOpenGraph({
       title: document.title,
       description: document.summary,
-    },
+    }),
     // Two ways a legal page must stay out of search results, and neither is
     // about the route: a preview is one editor's unpublished draft, and a
     // placeholder is not WeCreate's approved text. Presenting either as its

@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { enquiryDestination } from "@/components/primitives/cta-link";
 import type { EffectiveLegalRevision } from "@/managed-content/legal";
 import type { SiteSettings } from "@/managed-content/types";
 
@@ -18,6 +19,7 @@ interface SiteFooterProps {
 
 export function SiteFooter({ settings, legalLinks }: SiteFooterProps) {
   const { contact, footer, socialAccounts, navigation, brandName } = settings;
+  const whatsappEnquiry = enquiryDestination(contact.whatsappUrl);
 
   return (
     <footer className="border-t border-wc-line-dark bg-wc-pure pt-section-xs pb-[34px]">
@@ -63,9 +65,11 @@ export function SiteFooter({ settings, legalLinks }: SiteFooterProps) {
                 href={contact.whatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                {...(whatsappEnquiry ? { "data-enquiry": whatsappEnquiry } : undefined)}
                 className="transition-colors duration-300 hover:text-wc-white"
               >
                 {contact.whatsappLabel}
+                <span className="sr-only"> (nouvel onglet)</span>
               </a>
             </li>
             <li>
@@ -94,6 +98,7 @@ export function SiteFooter({ settings, legalLinks }: SiteFooterProps) {
                   className="transition-colors duration-300 hover:text-wc-white"
                 >
                   {account.label}
+                  <span className="sr-only"> (nouvel onglet)</span>
                 </a>
               </li>
             ))}

@@ -36,10 +36,12 @@ export function ServiceEnquiryNotice({
         <p className="m-0 mt-3 max-w-[68ch] text-body-sm font-light text-wc-muted-2">
           {enquiry.discoveryCallNote}
         </p>
-        <div className="mt-heading-gap flex flex-wrap gap-3">
+        <div className="mt-heading-gap flex flex-col gap-3 sm:flex-row sm:flex-wrap">
           <CtaLink
             cta={{ label: contact.whatsappLabel, href: contact.whatsappUrl }}
             variant="solid"
+            size="block"
+            className="sm:inline-block sm:w-auto"
           />
           <CtaLink
             cta={{
@@ -47,6 +49,8 @@ export function ServiceEnquiryNotice({
               href: contact.discoveryCallUrl,
             }}
             variant="ghost"
+            size="block"
+            className="sm:inline-block sm:w-auto"
           />
         </div>
       </Reveal>

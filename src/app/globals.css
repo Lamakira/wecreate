@@ -356,3 +356,27 @@
   opacity: 1;
   transform: none;
 }
+
+/* Skip link: off-screen until a keyboard user tabs to it, then above the
+ * grain overlay and the header so the control they just focused is actually
+ * visible. */
+.skip-to-content {
+  position: absolute;
+  inset-inline-start: 0.75rem;
+  top: 0.75rem;
+  z-index: 10000;
+  padding: 0.75rem 1.25rem;
+  background: var(--color-wc-white);
+  color: var(--color-wc-pure);
+  font-size: var(--text-button);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  transform: translateY(-200%);
+}
+
+.skip-to-content:focus {
+  transform: none;
+  outline: 2px solid var(--color-wc-pure);
+  outline-offset: 3px;
+}

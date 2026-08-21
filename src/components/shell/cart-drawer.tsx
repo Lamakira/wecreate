@@ -13,6 +13,7 @@ import {
 import { useDigitalCart, type DigitalCart } from "@/digital-cart/use-digital-cart";
 import { formatXof } from "@/lib/format";
 import { AVAILABILITY_LABELS } from "@/managed-content/digital-products";
+import { track } from "@/measurement";
 
 /** Where a shopper goes once their cart is ready. Issue #10 builds it. */
 const CHECKOUT_PATH = "/commande";
@@ -83,6 +84,7 @@ export function CartDrawer() {
               aria-describedby="cart-state"
               onClick={() => {
                 if (isBlocked) return;
+                track({ name: "checkout_started" });
                 cart.close();
                 router.push(CHECKOUT_PATH);
               }}
