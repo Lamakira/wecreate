@@ -59,6 +59,7 @@ export const resendEmailProvider: EmailProvider = {
         from: required("RESEND_FROM_ADDRESS"),
         to: [message.to],
         subject: message.subject,
+        html: message.html,
         text: message.body,
       }),
       signal: AbortSignal.timeout(SEND_TIMEOUT_MS),

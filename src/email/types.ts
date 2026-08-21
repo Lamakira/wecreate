@@ -39,15 +39,18 @@ export type EmailProviderId = "resend" | "fixture" | "none";
  * so the same delivery asked for twice is asked for with the same key and the
  * provider recognises it.
  *
- * The body is plain text. A receipt is read on a phone on a Benin mobile
- * connection, it has to survive every mail client WeCreate's buyers use, and
- * nothing in it needs a layout — so there is no HTML half to keep in step with
- * it and no image to fail to load.
+ * The message carries two halves saying the same thing: `html` is what a
+ * buyer's mail client renders, `body` is the plain-text fallback a client
+ * that cannot or will not render HTML shows instead. Both are composed from
+ * the same facts at the same moment, so they cannot drift apart. There are no
+ * images to fail to load: the layout is typography and colour alone, which is
+ * what survives a phone on a Benin mobile connection.
  */
 export interface TransactionalEmail {
   to: string;
   subject: string;
   body: string;
+  html: string;
   idempotencyKey: string;
 }
 
