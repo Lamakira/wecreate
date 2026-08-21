@@ -12,6 +12,7 @@ import {
   PAYMENT_STATE_MARKS,
   paymentProspect,
 } from "@/commerce/orders";
+import { CartCleanup } from "@/components/checkout/cart-cleanup";
 import {
   BoutiqueLink,
   CheckoutSplit,
@@ -114,6 +115,13 @@ export default async function PaymentReturnRoute() {
         />
       }
     >
+      {/*
+        The cart's contents are committed to the Order Snapshot once the
+        payment is approved, so the cart itself is forgotten — a page render
+        cannot write a cookie, which is why this is a client component rather
+        than a line here.
+      */}
+      {order.paymentState === "approved" ? <CartCleanup /> : null}
       <CheckoutStage
         kicker={`Commande ${order.reference} · Retour FedaPay`}
         heading={copy.heading}

@@ -8,7 +8,7 @@ import {
   interceptHostedPayment,
 } from "./support/checkout";
 import { CommerceDataPlane, putOnSale } from "./support/commerce";
-import { arriveWithCart } from "./support/digital-cart";
+import { arriveWithCart, storedCart } from "./support/digital-cart";
 import { ManagedContent } from "./support/managed-content";
 import {
   Outbox,
@@ -184,6 +184,12 @@ test.describe("Two approvals arriving at once", () => {
     await expect(
       accessRow(page, LUT.sku).getByTestId("access-allowance"),
     ).toHaveText(FULL_ALLOWANCE);
+
+    // And the cart is forgotten: what it held is committed to the order, so
+    // carrying it further would offer the same products for a second purchase.
+    await expect
+      .poll(() => storedCart(page), "the cart cookie is deleted")
+      .toBeUndefined();
 
     // And one of everything underneath it. Both events are kept — evidence is
     // never dropped — but only one of them decided anything, and the delivery

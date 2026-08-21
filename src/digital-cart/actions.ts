@@ -7,6 +7,7 @@ import type { DigitalProduct } from "@/managed-content/types";
 
 import {
   cartEntries,
+  EMPTY_DIGITAL_CART,
   encodeCartEntries,
   reconcileCart,
   withAcknowledgedPrices,
@@ -118,6 +119,20 @@ export async function removeProductFromCartAction(
 ): Promise<DigitalCartView> {
   const [entries, catalogue] = await readCartAgainstCatalogue();
   return settle(withoutProduct(entries, productId), catalogue);
+}
+
+/**
+ * Forget the whole cart.
+ *
+ * What the payment return page asks once the order's payment is approved: the
+ * cart's contents are committed to an Order Snapshot by then, and leaving them
+ * in place would offer the same products for a second purchase. Not cleared
+ * any earlier — an attempt that never reached the provider is resumed by
+ * comparing the order against the cart, which has to still be there.
+ */
+export async function clearDigitalCartAction(): Promise<DigitalCartView> {
+  await writeCartEntries([]);
+  return EMPTY_DIGITAL_CART;
 }
 
 /**

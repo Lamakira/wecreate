@@ -14,6 +14,7 @@ import {
 import {
   acknowledgeCartPricesAction,
   addProductToCartAction,
+  clearDigitalCartAction,
   readDigitalCartAction,
   removeProductFromCartAction,
 } from "./actions";
@@ -61,6 +62,8 @@ export interface DigitalCart {
   remove: (productId: string) => void;
   /** Accept today's prices for every line, after a published change. */
   acknowledgePrices: () => void;
+  /** Forget the whole cart, once what it held has been paid for. */
+  clear: () => void;
 }
 
 const DigitalCartContext = createContext<DigitalCart | null>(null);
@@ -173,6 +176,8 @@ export function DigitalCartProvider({ children }: { children: ReactNode }) {
     run(() => acknowledgeCartPricesAction(presented));
   }, [run, view]);
 
+  const clear = useCallback(() => run(clearDigitalCartAction), [run]);
+
   const value = useMemo<DigitalCart>(
     () => ({
       view: view ?? EMPTY_DIGITAL_CART,
@@ -190,10 +195,12 @@ export function DigitalCartProvider({ children }: { children: ReactNode }) {
       add,
       remove,
       acknowledgePrices,
+      clear,
     }),
     [
       acknowledgePrices,
       add,
+      clear,
       close,
       hasFailed,
       isBusy,
