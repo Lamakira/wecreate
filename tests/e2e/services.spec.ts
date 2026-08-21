@@ -210,7 +210,7 @@ test.describe("Services", () => {
     expect(href).not.toContain(" ");
 
     expect(await prefilledMessage(link)).toBe(
-      "Bonjour WeCreate. Je vous écris au sujet de Pack Croissance — Entreprises. Pouvons-nous en parler ?",
+      "Bonjour WeCreate. Je vous écris au sujet de Pack Croissance - Entreprises. Pouvons-nous en parler ?",
     );
 
     // Each pack identifies itself, so WeCreate never has to ask what the
@@ -219,7 +219,7 @@ test.describe("Services", () => {
       await prefilledMessage(
         pack(page, "Pack Souvenir").getByRole("link", { name: /Demander un devis/ }),
       ),
-    ).toContain("Pack Souvenir — Mariage");
+    ).toContain("Pack Souvenir - Mariage");
   });
 
   test("offers a hosted Discovery Call without loading a scheduling widget", async ({
@@ -359,7 +359,7 @@ test.describe("Services", () => {
 
     const drone = section
       .getByRole("listitem")
-      .filter({ hasText: "Drone — entreprises et immobilier" });
+      .filter({ hasText: "Drone - entreprises et immobilier" });
     await expect(drone.getByText("50 000 F")).toBeVisible();
     await expect(drone.getByText("par vidéo")).toBeVisible();
 
@@ -369,7 +369,7 @@ test.describe("Services", () => {
     await expect(
       section
         .getByRole("listitem")
-        .filter({ hasText: "Drone — mariage, plusieurs cérémonies" })
+        .filter({ hasText: "Drone - mariage, plusieurs cérémonies" })
         .getByText("200 000 F"),
     ).toBeVisible();
 
@@ -448,7 +448,7 @@ test.describe("Services", () => {
       await prefilledMessage(
         pack(page, "Pack Présence").getByRole("link", { name: /Demander un devis/ }),
       ),
-    ).toContain("Pack Présence — Entreprises");
+    ).toContain("Pack Présence - Entreprises");
   });
 });
 
@@ -470,7 +470,7 @@ test.describe("Services without JavaScript", () => {
     const link = pack(page, "Pack Héritage").getByRole("link", {
       name: /Demander un devis/,
     });
-    expect(await prefilledMessage(link)).toContain("Pack Héritage — Mariage");
+    expect(await prefilledMessage(link)).toContain("Pack Héritage - Mariage");
 
     await expect(
       pack(page, "Pack Héritage").getByRole("link", { name: /Appel découverte/ }),

@@ -112,7 +112,7 @@ export const portfolioProject = defineType({
       type: "mediaFrame",
       group: "media",
       description:
-        "Le format de la carte, et l'affiche si vous en fournissez une. Sans image, l'affiche est générée à partir de la vidéo — le texte alternatif reste obligatoire dans les deux cas.",
+        "Le format de la carte, et l'affiche si vous en fournissez une. Sans image, l'affiche est générée à partir de la vidéo - le texte alternatif reste obligatoire dans les deux cas.",
       validation: (rule) =>
         rule.required().custom((value) => {
           // `mediaFrame` asks for alternative text only once an image is

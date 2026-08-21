@@ -778,7 +778,7 @@ test.describe("Granting a later version than the order bought", () => {
 
     await grant
       .getByLabel("Version à accorder")
-      .selectOption({ label: "Version 2 — lut-04-v2.zip" });
+      .selectOption({ label: "Version 2 - lut-04-v2.zip" });
     await grant.getByLabel("Motif de la version accordée").fill("fichier corrigé");
     await press(page, grant.getByRole("button", { name: "Accorder cette version" }));
     await expect(notice(page)).toContainText("Version accordée");

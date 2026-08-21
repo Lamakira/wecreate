@@ -90,7 +90,7 @@ export function AuditTrail({
               className="border border-wc-line-dark p-4 text-body-sm font-light text-wc-soft"
             >
               <p className="m-0 text-body text-wc-white">
-                {ACTION_LABELS[entry.action]} —{" "}
+                {ACTION_LABELS[entry.action]} -{" "}
                 {entry.sku ?? entry.orderReference}
               </p>
               <p className="m-0">

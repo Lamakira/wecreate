@@ -130,7 +130,7 @@ test.describe("Contact", () => {
     ).toHaveAttribute("href", "https://tiktok.com/@wecreate.bj");
 
     await expect(
-      channels.getByText("Studio à Calavi Tankpè, Bénin — sur rendez-vous."),
+      channels.getByText("Studio à Calavi Tankpè, Bénin - sur rendez-vous."),
     ).toBeVisible();
   });
 

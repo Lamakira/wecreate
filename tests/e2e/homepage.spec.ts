@@ -33,7 +33,7 @@ test.describe("Homepage", () => {
     await page.goto("/");
 
     await expect(page).toHaveTitle(
-      "WeCreate — Production vidéo cinématographique",
+      "WeCreate - Production vidéo cinématographique",
     );
 
     const heading = page.getByRole("heading", { level: 1 });
@@ -117,7 +117,7 @@ test.describe("Homepage", () => {
       section.getByRole("button", { name: /panier|ajouter/i }),
     ).toHaveCount(0);
     await expect(
-      section.getByRole("link", { name: "Color Grading Signature — Voir le détail" }),
+      section.getByRole("link", { name: "Color Grading Signature - Voir le détail" }),
     ).toHaveAttribute("href", "/boutique/color-grading-signature");
   });
 

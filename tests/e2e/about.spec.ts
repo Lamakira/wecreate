@@ -139,7 +139,7 @@ test.describe("À propos", () => {
     const equipment = column(page, "L'équipement");
     await expect(equipment.getByRole("listitem")).toHaveCount(3);
     await expect(
-      equipment.getByText("Sony ZV-E1 — plein format"),
+      equipment.getByText("Sony ZV-E1 - plein format"),
     ).toBeVisible();
   });
 

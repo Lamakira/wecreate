@@ -86,7 +86,7 @@ export const legalRevision = defineType({
       initialValue: "placeholder",
       options: {
         list: [
-          { title: "Provisoire — texte de développement", value: "placeholder" },
+          { title: "Provisoire - texte de développement", value: "placeholder" },
           { title: "Validé par WeCreate", value: "approved" },
         ],
         layout: "radio",
@@ -106,7 +106,7 @@ export const legalRevision = defineType({
   preview: {
     select: { effectiveFrom: "effectiveFrom", id: "id.current", status: "status" },
     prepare: ({ effectiveFrom, id, status }) => ({
-      title: `${effectiveFrom ?? "sans date"} — ${id ?? "sans identifiant"}`,
+      title: `${effectiveFrom ?? "sans date"} - ${id ?? "sans identifiant"}`,
       subtitle: status === "approved" ? "Validé" : "Provisoire",
     }),
   },
@@ -228,7 +228,7 @@ export const legalDocument = defineType({
             )
             .map((revision) => revision.id);
           if (removed.length > 0) {
-            return `Révision déjà publiée retirée : ${removed.join(", ")}. Une commande passée y renvoie — publiez-en une nouvelle plutôt que d'effacer celle-ci.`;
+            return `Révision déjà publiée retirée : ${removed.join(", ")}. Une commande passée y renvoie - publiez-en une nouvelle plutôt que d'effacer celle-ci.`;
           }
 
           const rewritten = inForce.find((revision) => {
@@ -236,7 +236,7 @@ export const legalDocument = defineType({
             return candidate && candidate.text !== revision.text;
           });
           if (rewritten) {
-            return `La révision « ${rewritten.id} » est déjà publiée : son texte et sa date ne peuvent plus changer. Ajoutez une nouvelle révision — celle-ci est ce qu'une commande passée a accepté.`;
+            return `La révision « ${rewritten.id} » est déjà publiée : son texte et sa date ne peuvent plus changer. Ajoutez une nouvelle révision - celle-ci est ce qu'une commande passée a accepté.`;
           }
 
           return true;

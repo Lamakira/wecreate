@@ -73,7 +73,7 @@ export function ProjectDetails({
         <ul className="m-0 list-none p-0 text-body font-light text-wc-soft">
           {project.deliverables.map((deliverable) => (
             <li key={deliverable} className="mb-1 last:mb-0">
-              — {deliverable}
+              - {deliverable}
             </li>
           ))}
         </ul>

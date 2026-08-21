@@ -516,7 +516,7 @@ function GrantRow({
               </option>
               {offerable.map((version) => (
                 <option key={version.id} value={version.id}>
-                  Version {version.version} — {version.fileName}
+                  Version {version.version} - {version.fileName}
                 </option>
               ))}
             </select>
@@ -628,7 +628,7 @@ function AnomaliesPanel({
               <option value="">Aucune : note seule</option>
               {outstanding.map((anomaly) => (
                 <option key={anomaly.id} value={anomaly.id}>
-                  {ORDER_ANOMALY_LABELS[anomaly.kind]} —{" "}
+                  {ORDER_ANOMALY_LABELS[anomaly.kind]} -{" "}
                   {formatMoment(anomaly.detectedAt)}
                 </option>
               ))}

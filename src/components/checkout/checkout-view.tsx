@@ -147,7 +147,7 @@ function ResumingNotice({
             Le paiement de cette commande n&apos;a pas abouti
           </strong>{" "}
           et rien n&apos;a été débité. Reprendre le paiement utilise la commande{" "}
-          {order.reference} telle qu&apos;elle a été enregistrée — ses produits,
+          {order.reference} telle qu&apos;elle a été enregistrée - ses produits,
           ses prix et les conditions que vous avez acceptées : cela ne crée pas
           de seconde commande.
         </>

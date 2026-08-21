@@ -191,7 +191,7 @@ export function PaymentVerification() {
       ) : stopped ? (
         <span data-testid="payment-verification-paused">
           Cette page a cessé de vérifier automatiquement. Rechargez-la pour
-          reprendre — et dans tous les cas, nous vous écrivons dès que le
+          reprendre - et dans tous les cas, nous vous écrivons dès que le
           paiement est confirmé : rien ne dépend de cette page.
         </span>
       ) : (

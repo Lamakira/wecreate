@@ -74,7 +74,7 @@ export function FactorsPanel({
           >
             <p className="m-0">
               <span className="block text-micro uppercase tracking-24 text-wc-muted-2">
-                Clé — {pending.label}
+                Clé - {pending.label}
               </span>
               <code
                 data-testid="factor-secret"

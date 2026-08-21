@@ -197,7 +197,7 @@ export const digitalProduct = defineType({
       group: "availability",
       initialValue: false,
       description:
-        "Publier la fiche et ouvrir la vente sont deux décisions. Sans cette case le produit reste visible et annoncé « bientôt disponible » — et même cochée, la vente n'ouvre qu'une fois la licence validée et le fichier activé côté commerce.",
+        "Publier la fiche et ouvrir la vente sont deux décisions. Sans cette case le produit reste visible et annoncé « bientôt disponible » - et même cochée, la vente n'ouvre qu'une fois la licence validée et le fichier activé côté commerce.",
     }),
     defineField({
       name: "isArchived",

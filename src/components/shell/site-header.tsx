@@ -54,7 +54,7 @@ export function SiteHeader({
       >
         <Link
           href="/"
-          aria-label={`${settings.brandName} — accueil`}
+          aria-label={`${settings.brandName} - accueil`}
           className="flex flex-none items-center"
         >
           <Image

@@ -68,7 +68,7 @@ export function DeliverablesPanel({
               </option>
               {deliverables.map((deliverable) => (
                 <option key={deliverable.sku} value={deliverable.sku}>
-                  {deliverable.title} — {deliverable.sku}
+                  {deliverable.title} - {deliverable.sku}
                 </option>
               ))}
             </select>

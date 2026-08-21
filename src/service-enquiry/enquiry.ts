@@ -34,7 +34,7 @@ export interface ServiceEnquiryContext {
  * WeCreate's inbox: the pack, then the universe it belongs to.
  */
 export function serviceOfferLabel(packName: string, universe: string): string {
-  return `${packName} — ${universe}`;
+  return `${packName} - ${universe}`;
 }
 
 /*

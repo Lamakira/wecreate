@@ -336,7 +336,7 @@ test.describe("Uploading a Paid Deliverable Version", () => {
     await expect(activations).toHaveCount(2);
 
     const latest = activations.first();
-    await expect(latest).toContainText("Version activée — LUT-01");
+    await expect(latest).toContainText("Version activée - LUT-01");
     await expect(latest).toContainText(COMMERCE_OPERATOR.email);
     await expect(latest).toContainText("Avant : version 1 (pack.zip");
     await expect(latest).toContainText("Après : version 2 (pack-v2.zip");

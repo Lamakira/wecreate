@@ -68,7 +68,7 @@ export function CtaLink({
   const content = (
     <>
       {cta.label}
-      {context ? <span className="sr-only"> — {context}</span> : null}
+      {context ? <span className="sr-only"> - {context}</span> : null}
     </>
   );
 

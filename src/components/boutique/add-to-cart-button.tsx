@@ -47,7 +47,7 @@ export function AddToCartButton({
       className={`${ACTION_SIZES[size]} bg-wc-pure text-wc-white transition-opacity duration-300 hover:opacity-80`}
     >
       {isInCart ? "Voir dans le panier" : "Ajouter au panier"}
-      <span className="sr-only"> — {title}</span>
+      <span className="sr-only"> - {title}</span>
     </button>
   );
 }

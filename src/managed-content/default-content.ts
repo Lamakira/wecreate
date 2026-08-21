@@ -38,7 +38,7 @@ const SERVICES_CONTENT: ServicesContent = {
   kicker: "Services · Trois univers",
   headline: { lead: "La méthode ", emphasis: "WeCreate", trail: "." },
   methodColumns: [
-    "On commence par comprendre ce que vous vendez et à qui. Ensuite on écrit. Puis on tourne — plein format, lumière travaillée, son propre.",
+    "On commence par comprendre ce que vous vendez et à qui. Ensuite on écrit. Puis on tourne - plein format, lumière travaillée, son propre.",
     "L'étalonnage signature vient à la fin : c'est là que l'image devient reconnaissable. Rien n'est laissé au hasard, jamais de gabarit.",
     "Livraison en 5 jours ouvrés, formats prêts à publier. Devis sous 24-48h, tarifs en FCFA, tout est écrit.",
   ],
@@ -196,7 +196,7 @@ const SERVICES_CONTENT: ServicesContent = {
       kicker: "Films premium",
       title: "Mariage",
       intro:
-        "Un mariage ne se rejoue pas. On le traite comme un film : intention, silence, émotion — jamais du montage automatique.",
+        "Un mariage ne se rejoue pas. On le traite comme un film : intention, silence, émotion - jamais du montage automatique.",
       packs: [
         {
           id: "mariage-souvenir",
@@ -289,12 +289,12 @@ const SERVICES_CONTENT: ServicesContent = {
         values: ["350 000 F", "650 000 F", "1 200 000 F"],
       },
       { key: "videos", label: "Vidéos par mois", values: ["4", "8", "12"] },
-      { key: "photos", label: "Photos HD", values: ["—", "3", "10"] },
+      { key: "photos", label: "Photos HD", values: ["-", "3", "10"] },
       {
         key: "film-de-marque",
         label: "Vidéo pub cinéma",
         values: [
-          "—",
+          "-",
           "1 par trimestre, 60-90s",
           "1 par trimestre, 90-120s, multilingue possible",
         ],
@@ -302,9 +302,9 @@ const SERVICES_CONTENT: ServicesContent = {
       {
         key: "evenementiel",
         label: "Couvertures événementielles",
-        values: ["—", "—", "2 par an"],
+        values: ["-", "-", "2 par an"],
       },
-      { key: "variantes", label: "Variantes par mois", values: ["—", "2", "4"] },
+      { key: "variantes", label: "Variantes par mois", values: ["-", "2", "4"] },
       {
         key: "delais",
         label: "Délais de livraison",
@@ -317,7 +317,7 @@ const SERVICES_CONTENT: ServicesContent = {
       {
         key: "bilans",
         label: "Bilans",
-        values: ["—", "Bilan trimestriel", "Bilan annuel de 3h"],
+        values: ["-", "Bilan trimestriel", "Bilan annuel de 3h"],
       },
       {
         key: "stockage",
@@ -338,21 +338,21 @@ const SERVICES_CONTENT: ServicesContent = {
     addOns: [
       {
         key: "drone-entreprise",
-        title: "Drone — entreprises et immobilier",
+        title: "Drone - entreprises et immobilier",
         priceXof: 50000,
         priceUnit: "par vidéo",
         description: "Autorisations, pilote, plans aériens étalonnés.",
       },
       {
         key: "drone-mariage",
-        title: "Drone — mariage",
+        title: "Drone - mariage",
         priceXof: 100000,
         priceUnit: "une cérémonie",
         description: "Les plans aériens de la journée, sur une cérémonie.",
       },
       {
         key: "drone-mariage-multiple",
-        title: "Drone — mariage, plusieurs cérémonies",
+        title: "Drone - mariage, plusieurs cérémonies",
         priceXof: 200000,
         priceUnit: "",
         description: "Les mêmes plans aériens, sur l'ensemble des cérémonies.",
@@ -604,7 +604,7 @@ const BOUTIQUE_CONTENT: BoutiqueContent = {
       sku: "LUT-03",
       family: "luts",
       slug: "ambiances-nostalgie-luxe-froid",
-      title: "Ambiances — Nostalgie / Luxe / Froid",
+      title: "Ambiances - Nostalgie / Luxe / Froid",
       format: "Fichiers .cube",
       summary: "3 ambiances signatures pour vlogs et pubs.",
       priceXof: 12000,
@@ -623,7 +623,7 @@ const ABOUT_CONTENT: AboutContent = {
   headline: { lead: "Des ", emphasis: "œuvres", trail: ", pas du contenu." },
   story: {
     paragraphs: [
-      "WeCreate est né d'un refus : celui de la vidéo tiède. Au Bénin, presque tout le monde « fait du contenu ». Nous fabriquons des images qui marquent — parce qu'une image qui marque est une image qui vend.",
+      "WeCreate est né d'un refus : celui de la vidéo tiède. Au Bénin, presque tout le monde « fait du contenu ». Nous fabriquons des images qui marquent - parce qu'une image qui marque est une image qui vend.",
       "Le studio est basé à Calavi Tankpè. Nous intervenons partout au Bénin : Cotonou, Porto-Novo, Ouidah, Parakou, et à l'international sur devis.",
     ],
     brandStatement:
@@ -690,7 +690,7 @@ const ABOUT_CONTENT: AboutContent = {
     items: [
       {
         key: "boitier",
-        title: "Sony ZV-E1 — plein format",
+        title: "Sony ZV-E1 - plein format",
         description: "Basses lumières, S-Log3, stabilisation active.",
       },
       {
@@ -754,7 +754,7 @@ const CONTACT_CONTENT: ContactContent = {
     emailNote:
       "Factures, documents, questions administratives. Pour un projet, WhatsApp va plus vite.",
     socialKicker: "Réseaux",
-    locationNote: "Studio à Calavi Tankpè, Bénin — sur rendez-vous.",
+    locationNote: "Studio à Calavi Tankpè, Bénin - sur rendez-vous.",
   },
   gettingStarted: {
     kicker: "Comment démarrer",
@@ -831,7 +831,7 @@ const LEGAL_DOCUMENTS: LegalDocument[] = [
             key: "objet",
             heading: "Objet",
             paragraphs: [
-              "Ces conditions régiront la vente des produits numériques de WeCreate — ebooks, guides, LUTs et presets — payés en intégralité en ligne et livrés automatiquement après confirmation du paiement.",
+              "Ces conditions régiront la vente des produits numériques de WeCreate - ebooks, guides, LUTs et presets - payés en intégralité en ligne et livrés automatiquement après confirmation du paiement.",
               "Les prestations vidéo ne sont pas vendues sur ce site. Un pack de services ouvre une conversation : le devis, le planning et les conditions se décident hors ligne, et aucun paiement de prestation ne transite par le site.",
             ],
           },
@@ -873,7 +873,7 @@ const LEGAL_DOCUMENTS: LegalDocument[] = [
             key: "livraison",
             heading: "Livraison",
             paragraphs: [
-              "Un produit numérique est livré dès que le paiement est confirmé par le prestataire de paiement — et non au retour du navigateur sur le site, qui ne prouve rien.",
+              "Un produit numérique est livré dès que le paiement est confirmé par le prestataire de paiement - et non au retour du navigateur sur le site, qui ne prouve rien.",
               "L'accès est envoyé par email et reste ouvert pendant une durée limitée, sans création de compte. Les liens de téléchargement sont temporaires et peuvent être réémis.",
             ],
           },
@@ -881,7 +881,7 @@ const LEGAL_DOCUMENTS: LegalDocument[] = [
             key: "remboursement",
             heading: "Remboursement",
             paragraphs: [
-              "Un produit numérique est délivré immédiatement et en entier. Le texte définitif précisera les cas ouvrant droit à remboursement — non-livraison, double paiement, fichier inexploitable.",
+              "Un produit numérique est délivré immédiatement et en entier. Le texte définitif précisera les cas ouvrant droit à remboursement - non-livraison, double paiement, fichier inexploitable.",
               "Aucun remboursement n'est décidé ni exécuté automatiquement par le site : une demande est traitée par une personne, sous la politique validée par WeCreate.",
             ],
           },
@@ -955,7 +955,7 @@ const LEGAL_DOCUMENTS: LegalDocument[] = [
             heading: "Données collectées",
             paragraphs: [
               "En naviguant : rien qui vous identifie. Ce site ne pose aucun cookie publicitaire et ne charge aucun script tiers de suivi.",
-              "En achetant : nom complet, email, téléphone international et, si vous le renseignez, le nom de votre société. Rien d'autre — ni adresse postale, ni compte client.",
+              "En achetant : nom complet, email, téléphone international et, si vous le renseignez, le nom de votre société. Rien d'autre - ni adresse postale, ni compte client.",
             ],
           },
           {
@@ -1009,7 +1009,7 @@ const LEGAL_DOCUMENTS: LegalDocument[] = [
             key: "contact",
             heading: "Contact",
             paragraphs: [
-              "Les coordonnées publiques de WeCreate — WhatsApp, appel découverte, email administratif — sont celles de la page Contact et du pied de page de ce site.",
+              "Les coordonnées publiques de WeCreate - WhatsApp, appel découverte, email administratif - sont celles de la page Contact et du pied de page de ce site.",
             ],
           },
           {
@@ -1079,13 +1079,13 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
       navigationHeading: "Navigation",
       contactHeading: "Contact",
       socialHeading: "Réseaux",
-      legalLine: "WeCreate — Calavi Tankpè, Bénin",
+      legalLine: "WeCreate - Calavi Tankpè, Bénin",
     },
     seo: {
       siteName: "WeCreate",
       titleTemplate: "%s · WeCreate",
       defaultTitle:
-        "WeCreate — Production vidéo cinématographique à Calavi Tankpè",
+        "WeCreate - Production vidéo cinématographique à Calavi Tankpè",
       defaultDescription:
         "Agence de production vidéo cinématographique à Calavi Tankpè, Bénin. Entreprises, immobilier, mariage : écriture, tournage plein format et étalonnage signature.",
       openGraphImageUrl: null,
@@ -1094,9 +1094,9 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
   },
   homePage: {
     seo: {
-      title: "WeCreate — Production vidéo cinématographique",
+      title: "WeCreate - Production vidéo cinématographique",
       description:
-        "On ne capture pas des images. Écriture, mise en scène, plein format, étalonnage signature — chaque vidéo est traitée comme une œuvre.",
+        "On ne capture pas des images. Écriture, mise en scène, plein format, étalonnage signature - chaque vidéo est traitée comme une œuvre.",
       openGraphImageUrl: null,
     },
     hero: {
@@ -1107,7 +1107,7 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
         trail: " qui font vendre.",
       },
       subtitle:
-        "On ne capture pas des images. Écriture, mise en scène, plein format, étalonnage signature — chaque vidéo est traitée comme une œuvre.",
+        "On ne capture pas des images. Écriture, mise en scène, plein format, étalonnage signature - chaque vidéo est traitée comme une œuvre.",
       primaryCta: {
         label: "Voir le portfolio",
         href: "/portfolio",

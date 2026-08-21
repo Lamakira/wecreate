@@ -15,8 +15,8 @@ const REPEATS = 3;
  */
 export function PositioningMarquee({ marquee }: PositioningMarqueeProps) {
   const line = `${Array.from({ length: REPEATS }, () => marquee.text).join(
-    "  —  ",
-  )}  —  `;
+    "  -  ",
+  )}  -  `;
 
   return (
     <div

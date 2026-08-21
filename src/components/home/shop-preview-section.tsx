@@ -89,7 +89,7 @@ export function ShopPreviewSection({
                     href={productPath(product.slug)}
                     className="border-b border-wc-muted pb-1 text-micro tracking-20 uppercase transition-colors duration-300 hover:border-wc-white"
                   >
-                    <span className="sr-only">{product.title} — </span>
+                    <span className="sr-only">{product.title} - </span>
                     {section.linkLabel}
                   </Link>
                 </div>

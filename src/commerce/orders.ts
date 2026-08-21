@@ -126,7 +126,7 @@ export const PAYMENT_STATE_MARKS: Record<PaymentState, string> = {
   pending: "…",
   approved: "✓",
   failed: "×",
-  cancelled: "—",
+  cancelled: "-",
 };
 
 /**

@@ -124,7 +124,7 @@ export function ProductView({
                       className="flex gap-3 text-body font-light text-wc-ink"
                     >
                       <span aria-hidden="true" className="text-wc-pure">
-                        —
+                        -
                       </span>
                       {inclusion}
                     </li>
@@ -197,7 +197,7 @@ export function ProductView({
                     className="border-b border-wc-muted-on-light pb-1 transition-colors duration-300 hover:border-wc-pure"
                   >
                     {boutique.licence.linkLabel}
-                    <span className="sr-only"> — {licence.title}</span>
+                    <span className="sr-only"> - {licence.title}</span>
                   </Link>{" "}
                   <span className="text-wc-muted-on-light">
                     · en vigueur depuis le{" "}
@@ -231,7 +231,7 @@ export function ProductView({
                   className="border-b border-wc-muted-on-light pb-1 transition-colors duration-300 hover:border-wc-pure"
                 >
                   {boutique.support.whatsappLabel}
-                  <span className="sr-only"> — nouvel onglet</span>
+                  <span className="sr-only"> - nouvel onglet</span>
                 </a>
                 <a
                   href={`mailto:${contact.email}?subject=${encodeURIComponent(product.title)}`}

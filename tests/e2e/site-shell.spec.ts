@@ -16,7 +16,7 @@ test.describe("Site shell", () => {
     await page.mouse.wheel(0, 2000);
     await expect(header).toBeInViewport();
     await expect(
-      page.getByRole("link", { name: "WeCreate — accueil" }),
+      page.getByRole("link", { name: "WeCreate - accueil" }),
     ).toBeVisible();
   });
 
@@ -116,7 +116,7 @@ test.describe("Site shell", () => {
     };
 
     const logo = await leftEdgeOf(
-      page.getByRole("banner").getByRole("link", { name: "WeCreate — accueil" }),
+      page.getByRole("banner").getByRole("link", { name: "WeCreate - accueil" }),
     );
 
     const bands = {
@@ -130,7 +130,7 @@ test.describe("Site shell", () => {
         name: "La différence WeCreate",
       }),
       "footer logo": page.getByRole("contentinfo").locator("img").first(),
-      "footer legal line": page.getByText("WeCreate — Calavi Tankpè, Bénin"),
+      "footer legal line": page.getByText("WeCreate - Calavi Tankpè, Bénin"),
     };
 
     for (const [name, locator] of Object.entries(bands)) {

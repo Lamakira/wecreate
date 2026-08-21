@@ -67,7 +67,7 @@ export function ServicePackCard({
             className="flex gap-2.5 text-body-sm font-light text-wc-soft"
           >
             <span aria-hidden="true" className="text-wc-white">
-              —
+              -
             </span>
             {inclusion}
           </li>
