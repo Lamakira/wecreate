@@ -16,8 +16,11 @@ export const dataset = process.env.NEXT_PUBLIC_SANITY_DATASET ?? "production";
 export const apiVersion = process.env.NEXT_PUBLIC_SANITY_API_VERSION ?? "2026-08-01";
 
 /**
- * Server-only. Grants read access to unpublished documents, so it must never
- * reach the browser and is only used on the preview path.
+ * Server-only. Never prefix with NEXT_PUBLIC_: it can read unpublished
+ * documents, and it must never reach the browser. Preview uses it for the
+ * drafts perspective. Published pages use it too, still asking only for
+ * published documents, because some of those documents are absent from the
+ * anonymous API.
  */
 export const readToken = process.env.SANITY_API_READ_TOKEN ?? "";
 

@@ -125,12 +125,19 @@ jobs:
           # serves a policy that blocks its own file handover.
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           WECREATE_COMMERCE_PROVIDER: ${{ vars.WECREATE_COMMERCE_PROVIDER }}
+          # Not compiled into the browser bundle. Needed at `next build` so
+          # prerendered pages can read published types the anonymous Sanity API
+          # omits. The server still carries its own copy in shared/env for
+          # request-time reads; unset here, those placeholders last until the
+          # first runtime fetch with that copy.
+          SANITY_API_READ_TOKEN: ${{ secrets.SANITY_API_READ_TOKEN }}
         run: |
           set -euo pipefail
           for name in NEXT_PUBLIC_SITE_URL NEXT_PUBLIC_SANITY_PROJECT_ID \
                       NEXT_PUBLIC_SANITY_DATASET NEXT_PUBLIC_SANITY_API_VERSION \
                       NEXT_PUBLIC_MUX_ENV_KEY WECREATE_ALLOW_INDEXING \
-                      WECREATE_COMMERCE_PROVIDER SUPABASE_URL; do
+                      WECREATE_COMMERCE_PROVIDER SUPABASE_URL \
+                      SANITY_API_READ_TOKEN; do
             value="${!name}"
             if [ -n "$value" ]; then
               printf '%s=%s\n' "$name" "$value" >> "$GITHUB_ENV"
