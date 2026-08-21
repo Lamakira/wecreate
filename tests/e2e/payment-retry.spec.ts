@@ -424,6 +424,12 @@ test.describe("What suppresses the retry", () => {
     page.on("request", (sent) => {
       const invokesAnAction = Boolean(sent.headers()["next-action"]);
       if (invokesAnAction || sent.url().startsWith(FEDAPAY_HOSTED_ORIGIN)) {
+        // `router.refresh()` POSTs this document so the heading can change
+        // without a reload. That is a read of the order, not a new payment.
+        const path = new URL(sent.url()).pathname;
+        if (invokesAnAction && path === "/commande/retour") {
+          return;
+        }
         acted.push(`${sent.method()} ${sent.url()}`);
       }
     });

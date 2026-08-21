@@ -6,6 +6,7 @@ import { ServiceComparisonSection } from "@/components/services/service-comparis
 import { ServiceEnquiryNotice } from "@/components/services/service-enquiry-notice";
 import { ServiceUniverseSection } from "@/components/services/service-universe-section";
 import { readServices, readSiteSettings } from "@/managed-content";
+import { pageOpenGraph } from "@/seo/open-graph";
 import type { ServiceEnquiryContext } from "@/service-enquiry/enquiry";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -15,11 +16,11 @@ export async function generateMetadata(): Promise<Metadata> {
     title: seo.title,
     description: seo.description,
     alternates: { canonical: "/services" },
-    openGraph: {
+    openGraph: await pageOpenGraph({
       title: seo.title,
       description: seo.description,
-      images: seo.openGraphImageUrl ? [seo.openGraphImageUrl] : undefined,
-    },
+      imageUrl: seo.openGraphImageUrl,
+    }),
   };
 }
 

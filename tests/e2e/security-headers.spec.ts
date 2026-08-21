@@ -89,7 +89,13 @@ test.describe("Security headers", () => {
     // pointing anywhere is still refused.
     const scriptSrc = policy.get("script-src") ?? "";
     expect(scriptSrc).toContain("'self'");
-    expect(scriptSrc).not.toContain("http");
+    expect(scriptSrc).toContain("https://static.cloudflareinsights.com");
+    // Plain HTTP origins are still refused; the Cloudflare host is the one
+    // exception this ticket added, for the Web Analytics beacon.
+    expect(scriptSrc).not.toMatch(/(?:^|\s)http:/);
+
+    const connectSrc = policy.get("connect-src") ?? "";
+    expect(connectSrc).toContain("https://cloudflareinsights.com");
   });
 
   test("does not lend the public site the Studio's relaxations", async ({

@@ -10,6 +10,7 @@ export function DraftModeBanner() {
       data-testid="draft-mode-banner"
       className="fixed inset-x-0 bottom-0 z-1001 flex flex-wrap items-center justify-center gap-4 border-t border-wc-border bg-wc-pure px-gutter py-3 text-micro tracking-20 uppercase text-wc-white"
     >
+      <meta name="robots" content="noindex, nofollow" />
       <span>Aperçu du contenu non publié</span>
       <a
         href="/api/draft/disable"

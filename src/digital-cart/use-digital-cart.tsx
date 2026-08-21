@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 
+import { track } from "@/measurement";
 import {
   acknowledgeCartPricesAction,
   addProductToCartAction,
@@ -155,7 +156,11 @@ export function DigitalCartProvider({ children }: { children: ReactNode }) {
       // now says *Voir dans le panier* does what it says instead of spending a
       // round trip on a request that would change nothing.
       if (!view?.lines.some((line) => line.id === productId)) {
-        run(() => addProductToCartAction(productId));
+        run(async () => {
+          const next = await addProductToCartAction(productId);
+          track({ name: "product_added", product: productId });
+          return next;
+        });
       }
     },
     [run, view],

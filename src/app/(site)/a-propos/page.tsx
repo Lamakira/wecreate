@@ -6,6 +6,7 @@ import { AboutStorySection } from "@/components/about/about-story-section";
 import { CapabilityColumn } from "@/components/about/capability-column";
 import { SplitHeading } from "@/components/primitives/split-heading";
 import { readAbout } from "@/managed-content";
+import { pageOpenGraph } from "@/seo/open-graph";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { seo } = await readAbout();
@@ -14,11 +15,11 @@ export async function generateMetadata(): Promise<Metadata> {
     title: seo.title,
     description: seo.description,
     alternates: { canonical: "/a-propos" },
-    openGraph: {
+    openGraph: await pageOpenGraph({
       title: seo.title,
       description: seo.description,
-      images: seo.openGraphImageUrl ? [seo.openGraphImageUrl] : undefined,
-    },
+      imageUrl: seo.openGraphImageUrl,
+    }),
   };
 }
 

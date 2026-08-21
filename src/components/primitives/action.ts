@@ -10,7 +10,7 @@
 export const ACTION_SIZES = {
   /** An action standing on its own in a section. */
   default:
-    "inline-block whitespace-nowrap px-7 py-[17px] text-button font-semibold tracking-18 uppercase",
+    "inline-block max-w-full px-7 py-[17px] text-button font-semibold tracking-18 uppercase",
   /** One of a stack filling the foot of a card or a drawer, at its smaller type. */
   block:
     "block w-full px-5 py-[15px] text-center text-micro font-semibold tracking-18 uppercase",

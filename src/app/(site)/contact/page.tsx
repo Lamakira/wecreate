@@ -4,6 +4,7 @@ import { ContactChannelsSection } from "@/components/contact/contact-channels-se
 import { GettingStartedSection } from "@/components/contact/getting-started-section";
 import { SplitHeading } from "@/components/primitives/split-heading";
 import { readContact, readSiteSettings } from "@/managed-content";
+import { pageOpenGraph } from "@/seo/open-graph";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { seo } = await readContact();
@@ -12,11 +13,11 @@ export async function generateMetadata(): Promise<Metadata> {
     title: seo.title,
     description: seo.description,
     alternates: { canonical: "/contact" },
-    openGraph: {
+    openGraph: await pageOpenGraph({
       title: seo.title,
       description: seo.description,
-      images: seo.openGraphImageUrl ? [seo.openGraphImageUrl] : undefined,
-    },
+      imageUrl: seo.openGraphImageUrl,
+    }),
   };
 }
 
@@ -52,7 +53,7 @@ export default async function ContactPage() {
         </p>
       </section>
 
-      <div className="wc-container grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] items-start gap-[clamp(28px,4vw,72px)] pb-section-sm">
+      <div className="wc-container grid grid-cols-[repeat(auto-fit,minmax(min(300px,100%),1fr))] items-start gap-[clamp(28px,4vw,72px)] pb-section-sm">
         <ContactChannelsSection
           channels={contact.channels}
           contact={settings.contact}

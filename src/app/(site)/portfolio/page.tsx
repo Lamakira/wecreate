@@ -3,6 +3,7 @@ import { draftMode } from "next/headers";
 
 import { PortfolioGallery } from "@/components/portfolio/portfolio-gallery";
 import { readPortfolio } from "@/managed-content";
+import { pageOpenGraph } from "@/seo/open-graph";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { seo } = await readPortfolio();
@@ -11,11 +12,11 @@ export async function generateMetadata(): Promise<Metadata> {
     title: seo.title,
     description: seo.description,
     alternates: { canonical: "/portfolio" },
-    openGraph: {
+    openGraph: await pageOpenGraph({
       title: seo.title,
       description: seo.description,
-      images: seo.openGraphImageUrl ? [seo.openGraphImageUrl] : undefined,
-    },
+      imageUrl: seo.openGraphImageUrl,
+    }),
   };
 }
 

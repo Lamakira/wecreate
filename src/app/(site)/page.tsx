@@ -9,6 +9,7 @@ import { RecentWorkSection } from "@/components/home/recent-work-section";
 import { ShopPreviewSection } from "@/components/home/shop-preview-section";
 import { UniversesSection } from "@/components/home/universes-section";
 import { readBoutique, readHomePage, readPortfolio } from "@/managed-content";
+import { pageOpenGraph } from "@/seo/open-graph";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { seo } = await readHomePage();
@@ -17,11 +18,11 @@ export async function generateMetadata(): Promise<Metadata> {
     title: seo.title,
     description: seo.description,
     alternates: { canonical: "/" },
-    openGraph: {
+    openGraph: await pageOpenGraph({
       title: seo.title,
       description: seo.description,
-      images: seo.openGraphImageUrl ? [seo.openGraphImageUrl] : undefined,
-    },
+      imageUrl: seo.openGraphImageUrl,
+    }),
   };
 }
 

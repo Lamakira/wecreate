@@ -8,6 +8,10 @@ import { SiteFooter } from "@/components/shell/site-footer";
 import { SiteShell } from "@/components/shell/site-shell";
 import { DigitalCartProvider } from "@/digital-cart/use-digital-cart";
 import { readEffectiveLegalTerms, readSiteSettings } from "@/managed-content";
+import { SiteMeasurement } from "@/measurement";
+import { localBusinessJsonLd } from "@/seo/json-ld";
+import { JsonLdScript } from "@/seo/json-ld-script";
+import { pageOpenGraph } from "@/seo/open-graph";
 import { isIndexable, siteUrl } from "@/site-config";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -21,16 +25,17 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     description: seo.defaultDescription,
     applicationName: seo.siteName,
-    openGraph: {
-      type: "website",
-      siteName: seo.siteName,
-      locale: seo.openGraphLocale,
+    openGraph: await pageOpenGraph({
       title: seo.defaultTitle,
       description: seo.defaultDescription,
-      images: seo.openGraphImageUrl ? [seo.openGraphImageUrl] : undefined,
-    },
-    // Staging and preview deployments stay out of search results entirely.
-    robots: isIndexable() ? { index: true, follow: true } : { index: false, follow: false },
+      imageUrl: seo.openGraphImageUrl,
+    }),
+    // Staging is noindex on every page. Preview is a second, per-session
+    // rule: DraftModeBanner emits its own robots meta, because calling
+    // draftMode() here would make every public page's metadata dynamic.
+    robots: !isIndexable()
+      ? { index: false, follow: false }
+      : { index: true, follow: true },
   };
 }
 
@@ -53,6 +58,11 @@ export default async function SiteLayout({ children }: { children: ReactNode }) 
 
   return (
     <DigitalCartProvider>
+      <a href="#contenu" className="skip-to-content">
+        Aller au contenu
+      </a>
+      <JsonLdScript data={localBusinessJsonLd(settings, siteUrl())} />
+      <SiteMeasurement />
       <GrainOverlay />
       <SiteShell settings={settings}>
         <main id="contenu" className="pt-header-offset">

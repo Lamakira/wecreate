@@ -72,7 +72,7 @@ export function ProductView({
           ← {boutique.backLabel}
         </Link>
 
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] items-start gap-[clamp(28px,4vw,72px)]">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(300px,100%),1fr))] items-start gap-[clamp(28px,4vw,72px)]">
           <div className="relative">
             <MediaFrame
               media={product.cover}

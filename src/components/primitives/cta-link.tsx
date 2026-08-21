@@ -20,6 +20,26 @@ export function opensNewTab(href: string): boolean {
   return /^(https?:)?\/\//i.test(href);
 }
 
+/**
+ * Whether following this destination starts a Service Enquiry, and which one.
+ *
+ * Inferred from the address itself so an editor who points the header CTA at
+ * WhatsApp does not also have to mark it as an enquiry. A product-support
+ * WhatsApp link is a plain `<a>` elsewhere and is not classified here, which
+ * is how a question about an ebook stays out of Service Enquiry measurement.
+ */
+export function enquiryDestination(
+  href: string,
+): "whatsapp" | "discovery_call" | undefined {
+  if (/wa\.me|whatsapp\.com/i.test(href)) {
+    return "whatsapp";
+  }
+  if (/calendly\.com/i.test(href)) {
+    return "discovery_call";
+  }
+  return undefined;
+}
+
 const VARIANTS = {
   /** Solid white on dark: the primary action. */
   solid:
@@ -64,11 +84,14 @@ export function CtaLink({
   ]
     .filter(Boolean)
     .join(" ");
+  const enquiry = enquiryDestination(cta.href);
+  const newTab = opensNewTab(cta.href);
 
   const content = (
     <>
       {cta.label}
       {context ? <span className="sr-only"> - {context}</span> : null}
+      {newTab ? <span className="sr-only"> (nouvel onglet)</span> : null}
     </>
   );
 
@@ -76,9 +99,8 @@ export function CtaLink({
     return (
       <a
         href={cta.href}
-        {...(opensNewTab(cta.href)
-          ? { target: "_blank", rel: "noopener noreferrer" }
-          : undefined)}
+        {...(newTab ? { target: "_blank", rel: "noopener noreferrer" } : undefined)}
+        {...(enquiry ? { "data-enquiry": enquiry } : undefined)}
         className={classes}
       >
         {content}

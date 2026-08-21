@@ -1,4 +1,4 @@
-import { opensNewTab } from "@/components/primitives/cta-link";
+import { enquiryDestination, opensNewTab } from "@/components/primitives/cta-link";
 
 /**
  * One of the three ways to reach WeCreate.
@@ -37,12 +37,14 @@ export function ContactChannel({
   note,
 }: ContactChannelProps) {
   const newTab = opensNewTab(href);
+  const enquiry = enquiryDestination(href);
 
   return (
     <li data-testid="contact-channel">
       <a
         href={href}
         {...(newTab ? { target: "_blank", rel: "noopener noreferrer" } : undefined)}
+        {...(enquiry ? { "data-enquiry": enquiry } : undefined)}
         className="inline-block border-b border-wc-border pb-3 font-display text-[clamp(22px,2.4vw,30px)] transition-colors duration-300 hover:text-wc-soft"
       >
         {announcedKind ? (

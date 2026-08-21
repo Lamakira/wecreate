@@ -1,6 +1,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
 import { ManagedContent } from "./support/managed-content";
+import { thirdPartyRequests } from "./support/third-party";
 
 /**
  * Services, and the Service Enquiry they end in.
@@ -227,11 +228,9 @@ test.describe("Services", () => {
     baseURL,
   }) => {
     const origin = new URL(baseURL!).origin;
-    const foreignRequests: string[] = [];
+    const seen: string[] = [];
     page.on("request", (request) => {
-      if (!request.url().startsWith(origin)) {
-        foreignRequests.push(request.url());
-      }
+      seen.push(request.url());
     });
 
     await page.goto("/services", { waitUntil: "networkidle" });
@@ -247,8 +246,9 @@ test.describe("Services", () => {
     await expect(link).toHaveAttribute("rel", /noopener/);
 
     // Rendering the page contacts nobody: no Calendly script, no iframe, no
-    // third party on the critical path of a Benin mobile connection.
-    expect(foreignRequests).toEqual([]);
+    // transactional third party on the critical path of a Benin mobile
+    // connection. Cloudflare Web Analytics is the CDN's own beacon (ADR-0011).
+    expect(thirdPartyRequests(seen, origin)).toEqual([]);
     await expect(page.locator("iframe")).toHaveCount(0);
 
     // Whatever the calendar is doing, WhatsApp is beside it on every pack.

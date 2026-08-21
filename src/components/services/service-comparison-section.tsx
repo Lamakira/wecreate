@@ -44,7 +44,7 @@ export function ServiceComparisonSection({
           tabIndex={0}
           role="region"
           aria-label={comparison.caption}
-          className="overflow-x-auto"
+          className="max-w-full min-w-0 overflow-x-auto"
         >
           <table className="w-full min-w-[620px] border-collapse text-body-sm">
             <caption className="sr-only">{comparison.caption}</caption>
