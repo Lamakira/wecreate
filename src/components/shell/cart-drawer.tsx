@@ -195,7 +195,7 @@ function CartLine({ line, onFollow, onRemove }: CartLineProps) {
       data-availability={line.availability}
       className="flex gap-3.5 border-b border-wc-line-darker py-5"
     >
-      <div className="flex-1">
+      <div className="flex flex-1 flex-col items-start">
         <Link
           href={line.path}
           onClick={onFollow}
@@ -209,7 +209,7 @@ function CartLine({ line, onFollow, onRemove }: CartLineProps) {
             data-testid="cart-line-unavailable"
             className="m-0 mt-1.5 text-body-sm font-light text-wc-muted-2"
           >
-            {AVAILABILITY_LABELS[line.availability]} — retirez ce produit pour
+            {AVAILABILITY_LABELS[line.availability]} - retirez ce produit pour
             continuer.
           </p>
         )}
