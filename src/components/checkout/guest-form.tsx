@@ -58,15 +58,15 @@ export function GuestForm({ totalXof, mustAccept }: GuestFormProps) {
         <div
           role="alert"
           data-testid="checkout-errors"
-          className="border border-wc-pure p-5"
+          className="border border-wc-error p-5"
         >
-          <p className="m-0 text-body font-semibold">
+          <p className="m-0 text-body font-semibold text-wc-error">
             {message ?? "Votre commande n'a pas pu être lancée."}
           </p>
           {refused.length > 0 ? (
             <ul className="m-0 mt-3 flex list-none flex-col gap-1.5 p-0">
               {refused.map((refusal) => (
-                <li key={refusal} className="text-body-sm font-light text-wc-ink">
+                <li key={refusal} className="text-body-sm font-light text-wc-error">
                   {GUEST_REFUSAL_LABELS[refusal]}
                 </li>
               ))}
@@ -152,7 +152,7 @@ export function GuestForm({ totalXof, mustAccept }: GuestFormProps) {
                     className="border-b border-wc-muted-on-light pb-0.5 transition-colors duration-300 hover:border-wc-pure"
                   >
                     Lire {revision.title}
-                    <span className="sr-only"> — nouvel onglet</span>
+                    <span className="sr-only"> - nouvel onglet</span>
                   </Link>
                 </p>
               </div>
@@ -240,12 +240,11 @@ function Field({
         aria-required={optional ? undefined : true}
         aria-invalid={refusal ? true : undefined}
         aria-describedby={described || undefined}
-        // A refused field is thicker and black rather than a different colour:
-        // this identity has no red to spend, and a border weight is readable
-        // without one.
+        // A refused field is red as well as thicker: the weight alone reads as
+        // emphasis, and an error a buyer cannot spot is one they cannot fix.
         className={`mt-2.5 block w-full bg-transparent px-4 py-3.5 text-body font-light text-wc-pure ${
           refusal
-            ? "border-2 border-wc-pure"
+            ? "border-2 border-wc-error"
             : "border border-wc-muted-on-light"
         }`}
       />
@@ -273,7 +272,7 @@ function FieldError({
     <p
       id={`error-${field}`}
       data-testid={`error-${field}`}
-      className="m-0 mt-2 text-body-sm font-semibold text-wc-pure"
+      className="m-0 mt-2 text-body-sm font-semibold text-wc-error"
     >
       {GUEST_REFUSAL_LABELS[refusal]}
     </p>

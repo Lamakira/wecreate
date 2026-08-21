@@ -97,7 +97,7 @@ export function CommerceNotice({ message }: { message: string | undefined }) {
       data-tone={resolved.tone}
       className={
         resolved.tone === "error"
-          ? "m-0 mb-8 border border-wc-white px-4 py-3 text-body font-light text-wc-white"
+          ? "m-0 mb-8 border border-wc-error-on-dark px-4 py-3 text-body font-light text-wc-error-on-dark"
           : "m-0 mb-8 border border-wc-border px-4 py-3 text-body font-light text-wc-soft"
       }
     >

@@ -115,6 +115,13 @@
   --color-wc-line-light: #eeeeee;
   --color-wc-ink: #333333;
   --color-wc-white: #ffffff;
+  /* Error states, and nothing else. The palette is otherwise strict black and
+   * white, but a refusal a buyer cannot spot at a glance is a refusal they
+   * cannot act on. Two values, for the same reason there are two muted greys:
+   * no single red reads on both grounds — #C81E1E passes 4.5:1 on white,
+   * #FF6B6B passes it on the darkest surfaces. */
+  --color-wc-error: #c81e1e;
+  --color-wc-error-on-dark: #ff6b6b;
 
   /* Typefaces */
   --font-display: "Playfair Display", "Iowan Old Style", "Palatino Linotype",
