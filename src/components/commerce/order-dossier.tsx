@@ -165,13 +165,14 @@ export function OrderDossierView({
         ) : null}
       </CommercePanel>
 
-      <BuyerPanel
-        reference={order.reference}
-        buyer={buyer}
-        correction={correction}
-        deliverTo={dossier.deliverTo}
-        access={dossier.access}
-      />
+        <BuyerPanel
+          reference={order.reference}
+          buyer={buyer}
+          correction={correction}
+          deliverTo={dossier.deliverTo}
+          access={dossier.access}
+          forgotten={dossier.personalDataForgotten}
+        />
 
       <AccessPanel dossier={dossier} versions={versions} />
 
@@ -270,12 +271,14 @@ function BuyerPanel({
   correction,
   deliverTo,
   access,
+  forgotten,
 }: {
   reference: string;
   buyer: OrderDossier["buyer"];
   correction: OrderDossier["correction"];
   deliverTo: string;
   access: OrderDossier["access"];
+  forgotten: boolean;
 }) {
   const sent = access
     ? `Dernier envoi : le reçu et les accès, adressés le ${formatMoment(access.issuedAt)}.`
@@ -286,36 +289,48 @@ function BuyerPanel({
       title="Acheteur"
       description="Ce que l'acheteuse ou l'acheteur a écrit reste tel quel sur le bon de commande. Une correction s'ajoute à côté, avec son motif et le nom de qui l'a faite."
     >
-      <dl
-        data-testid="dossier-buyer"
-        className="m-0 grid grid-cols-1 gap-2 text-body-sm font-light text-wc-soft sm:grid-cols-[10rem_1fr]"
-      >
-        <dt className="text-wc-muted-2">Nom</dt>
-        <dd className="m-0" data-testid="buyer-name">
-          {buyer.fullName}
-        </dd>
-        <dt className="text-wc-muted-2">E-mail saisi</dt>
-        <dd className="m-0" data-testid="buyer-email">
-          {buyer.email}
-        </dd>
-        <dt className="text-wc-muted-2">Téléphone saisi</dt>
-        <dd className="m-0" data-testid="buyer-telephone">
-          {buyer.telephone}
-        </dd>
-        {buyer.company ? (
-          <>
-            <dt className="text-wc-muted-2">Entreprise</dt>
-            <dd className="m-0">{buyer.company}</dd>
-          </>
-        ) : null}
-      </dl>
+      {forgotten ? (
+        <p
+          data-testid="buyer-forgotten"
+          className="m-0 text-body font-light text-wc-white"
+        >
+          Ces coordonnées ont été oubliées à l'issue de la période de
+          conservation.
+        </p>
+      ) : (
+        <>
+          <dl
+            data-testid="dossier-buyer"
+            className="m-0 grid grid-cols-1 gap-2 text-body-sm font-light text-wc-soft sm:grid-cols-[10rem_1fr]"
+          >
+            <dt className="text-wc-muted-2">Nom</dt>
+            <dd className="m-0" data-testid="buyer-name">
+              {buyer.fullName}
+            </dd>
+            <dt className="text-wc-muted-2">E-mail saisi</dt>
+            <dd className="m-0" data-testid="buyer-email">
+              {buyer.email}
+            </dd>
+            <dt className="text-wc-muted-2">Téléphone saisi</dt>
+            <dd className="m-0" data-testid="buyer-telephone">
+              {buyer.telephone}
+            </dd>
+            {buyer.company ? (
+              <>
+                <dt className="text-wc-muted-2">Entreprise</dt>
+                <dd className="m-0">{buyer.company}</dd>
+              </>
+            ) : null}
+          </dl>
 
-      <p
-        data-testid="deliver-to"
-        className="m-0 mt-4 text-body font-light text-wc-white"
-      >
-        Les envois partent vers {deliverTo}.
-      </p>
+          <p
+            data-testid="deliver-to"
+            className="m-0 mt-4 text-body font-light text-wc-white"
+          >
+            Les envois partent vers {deliverTo}.
+          </p>
+        </>
+      )}
       <p
         data-testid="email-intent"
         className="m-0 mt-2 text-body-sm font-light text-wc-soft"
@@ -336,34 +351,36 @@ function BuyerPanel({
         </p>
       ) : null}
 
-      <form
-        method="POST"
-        action={SUPPORT_ENDPOINT}
-        noValidate
-        data-testid="correct-contact"
-        className="mt-5 flex flex-col gap-4 sm:max-w-lg"
-      >
-        <input type="hidden" name="operation" value="correct-contact" />
-        <input type="hidden" name="reference" value={reference} />
-        <SupportField
-          label="E-mail corrigé"
-          name="email"
-          type="email"
-          hint="Laissez vide pour ne pas y toucher."
-        />
-        <SupportField
-          label="Téléphone corrigé"
-          name="telephone"
-          type="text"
-          hint="Format international, par exemple +229 01 97 00 00 00. Laissez vide pour ne pas y toucher."
-        />
-        <SupportField label="Motif de la correction" name="reason" type="text" />
-        <div>
-          <CommerceButton pendingLabel="Enregistrement…">
-            Enregistrer la correction
-          </CommerceButton>
-        </div>
-      </form>
+      {forgotten ? null : (
+        <form
+          method="POST"
+          action={SUPPORT_ENDPOINT}
+          noValidate
+          data-testid="correct-contact"
+          className="mt-5 flex flex-col gap-4 sm:max-w-lg"
+        >
+          <input type="hidden" name="operation" value="correct-contact" />
+          <input type="hidden" name="reference" value={reference} />
+          <SupportField
+            label="E-mail corrigé"
+            name="email"
+            type="email"
+            hint="Laissez vide pour ne pas y toucher."
+          />
+          <SupportField
+            label="Téléphone corrigé"
+            name="telephone"
+            type="text"
+            hint="Format international, par exemple +229 01 97 00 00 00. Laissez vide pour ne pas y toucher."
+          />
+          <SupportField label="Motif de la correction" name="reason" type="text" />
+          <div>
+            <CommerceButton pendingLabel="Enregistrement…">
+              Enregistrer la correction
+            </CommerceButton>
+          </div>
+        </form>
+      )}
     </CommercePanel>
   );
 }

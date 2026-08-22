@@ -13,6 +13,8 @@ import type { DigitalCartLine } from "@/digital-cart/cart";
 import type { EffectiveLegalRevision } from "@/managed-content/legal";
 import { getPaymentProvider, type PaymentProvider } from "@/payments/provider";
 import { PaymentProviderUnreachable } from "@/payments/types";
+import { capture } from "@/monitoring/provider";
+import { consume } from "@/security/rate-limit";
 import { siteUrl } from "@/site-config";
 
 import type { CheckoutFormState } from "./form";
@@ -195,7 +197,7 @@ export async function startPaymentAction(
    * correcting those is an audited support action (issue #15).
    */
   const opened = state.resuming
-    ? await both.commerce.openPaymentAttempt(state.resuming.reference)
+    ? await retryAttempt(both.commerce, state.resuming)
     : await create(both.commerce, {
         lines: state.cart.lines,
         buyer: submission.details,
@@ -203,6 +205,9 @@ export async function startPaymentAction(
         provider: both.payments.id,
       });
 
+  if (opened.status === "limited") {
+    return refuse("tooManyAttempts");
+  }
   if (opened.status === "refused") {
     // The order was settled or withdrawn between the page and the button. This
     // browser should stop pointing at it, and the buyer is sent back to a cart
@@ -234,7 +239,41 @@ export async function startPaymentAction(
 type OpenedAttempt =
   | { status: "opened"; order: OrderSnapshot; attempt: PaymentAttempt }
   | { status: "refused" }
+  | { status: "limited" }
   | { status: "withoutDeliverable" };
+
+/**
+ * Another attempt against an Order Snapshot that already exists.
+ *
+ * Rate-limited per order, because issue #1 asks for a cap on checkout retry
+ * and for unusual payment retries to be noticeable. The first payment is not
+ * a retry and is not counted here.
+ */
+async function retryAttempt(
+  commerce: CommerceProvider,
+  order: OrderSnapshot,
+): Promise<OpenedAttempt> {
+  if (!consume("checkout-retry", order.reference)) {
+    await capture({
+      kind: "unusual-payment-retries",
+      source: "server",
+      message: "Checkout retry exceeded the limit for this order.",
+      orderReference: order.reference,
+    });
+    return { status: "limited" };
+  }
+
+  const opened = await commerce.openPaymentAttempt(order.reference);
+  if (opened.status === "opened" && opened.order.attempts.length >= 5) {
+    await capture({
+      kind: "unusual-payment-retries",
+      source: "server",
+      message: "This order has been paid for several times without succeeding.",
+      orderReference: order.reference,
+    });
+  }
+  return opened;
+}
 
 /** Everything a new Order Snapshot is written from. */
 interface NewOrder {

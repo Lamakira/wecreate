@@ -18,6 +18,7 @@ export type CommerceMessageKey =
   | SupportRefusal
   | "signInRefused"
   | "codeRefused"
+  | "tooManyAttempts"
   | "sessionExpired"
   | "signedOut"
   | "versionCreated"
@@ -63,6 +64,10 @@ export const COMMERCE_MESSAGES: Record<CommerceMessageKey, CommerceMessage> = {
   codeRefused: {
     tone: "error",
     text: "Code refusé. Vérifiez l'heure de votre téléphone, puis réessayez.",
+  },
+  tooManyAttempts: {
+    tone: "error",
+    text: "Trop de tentatives. Réessayez dans quelques minutes.",
   },
   sessionExpired: {
     tone: "error",

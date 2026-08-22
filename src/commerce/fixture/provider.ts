@@ -305,7 +305,9 @@ function toOrderSnapshot(
     // Masked from where the order is actually going rather than from what the
     // buyer typed: somebody whose address WeCreate has corrected is looking for
     // the address their receipt went to.
-    buyerEmailHint: maskEmail(deliveryAddress(order.buyer, correctionOf(order))),
+    buyerEmailHint: order.personalDataForgottenAt
+      ? "***"
+      : maskEmail(deliveryAddress(order.buyer, correctionOf(order))),
     acceptedLegal: order.acceptedLegal,
     paymentState: order.paymentState,
     fulfillmentState: order.fulfillmentState,
@@ -689,6 +691,7 @@ export const fixtureCommerceProvider: CommerceProvider = {
             reference: order.reference,
             buyerEmail: order.buyer.email,
             correctedEmail: correctionOf(order)?.email ?? null,
+            personalDataForgotten: Boolean(order.personalDataForgottenAt),
           },
           search,
         ),
@@ -698,9 +701,9 @@ export const fixtureCommerceProvider: CommerceProvider = {
         reference: order.reference,
         createdAt: order.createdAt,
         totalXof: order.totalXof,
-        buyerEmailHint: maskEmail(
-          deliveryAddress(order.buyer, correctionOf(order)),
-        ),
+        buyerEmailHint: order.personalDataForgottenAt
+          ? "***"
+          : maskEmail(deliveryAddress(order.buyer, correctionOf(order))),
         paymentState: order.paymentState,
         fulfillmentState: order.fulfillmentState,
         outstanding: outstandingKinds(anomaliesOf(dataset, order.reference)),
@@ -715,11 +718,17 @@ export const fixtureCommerceProvider: CommerceProvider = {
     if (!order) return undefined;
 
     const correction = correctionOf(order);
+    const forgotten = Boolean(order.personalDataForgottenAt);
     return {
       order: toOrderSnapshot(dataset, order),
-      buyer: order.buyer,
-      correction,
-      deliverTo: deliveryAddress(order.buyer, correction),
+      buyer: forgotten
+        ? { fullName: "", email: "", telephone: "", company: null }
+        : order.buyer,
+      correction:
+        forgotten && correction
+          ? { ...correction, email: null, telephone: null }
+          : correction,
+      deliverTo: forgotten ? "" : deliveryAddress(order.buyer, correction),
       // The order they belong to is what this was looked up by, and repeating
       // it on every event would be the only thing on them that is not the
       // provider's own.
@@ -744,6 +753,7 @@ export const fixtureCommerceProvider: CommerceProvider = {
       audit: [...dataset.audit]
         .reverse()
         .filter((entry) => entry.orderReference === reference),
+      personalDataForgotten: forgotten,
     };
   },
 
@@ -1029,6 +1039,7 @@ export const fixtureCommerceProvider: CommerceProvider = {
         fulfillmentClaimId: null,
         fulfillmentClaimedAt: null,
         correction: null,
+        personalDataForgottenAt: null,
         attempts: [attempt],
       };
 

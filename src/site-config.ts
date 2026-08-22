@@ -23,6 +23,19 @@ export function siteUrl(): string {
 }
 
 /**
+ * Whether this deployment may mark cookies `Secure`.
+ *
+ * Production is HTTPS, so every credential cookie is Secure. The acceptance
+ * suite runs that same production build against `http://127.0.0.1`, and WebKit
+ * will not store a Secure cookie on http — Chromium and Firefox treat loopback
+ * as a secure context and hide the mismatch. The origin's protocol is the
+ * honest signal: HTTPS gets Secure, HTTP does not.
+ */
+export function cookiesAreSecure(): boolean {
+  return siteUrl().startsWith("https://");
+}
+
+/**
  * Staging and preview deployments must never be indexed. Only an explicitly
  * flagged production deployment is crawlable.
  */
@@ -118,5 +131,24 @@ export function areEmailTestHooksEnabled(): boolean {
   return (
     process.env.WECREATE_TEST_HOOKS === "1" &&
     process.env.WECREATE_EMAIL_PROVIDER === "fixture"
+  );
+}
+
+/**
+ * The same switch again, for captured failures.
+ *
+ * This one reads what the application asked its monitoring provider to
+ * record, which on a real deployment is a scrubbed event about an order or
+ * a signature. It is gated on the *monitoring* provider being the fixture
+ * for that reason: a run backed by Sentry has a real project, and nothing
+ * here may offer a way to read it.
+ *
+ * Resetting also empties the rate-limit buckets. They live in the same
+ * process, and a scenario that fills one would otherwise fail the next.
+ */
+export function areObservationTestHooksEnabled(): boolean {
+  return (
+    process.env.WECREATE_TEST_HOOKS === "1" &&
+    process.env.WECREATE_MONITORING_PROVIDER === "fixture"
   );
 }

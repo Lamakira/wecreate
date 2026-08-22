@@ -3,6 +3,7 @@ import "server-only";
 import { cookies } from "next/headers";
 
 import { ORDER_ACCESS_DAYS } from "@/commerce/order-access";
+import { cookiesAreSecure } from "@/site-config";
 
 import { isAccessToken } from "./token";
 
@@ -37,7 +38,7 @@ function cookieOptions() {
   return {
     httpOnly: true,
     sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
+    secure: cookiesAreSecure(),
     path: COOKIE_PATH,
     // As long as the access itself. A cookie that outlived it would only point
     // at something that can no longer be used.

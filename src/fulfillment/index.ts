@@ -10,7 +10,9 @@ import { getCommerceProvider } from "@/commerce/provider";
 import type { OpenDownloadOutcome } from "@/commerce/provider";
 import type { OrderAccess, OrderSnapshot } from "@/commerce/types";
 import { getEmailProvider } from "@/email/provider";
+import { EmailProviderUnreachable } from "@/email/types";
 import { readSiteSettings } from "@/managed-content";
+import { capture } from "@/monitoring/provider";
 import { siteUrl } from "@/site-config";
 
 import { composeReceipt } from "./receipt";
@@ -117,6 +119,16 @@ export async function deliverApprovedOrder(
     // operator has in front of them. Never the address, never the token, never
     // the message (issue #1).
     console.error(`Delivering order ${reference} failed.`, error);
+    await capture({
+      kind:
+        error instanceof EmailProviderUnreachable
+          ? "email-failure"
+          : "fulfillment-backlog",
+      source:
+        error instanceof EmailProviderUnreachable ? "email" : "fulfillment",
+      message: `Delivering order ${reference} failed.`,
+      orderReference: reference,
+    });
     // Named with this claim, so a delivery that took over from this one while
     // it was away is not the one marked failed.
     await commerce
@@ -199,6 +211,12 @@ export async function sendReissuedAccess(input: {
       `Sending the reissued access of order ${input.order.reference} failed.`,
       error,
     );
+    await capture({
+      kind: "email-failure",
+      source: "email",
+      message: `Sending the reissued access of order ${input.order.reference} failed.`,
+      orderReference: input.order.reference,
+    });
     return false;
   }
 }
@@ -269,13 +287,26 @@ export async function openPurchasedFile(
   }
 
   try {
-    return await commerce.openDownload({
+    const opened = await commerce.openDownload({
       tokenDigest: accessTokenDigest(token),
       sku,
       linkSeconds: PRIVATE_LINK_SECONDS,
     });
+    if (opened.status === "refused" && opened.reason === "unavailable") {
+      await capture({
+        kind: "storage-failure",
+        source: "storage",
+        message: "The private store did not hand over a purchased file.",
+      });
+    }
+    return opened;
   } catch (error) {
     console.error("Opening a purchased file failed.", error);
+    await capture({
+      kind: "storage-failure",
+      source: "storage",
+      message: "Opening a purchased file failed.",
+    });
     return { status: "refused", reason: "unavailable" };
   }
 }

@@ -156,6 +156,28 @@ const BASELINE_HEADERS = [
   },
 ];
 
+/**
+ * Transaction, staff and authoring surfaces must never sit in a shared cache.
+ *
+ * Named twice — the bare path and `:path*` — because Next.js' matcher does not
+ * treat `/commande/:path*` as covering `/commande` itself. `private` keeps a
+ * shared cache from storing the response; `no-store` keeps the browser from
+ * doing the same.
+ */
+const NO_STORE = {
+  key: "Cache-Control",
+  value: "private, no-store, must-revalidate",
+};
+
+const SENSITIVE_SOURCES = [
+  "/commande",
+  "/commande/:path*",
+  "/commerce",
+  "/commerce/:path*",
+  "/studio",
+  "/studio/:path*",
+] as const;
+
 const nextConfig: NextConfig = {
   /**
    * Emit `.next/standalone`: the server, plus only the parts of `node_modules`
@@ -200,6 +222,10 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      ...SENSITIVE_SOURCES.map((source) => ({
+        source,
+        headers: [NO_STORE],
+      })),
     ];
   },
   // Cache Components gives us the split ADR-0003 asks for: public pages render from a

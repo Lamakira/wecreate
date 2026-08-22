@@ -2,6 +2,8 @@ import "server-only";
 
 import { cookies } from "next/headers";
 
+import { cookiesAreSecure } from "@/site-config";
+
 import {
   CART_COOKIE_NAME,
   decodeCartEntries,
@@ -37,14 +39,14 @@ export const CART_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
 
 /**
  * `sameSite: "lax"` so the cart survives arriving from a shared link, `secure`
- * wherever the deployment is real, and scoped to the whole site because the
- * header carries the cart on every page.
+ * on HTTPS, and scoped to the whole site because the header carries the cart
+ * on every page.
  */
 function cartCookieOptions() {
   return {
     httpOnly: false,
     sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
+    secure: cookiesAreSecure(),
     path: "/",
     maxAge: CART_MAX_AGE_SECONDS,
   };

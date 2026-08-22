@@ -10,6 +10,8 @@ import { readSignedInOperator } from "@/commerce/session";
 
 import { signInAction, verifySecondFactorAction } from "@/commerce/actions";
 
+export const instant = false;
+
 interface ConnexionRouteProps {
   searchParams: Promise<{ message?: string }>;
 }

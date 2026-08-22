@@ -9,9 +9,13 @@ import { areCommerceTestHooksEnabled } from "@/site-config";
  *
  * The acceptance suite does everything else through the back office itself —
  * signing in, uploading, activating — because those are the behaviours under
- * test. Three things no actor can do are all this endpoint offers: returning
- * the data plane to its seeded state between scenarios, moving time, and taking
- * away the bytes behind the versions it holds.
+ * test. Four things no actor can do are all this endpoint offers: returning
+ * the data plane to its seeded state between scenarios, moving time, taking
+ * away the bytes behind the versions it holds, and applying the personal-data
+ * retention the rest of the application has decided is in force. Resetting
+ * also empties the in-memory rate-limit buckets: they live in this process,
+ * and a scenario that signs in would otherwise fill the staff-login window
+ * for the rest of the suite.
  *
  * **The private store is here because a store that cannot answer is a state the
  * buyer's page has to handle.** Issue #14 asks for a failure to produce a file
@@ -36,7 +40,8 @@ import { areCommerceTestHooksEnabled } from "@/site-config";
 type TestCommerceRequest =
   | { action: "reset" }
   | { action: "age"; seconds: number }
-  | { action: "emptyPrivateStore" };
+  | { action: "emptyPrivateStore" }
+  | { action: "applyRetention" };
 
 export async function POST(request: NextRequest): Promise<Response> {
   if (!areCommerceTestHooksEnabled()) {
@@ -57,12 +62,25 @@ export async function POST(request: NextRequest): Promise<Response> {
     return NextResponse.json({ ok: true, action: body.action });
   }
 
+  if (body.action === "applyRetention") {
+    const { applyPersonalDataRetention } = await import("@/privacy/retention");
+    const applied = await applyPersonalDataRetention();
+    return NextResponse.json({
+      ok: true,
+      action: body.action,
+      ...applied,
+    });
+  }
+
   if (body.action !== "reset") {
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   }
 
   const { resetCommerceFixture } = await import("@/commerce/fixture/store");
   await resetCommerceFixture();
+
+  const { resetRateLimits } = await import("@/security/rate-limit");
+  resetRateLimits();
 
   // A reset changes which products may be sold, so the Boutique's cached answer
   // has to go with it — the same thing activating a version does.

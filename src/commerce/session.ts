@@ -3,6 +3,8 @@ import "server-only";
 import { cookies } from "next/headers";
 import { cache } from "react";
 
+import { cookiesAreSecure } from "@/site-config";
+
 import { getCommerceProvider } from "./provider";
 import type { CommerceOperator, OperatorCredentials } from "./types";
 
@@ -50,7 +52,7 @@ function cookieOptions(maxAge: number) {
   return {
     httpOnly: true,
     sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
+    secure: cookiesAreSecure(),
     path: COOKIE_PATH,
     maxAge,
   };

@@ -34,6 +34,16 @@ export const TEST_REVALIDATE_SECRET = "acceptance-revalidate-secret";
 export const TEST_FEDAPAY_SECRET = "sk_sandbox_acceptance_never_leaves_the_server";
 
 /**
+ * A monitoring DSN nothing in the run sends to.
+ *
+ * The fixture monitoring provider is selected explicitly, so this string is
+ * never posted. It is set so a scenario can assert it never appears in a
+ * response or a captured event either.
+ */
+export const TEST_SENTRY_DSN =
+  "https://acceptance-sentry-never-leaves@o0.ingest.sentry.io/0";
+
+/**
  * The secret the fixture payment provider signs webhook deliveries with.
  *
  * A real deployment gets this from FedaPay's own webhook settings. The fixture
@@ -68,6 +78,14 @@ const serverEnv: Record<string, string> = {
   // and follows the Order Access address in it.
   WECREATE_EMAIL_PROVIDER: "fixture",
   FEDAPAY_SECRET_KEY: TEST_FEDAPAY_SECRET,
+  SENTRY_DSN: TEST_SENTRY_DSN,
+  // Captured failures are a fifth provider. The fixture keeps them in this
+  // process so a scenario can assert that a forged webhook or a guessed token
+  // was reported without a secret in the event. SENTRY_DSN is set beside it
+  // so a leak is noticeable; the fixture is selected explicitly, so nothing
+  // is posted.
+  WECREATE_MONITORING_PROVIDER: "fixture",
+  WECREATE_PERSONAL_DATA_RETENTION_DAYS: "30",
   WECREATE_PAYMENT_WEBHOOK_SECRET: TEST_PAYMENT_WEBHOOK_SECRET,
   WECREATE_TEST_HOOKS: "1",
   WECREATE_PREVIEW_SECRET: TEST_PREVIEW_SECRET,
@@ -138,7 +156,10 @@ export default defineConfig({
         ...devices["Desktop Firefox"],
         viewport: { width: 1440, height: 900 },
       },
-      testMatch: "**/public-journeys.spec.ts",
+      testMatch: [
+        "**/public-journeys.spec.ts",
+        "**/transaction-journeys.spec.ts",
+      ],
     },
     {
       name: "webkit",
@@ -146,7 +167,10 @@ export default defineConfig({
         ...devices["Desktop Safari"],
         viewport: { width: 1440, height: 900 },
       },
-      testMatch: "**/public-journeys.spec.ts",
+      testMatch: [
+        "**/public-journeys.spec.ts",
+        "**/transaction-journeys.spec.ts",
+      ],
     },
   ],
 

@@ -132,13 +132,17 @@ export function matchesOrderSearch(
     reference: string;
     buyerEmail: string;
     correctedEmail: string | null;
+    /** A forgotten order is found by its reference, never by an address. */
+    personalDataForgotten?: boolean;
   },
   query: string,
 ): boolean {
   const wanted = query.trim().toLowerCase();
   if (wanted.length === 0) return true;
+  if (order.reference.toLowerCase().includes(wanted)) return true;
+  if (order.personalDataForgotten) return false;
 
-  return [order.reference, order.buyerEmail, order.correctedEmail].some(
+  return [order.buyerEmail, order.correctedEmail].some(
     (value) => (value ?? "").toLowerCase().includes(wanted),
   );
 }
