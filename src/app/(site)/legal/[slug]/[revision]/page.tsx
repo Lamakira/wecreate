@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { LegalDocumentView } from "@/components/legal/legal-document-view";
-import { readLegalDocumentInForce } from "@/managed-content";
+import { SitePage } from "@/components/shell/site-page";
+import { readChrome, readLegalDocumentInForce } from "@/managed-content";
 import { keepOutOfSearchResults } from "@/site-config";
 
 /** Same reason as the document's own route: no shared shell knows the address. */
@@ -41,6 +42,7 @@ export default async function LegalRevisionRoute({
   params,
 }: LegalRevisionRouteProps) {
   const { slug, revision: revisionId } = await params;
+  const content = await readChrome();
   const inForce = await readLegalDocumentInForce(slug);
 
   const revision = inForce?.history.find(
@@ -50,5 +52,12 @@ export default async function LegalRevisionRoute({
     notFound();
   }
 
-  return <LegalDocumentView inForce={inForce} revision={revision} />;
+  return (
+    <SitePage
+      settings={content.settings}
+      legalDocuments={content.legalDocuments}
+    >
+      <LegalDocumentView inForce={inForce} revision={revision} />
+    </SitePage>
+  );
 }

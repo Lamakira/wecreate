@@ -1,6 +1,12 @@
+import { createHmac } from "node:crypto";
+
 import type { APIRequestContext, Page } from "@playwright/test";
 
-import { TEST_PREVIEW_SECRET, TEST_REVALIDATE_SECRET } from "../../../playwright.config";
+import {
+  TEST_PREVIEW_SECRET,
+  TEST_REVALIDATE_SECRET,
+  TEST_SANITY_WEBHOOK_SECRET,
+} from "../../../playwright.config";
 import type { DeepPartial } from "../../../src/managed-content/merge";
 import type { SiteContent } from "../../../src/managed-content/types";
 
@@ -25,16 +31,50 @@ export class ManagedContent {
   }
 
   /**
-   * Publish the current draft, then tell the site to drop its cached copy —
-   * the two halves of what pressing publish in Sanity does, the second half
-   * arriving as a webhook.
+   * Publish the current draft, then drop the cached slices that document type
+   * affects — the two halves of what pressing publish in Sanity does.
+   *
+   * With no type, everything expires: the same fallback a webhook with an
+   * unrecognised `_type` takes, and what every scenario that is not proving
+   * scoping wants.
    */
-  async publish(): Promise<void> {
-    await this.post({ action: "publishDrafts" });
-    await this.triggerRevalidation();
+  async publish(documentType?: string): Promise<void> {
+    await this.post({
+      action: "publishDrafts",
+      ...(documentType ? { documentType } : {}),
+    });
   }
 
-  /** The cache revalidation a publish webhook performs. */
+  /**
+   * Promote the draft to published without touching the cache.
+   *
+   * What pressing publish in the Studio does to the dataset, before the
+   * webhook arrives. Used to drive `/api/revalidate` itself.
+   */
+  async persistPublished(): Promise<void> {
+    await this.post({ action: "publishDrafts", revalidate: false });
+  }
+
+  /**
+   * Forget how many times the fixture has been read, without touching the
+   * cache. A scenario that has already warmed the pages uses this so the next
+   * counts are only the reads a publish caused.
+   */
+  async resetReadCount(): Promise<void> {
+    await this.post({ action: "resetReadCount" });
+  }
+
+  /** Published reads the fixture has served since the last reset of the count. */
+  async publishedReads(): Promise<number> {
+    return (await this.activity()).publishedReads;
+  }
+
+  /** Draft reads the fixture has served since the last reset of the count. */
+  async draftReads(): Promise<number> {
+    return (await this.activity()).draftReads;
+  }
+
+  /** The cache revalidation a bearer-token operator call performs. */
   async triggerRevalidation(): Promise<number> {
     const response = await this.request.post("/api/revalidate", {
       headers: { authorization: `Bearer ${TEST_REVALIDATE_SECRET}` },
@@ -42,23 +82,71 @@ export class ManagedContent {
     return response.status();
   }
 
+  /**
+   * The cache revalidation a Sanity publish webhook performs, signed the way
+   * Sanity signs it, over the raw body.
+   */
+  async triggerWebhook(documentType?: string): Promise<number> {
+    const body =
+      documentType === undefined
+        ? "{}"
+        : JSON.stringify({ _type: documentType });
+    const timestamp = Date.now();
+    const signature = signSanityWebhook(body, timestamp);
+    const response = await this.request.post("/api/revalidate", {
+      headers: {
+        "content-type": "application/json",
+        "sanity-webhook-signature": signature,
+      },
+      data: Buffer.from(body, "utf8"),
+    });
+    return response.status();
+  }
+
+  private async activity(): Promise<{
+    publishedReads: number;
+    draftReads: number;
+  }> {
+    const response = await this.request.get("/api/test/managed-content");
+    const text = await response.text();
+    this.assertHook(response.status(), text);
+    return JSON.parse(text) as {
+      publishedReads: number;
+      draftReads: number;
+    };
+  }
+
   private async post(body: unknown): Promise<void> {
     const response = await this.request.post("/api/test/managed-content", {
       data: body,
     });
-    if (response.status() === 404) {
+    this.assertHook(response.status(), await response.text());
+  }
+
+  private assertHook(status: number, text: string): void {
+    if (status === 404) {
       throw new Error(
         "The Managed Content test hook is not mounted. Playwright reuses an " +
           "already-running server outside CI, so this usually means a server " +
           "started by hand is holding the port. Stop it and re-run.",
       );
     }
-    if (!response.ok()) {
-      throw new Error(
-        `Managed Content test hook failed: ${response.status()} ${await response.text()}`,
-      );
+    if (status < 200 || status >= 300) {
+      throw new Error(`Managed Content test hook failed: ${status} ${text}`);
     }
   }
+}
+
+/**
+ * Sanity's webhook signature: HMAC-SHA256 of `timestamp.payload`, written as
+ * `t=<ms>,v1=<base64url>`. Spelled here rather than imported so a change to
+ * how the application verifies has to be a deliberate change to this file too.
+ */
+function signSanityWebhook(body: string, timestamp: number): string {
+  const digest = createHmac("sha256", TEST_SANITY_WEBHOOK_SECRET)
+    .update(`${timestamp}.${body}`, "utf8")
+    .digest("base64url");
+  return `t=${timestamp},v1=${digest}`;
 }
 
 /** Open a preview session in this browser context. */

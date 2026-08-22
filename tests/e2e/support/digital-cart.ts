@@ -63,7 +63,10 @@ export function cartDrawer(page: Page) {
 }
 
 export function cartIndicator(page: Page) {
-  return page.getByTestId("digital-cart-indicator");
+  // Cache Components keeps the previous page in a hidden Activity tree, so a
+  // client navigation from one chrome-in-page route to another leaves a second
+  // indicator in the DOM. The shopper only sees the visible one.
+  return page.getByTestId("digital-cart-indicator").filter({ visible: true });
 }
 
 /** Open the cart the way a shopper does, and wait for the shop to answer. */

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { readCheckout } from "@/checkout";
 import { CheckoutView } from "@/components/checkout/checkout-view";
+import { SiteChrome } from "@/components/shell/site-page";
 import { keepOutOfSearchResults } from "@/site-config";
 
 export const metadata: Metadata = {
@@ -30,5 +31,9 @@ export const instant = false;
  * on this site.
  */
 export default async function CheckoutRoute() {
-  return <CheckoutView state={await readCheckout()} />;
+  return (
+    <SiteChrome>
+      <CheckoutView state={await readCheckout()} />
+    </SiteChrome>
+  );
 }

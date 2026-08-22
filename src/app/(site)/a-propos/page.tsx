@@ -5,21 +5,26 @@ import { AboutMethodSection } from "@/components/about/about-method-section";
 import { AboutStorySection } from "@/components/about/about-story-section";
 import { CapabilityColumn } from "@/components/about/capability-column";
 import { SplitHeading } from "@/components/primitives/split-heading";
-import { readAbout } from "@/managed-content";
+import { SitePage } from "@/components/shell/site-page";
+import { readAboutPage } from "@/managed-content";
 import { pageOpenGraph } from "@/seo/open-graph";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const { seo } = await readAbout();
+  const content = await readAboutPage();
+  const { seo } = content.about;
 
   return {
     title: seo.title,
     description: seo.description,
     alternates: { canonical: "/a-propos" },
-    openGraph: await pageOpenGraph({
-      title: seo.title,
-      description: seo.description,
-      imageUrl: seo.openGraphImageUrl,
-    }),
+    openGraph: pageOpenGraph(
+      {
+        title: seo.title,
+        description: seo.description,
+        imageUrl: seo.openGraphImageUrl,
+      },
+      content.settings.seo,
+    ),
   };
 }
 
@@ -36,10 +41,14 @@ export async function generateMetadata(): Promise<Metadata> {
  * brief's own promise, and no client is quoted anywhere.
  */
 export default async function AProposPage() {
-  const about = await readAbout();
+  const content = await readAboutPage();
+  const { about } = content;
 
   return (
-    <>
+    <SitePage
+      settings={content.settings}
+      legalDocuments={content.legalDocuments}
+    >
       <section className="wc-container pt-[clamp(28px,5vw,64px)] pb-section-sm">
         <p className="m-0 mb-[22px] text-micro tracking-32 uppercase text-wc-muted-2">
           {about.kicker}
@@ -62,6 +71,6 @@ export default async function AProposPage() {
         <CapabilityColumn column={about.equipment} id="about-equipment" />
         <AboutCoverage coverage={about.coverage} />
       </div>
-    </>
+    </SitePage>
   );
 }

@@ -13,6 +13,7 @@ import {
   CheckoutSurface,
 } from "@/components/checkout/checkout-layout";
 import { OrderAccessRows } from "@/components/checkout/order-access-rows";
+import { SiteChrome } from "@/components/shell/site-page";
 import { keepOutOfSearchResults } from "@/site-config";
 
 export const metadata: Metadata = {
@@ -58,15 +59,17 @@ export default async function OrderAccessRoute({
 
   if (!access) {
     return (
-      <CheckoutSurface>
-        <CheckoutStage
-          kicker={ACCESS_UNAVAILABLE_COPY.kicker}
-          heading={ACCESS_UNAVAILABLE_COPY.heading}
-          lede={ACCESS_UNAVAILABLE_COPY.lede}
-        >
-          <BoutiqueLink />
-        </CheckoutStage>
-      </CheckoutSurface>
+      <SiteChrome>
+        <CheckoutSurface>
+          <CheckoutStage
+            kicker={ACCESS_UNAVAILABLE_COPY.kicker}
+            heading={ACCESS_UNAVAILABLE_COPY.heading}
+            lede={ACCESS_UNAVAILABLE_COPY.lede}
+          >
+            <BoutiqueLink />
+          </CheckoutStage>
+        </CheckoutSurface>
+      </SiteChrome>
     );
   }
 
@@ -75,28 +78,30 @@ export default async function OrderAccessRoute({
   const refusal = downloadRefusal(probleme);
 
   return (
-    <CheckoutSurface>
-      <CheckoutStage
-        kicker={`Commande ${access.reference} · ${ACCESS_COPY.kicker}`}
-        heading={ACCESS_COPY.heading}
-        lede={ACCESS_COPY.lede}
-      >
-        {refusal ? (
-          <p
-            data-testid="access-problem"
-            role="status"
-            className="m-0 border border-wc-line-light px-5 py-4 text-body font-light text-wc-ink"
-          >
-            {DOWNLOAD_REFUSAL_MESSAGES[refusal]}
+    <SiteChrome>
+      <CheckoutSurface>
+        <CheckoutStage
+          kicker={`Commande ${access.reference} · ${ACCESS_COPY.kicker}`}
+          heading={ACCESS_COPY.heading}
+          lede={ACCESS_COPY.lede}
+        >
+          {refusal ? (
+            <p
+              data-testid="access-problem"
+              role="status"
+              className="m-0 border border-wc-line-light px-5 py-4 text-body font-light text-wc-ink"
+            >
+              {DOWNLOAD_REFUSAL_MESSAGES[refusal]}
+            </p>
+          ) : null}
+
+          <OrderAccessRows access={access} downloadable />
+
+          <p className="m-0 mt-6 text-body-sm font-light text-wc-muted-on-light">
+            {ACCESS_COPY.note}
           </p>
-        ) : null}
-
-        <OrderAccessRows access={access} downloadable />
-
-        <p className="m-0 mt-6 text-body-sm font-light text-wc-muted-on-light">
-          {ACCESS_COPY.note}
-        </p>
-      </CheckoutStage>
-    </CheckoutSurface>
+        </CheckoutStage>
+      </CheckoutSurface>
+    </SiteChrome>
   );
 }

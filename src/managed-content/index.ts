@@ -2,6 +2,7 @@ import "server-only";
 
 import { cacheLife, cacheTag } from "next/cache";
 import { draftMode } from "next/headers";
+import { cache } from "react";
 
 import { findAtSlug, findSlugRedirect, slugRedirects } from "./addresses";
 import { isDiscoverable } from "./digital-products";
@@ -13,6 +14,16 @@ import {
 } from "./legal";
 import { isPublishable } from "./portfolio";
 import { getManagedContentProvider } from "./provider";
+import {
+  readPublishedAbout,
+  readPublishedBoutique,
+  readPublishedChrome,
+  readPublishedContact,
+  readPublishedHome,
+  readPublishedPortfolio,
+  readPublishedServices,
+} from "./published-read";
+import { LEGAL_TAG } from "./tag";
 import type {
   AboutContent,
   BoutiqueContent,
@@ -31,52 +42,77 @@ import type {
 export * from "./types";
 export { MANAGED_CONTENT_TAG } from "./tag";
 
-import { MANAGED_CONTENT_TAG } from "./tag";
-
-/**
- * The published site, cached and tagged.
- *
- * Public pages prerender from this, so an ordinary visit reaches a cached
- * response and never a content provider — which is what keeps the browsing
- * path off any transactional service (ADR-0003). Publishing invalidates the
- * tag through `/api/revalidate`.
- */
-async function readPublishedContent(): Promise<SiteContent> {
-  "use cache";
-  cacheTag(MANAGED_CONTENT_TAG);
-  cacheLife("managedContent");
-
-  const provider = await getManagedContentProvider();
-  return provider.read("published");
-}
-
 /**
  * The draft site. Deliberately uncached: a preview must show what the editor
- * just typed, and its result must never be served to anyone else.
+ * just typed, and its result must never be served to anyone else. React cache
+ * still collapses the several readers in one preview request into a single
+ * provider call.
  */
-async function readDraftContent(): Promise<SiteContent> {
+const loadDraftContent = cache(async (): Promise<SiteContent> => {
   const provider = await getManagedContentProvider();
   return provider.read("drafts");
+});
+
+async function readDraftContent(): Promise<SiteContent> {
+  return loadDraftContent();
+}
+
+async function publishedOrDraft<T>(
+  published: () => Promise<T>,
+  select: (content: SiteContent) => T,
+): Promise<T> {
+  const { isEnabled } = await draftMode();
+  return isEnabled ? select(await readDraftContent()) : published();
 }
 
 /**
- * Read Managed Content for the current request.
- *
- * Draft mode is the only way to reach unpublished content. Next.js sets a
- * signed bypass cookie when preview is enabled, which both selects the draft
- * perspective here and takes the response out of the shared cache.
+ * Header, footer, default SEO and legal links — checkout, 404, sitemap.
  */
-export async function readSiteContent(): Promise<SiteContent> {
-  const { isEnabled } = await draftMode();
-  return isEnabled ? readDraftContent() : readPublishedContent();
+export async function readChrome(): Promise<SiteContent> {
+  return publishedOrDraft(readPublishedChrome, (content) => content);
+}
+
+/**
+ * Published reads are per public page and tagged separately, so publishing
+ * About cannot drop Services. Header, footer and the page body share that
+ * one cached fetch — a cold render is one provider round trip.
+ */
+export async function readHome(): Promise<SiteContent> {
+  return publishedOrDraft(readPublishedHome, (content) => content);
+}
+
+export async function readAboutPage(): Promise<SiteContent> {
+  return publishedOrDraft(readPublishedAbout, (content) => content);
+}
+
+export async function readServicesPage(): Promise<SiteContent> {
+  return publishedOrDraft(readPublishedServices, (content) => content);
+}
+
+export async function readContactPage(): Promise<SiteContent> {
+  return publishedOrDraft(readPublishedContact, (content) => content);
+}
+
+export async function readPortfolioPage(): Promise<SiteContent> {
+  return publishedOrDraft(readPublishedPortfolio, (content) => content);
+}
+
+export async function readBoutiquePage(): Promise<SiteContent> {
+  return publishedOrDraft(readPublishedBoutique, (content) => content);
 }
 
 export async function readSiteSettings(): Promise<SiteSettings> {
-  return (await readSiteContent()).settings;
+  return publishedOrDraft(
+    async () => (await readPublishedChrome()).settings,
+    (content) => content.settings,
+  );
 }
 
 export async function readHomePage(): Promise<HomePage> {
-  return (await readSiteContent()).homePage;
+  return publishedOrDraft(
+    async () => (await readPublishedHome()).homePage,
+    (content) => content.homePage,
+  );
 }
 
 /**
@@ -87,7 +123,10 @@ export async function readHomePage(): Promise<HomePage> {
  * decides to publish. Draft and published still separate the same way.
  */
 export async function readServices(): Promise<ServicesContent> {
-  return (await readSiteContent()).services;
+  return publishedOrDraft(
+    async () => (await readPublishedServices()).services,
+    (content) => content.services,
+  );
 }
 
 /**
@@ -98,11 +137,17 @@ export async function readServices(): Promise<ServicesContent> {
  * satisfy before a visitor may see them. Draft and published still separate.
  */
 export async function readAbout(): Promise<AboutContent> {
-  return (await readSiteContent()).about;
+  return publishedOrDraft(
+    async () => (await readPublishedAbout()).about,
+    (content) => content.about,
+  );
 }
 
 export async function readContact(): Promise<ContactContent> {
-  return (await readSiteContent()).contact;
+  return publishedOrDraft(
+    async () => (await readPublishedContact()).contact,
+    (content) => content.contact,
+  );
 }
 
 /**
@@ -116,7 +161,9 @@ export async function readContact(): Promise<ContactContent> {
  */
 export async function readPortfolio(): Promise<PortfolioContent> {
   const { isEnabled } = await draftMode();
-  const portfolio = (await readSiteContent()).portfolio;
+  const portfolio = isEnabled
+    ? (await readDraftContent()).portfolio
+    : (await readPublishedPortfolio()).portfolio;
 
   return isEnabled
     ? portfolio
@@ -145,7 +192,9 @@ export async function readPortfolioProject(
  */
 export async function readBoutique(): Promise<BoutiqueContent> {
   const { isEnabled } = await draftMode();
-  const boutique = (await readSiteContent()).boutique;
+  const boutique = isEnabled
+    ? (await readDraftContent()).boutique
+    : (await readPublishedBoutique()).boutique;
 
   return isEnabled
     ? boutique
@@ -161,7 +210,10 @@ export async function readBoutique(): Promise<BoutiqueContent> {
  * its identity. Same reason `readDigitalProduct()` ignores the filter.
  */
 export async function readDigitalProducts(): Promise<DigitalProduct[]> {
-  return (await readSiteContent()).boutique.products;
+  return publishedOrDraft(
+    async () => (await readPublishedBoutique()).boutique.products,
+    (content) => content.boutique.products,
+  );
 }
 
 /**
@@ -175,7 +227,7 @@ export async function readDigitalProducts(): Promise<DigitalProduct[]> {
 export async function readDigitalProduct(
   slug: string,
 ): Promise<DigitalProduct | undefined> {
-  return findAtSlug((await readSiteContent()).boutique.products, slug);
+  return findAtSlug(await readDigitalProducts(), slug);
 }
 
 /**
@@ -187,7 +239,7 @@ export async function readDigitalProduct(
 export async function readDigitalProductSlugRedirect(
   slug: string,
 ): Promise<string | undefined> {
-  return findSlugRedirect((await readSiteContent()).boutique.products, slug);
+  return findSlugRedirect(await readDigitalProducts(), slug);
 }
 
 /**
@@ -201,14 +253,14 @@ export async function readDigitalProductSlugRedirect(
 export async function readDigitalProductSlugRedirects(): Promise<
   Record<string, string>
 > {
-  return slugRedirects((await readSiteContent()).boutique.products);
+  return slugRedirects(await readDigitalProducts());
 }
 
 /**
  * Today, as the effective-date rule sees it.
  *
  * Cached because Cache Components refuses a moving clock in a prerender, and
- * tagged with the content tag because of what it decides. An editor publishing
+ * tagged with the legal slice because of what it decides. An editor publishing
  * terms dated today must see them in force at once; a day frozen at yesterday
  * would leave the site serving the previous revision until the clock cache
  * happened to turn over. The publish drops both, so the two are always read
@@ -216,7 +268,7 @@ export async function readDigitalProductSlugRedirects(): Promise<
  */
 export async function readLegalDay(): Promise<string> {
   "use cache";
-  cacheTag(MANAGED_CONTENT_TAG);
+  cacheTag(LEGAL_TAG);
   cacheLife("managedContent");
 
   return legalToday();
@@ -232,7 +284,10 @@ export async function readLegalDay(): Promise<string> {
  * by them.
  */
 export async function readLegalDocuments(): Promise<LegalDocument[]> {
-  return (await readSiteContent()).legalDocuments;
+  return publishedOrDraft(
+    async () => (await readPublishedChrome()).legalDocuments,
+    (content) => content.legalDocuments,
+  );
 }
 
 /** The legal document at an address, or `undefined` if nothing is there. */

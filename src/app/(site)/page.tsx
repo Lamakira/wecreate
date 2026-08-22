@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { draftMode } from "next/headers";
 
 import { BrandQuoteSection } from "@/components/home/brand-quote-section";
 import { FinalCtaSection } from "@/components/home/final-cta-section";
@@ -8,21 +9,28 @@ import { ProofSection } from "@/components/home/proof-section";
 import { RecentWorkSection } from "@/components/home/recent-work-section";
 import { ShopPreviewSection } from "@/components/home/shop-preview-section";
 import { UniversesSection } from "@/components/home/universes-section";
-import { readBoutique, readHomePage, readPortfolio } from "@/managed-content";
+import { SitePage } from "@/components/shell/site-page";
+import { readHome } from "@/managed-content";
+import { isDiscoverable } from "@/managed-content/digital-products";
+import { isPublishable } from "@/managed-content/portfolio";
 import { pageOpenGraph } from "@/seo/open-graph";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const { seo } = await readHomePage();
+  const content = await readHome();
+  const { seo } = content.homePage;
 
   return {
     title: seo.title,
     description: seo.description,
     alternates: { canonical: "/" },
-    openGraph: await pageOpenGraph({
-      title: seo.title,
-      description: seo.description,
-      imageUrl: seo.openGraphImageUrl,
-    }),
+    openGraph: pageOpenGraph(
+      {
+        title: seo.title,
+        description: seo.description,
+        imageUrl: seo.openGraphImageUrl,
+      },
+      content.settings.seo,
+    ),
   };
 }
 
@@ -34,16 +42,25 @@ export async function generateMetadata(): Promise<Metadata> {
  * composed page, not a page builder.
  */
 export default async function HomePageRoute() {
-  const homePage = await readHomePage();
+  const content = await readHome();
+  const { homePage } = content;
+  const { isEnabled: isPreview } = await draftMode();
   // The reel is the portfolio's own list, gated the same way, so the homepage
   // cannot show work the portfolio would refuse to publish. The Boutique teaser
   // works the same way: the featured products are the Boutique's own, already
   // without the ones an editor has archived.
-  const { projects } = await readPortfolio();
-  const { products } = await readBoutique();
+  const projects = isPreview
+    ? content.portfolio.projects
+    : content.portfolio.projects.filter(isPublishable);
+  const products = isPreview
+    ? content.boutique.products
+    : content.boutique.products.filter(isDiscoverable);
 
   return (
-    <>
+    <SitePage
+      settings={content.settings}
+      legalDocuments={content.legalDocuments}
+    >
       <HeroSection hero={homePage.hero} />
       {homePage.positioningMarquee.isVisible ? (
         <PositioningMarquee marquee={homePage.positioningMarquee} />
@@ -67,6 +84,6 @@ export default async function HomePageRoute() {
       {homePage.finalCta.isVisible ? (
         <FinalCtaSection section={homePage.finalCta} />
       ) : null}
-    </>
+    </SitePage>
   );
 }

@@ -5,22 +5,27 @@ import { ServiceAddOnsSection } from "@/components/services/service-add-ons-sect
 import { ServiceComparisonSection } from "@/components/services/service-comparison-section";
 import { ServiceEnquiryNotice } from "@/components/services/service-enquiry-notice";
 import { ServiceUniverseSection } from "@/components/services/service-universe-section";
-import { readServices, readSiteSettings } from "@/managed-content";
+import { SitePage } from "@/components/shell/site-page";
+import { readServicesPage } from "@/managed-content";
 import { pageOpenGraph } from "@/seo/open-graph";
 import type { ServiceEnquiryContext } from "@/service-enquiry/enquiry";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const { seo } = await readServices();
+  const content = await readServicesPage();
+  const { seo } = content.services;
 
   return {
     title: seo.title,
     description: seo.description,
     alternates: { canonical: "/services" },
-    openGraph: await pageOpenGraph({
-      title: seo.title,
-      description: seo.description,
-      imageUrl: seo.openGraphImageUrl,
-    }),
+    openGraph: pageOpenGraph(
+      {
+        title: seo.title,
+        description: seo.description,
+        imageUrl: seo.openGraphImageUrl,
+      },
+      content.settings.seo,
+    ),
   };
 }
 
@@ -38,8 +43,8 @@ export async function generateMetadata(): Promise<Metadata> {
  * (ADR-0006).
  */
 export default async function ServicesPage() {
-  const services = await readServices();
-  const settings = await readSiteSettings();
+  const content = await readServicesPage();
+  const { services, settings } = content;
 
   // Where a service offer goes, and what its buttons say. Assembled once here
   // because the destinations are global contact details while the wording
@@ -51,7 +56,10 @@ export default async function ServicesPage() {
   };
 
   return (
-    <>
+    <SitePage
+      settings={content.settings}
+      legalDocuments={content.legalDocuments}
+    >
       <section className="wc-container pt-[clamp(28px,5vw,64px)] pb-section-sm">
         <p className="m-0 mb-[22px] text-micro tracking-32 uppercase text-wc-muted-2">
           {services.kicker}
@@ -90,6 +98,6 @@ export default async function ServicesPage() {
       {services.addOns.isVisible ? (
         <ServiceAddOnsSection section={services.addOns} />
       ) : null}
-    </>
+    </SitePage>
   );
 }

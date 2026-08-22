@@ -2,19 +2,17 @@ import type { Metadata } from "next";
 import { draftMode } from "next/headers";
 import { notFound, permanentRedirect } from "next/navigation";
 
-import { readPurchaseContext } from "@/commerce";
+import { readPurchaseContextFrom } from "@/commerce";
 import { ProductView } from "@/components/boutique/product-view";
-import {
-  readBoutique,
-  readDigitalProduct,
-  readDigitalProductSlugRedirect,
-  readEffectiveLegalTerms,
-  readSiteSettings,
-} from "@/managed-content";
+import { SitePage } from "@/components/shell/site-page";
+import { readBoutiquePage, readLegalDay } from "@/managed-content";
+import { findAtSlug, findSlugRedirect } from "@/managed-content/addresses";
 import {
   DIGITAL_PRODUCT_LICENCE_KIND,
+  isDiscoverable,
   productPath,
 } from "@/managed-content/digital-products";
+import { effectiveLegalTerms } from "@/managed-content/legal";
 import { digitalProductJsonLd } from "@/seo/json-ld";
 import { JsonLdScript } from "@/seo/json-ld-script";
 import { pageOpenGraph } from "@/seo/open-graph";
@@ -37,7 +35,8 @@ export async function generateMetadata({
   params,
 }: ProductRouteProps): Promise<Metadata> {
   const { slug } = await params;
-  const product = await readDigitalProduct(slug);
+  const content = await readBoutiquePage();
+  const product = findAtSlug(content.boutique.products, slug);
   if (!product) {
     return {};
   }
@@ -51,11 +50,14 @@ export async function generateMetadata({
     // arrived at a former slug, so a moved product does not compete with itself
     // in search.
     alternates: { canonical: productPath(product.slug) },
-    openGraph: await pageOpenGraph({
-      title: product.title,
-      description: product.summary,
-      imageUrl: product.cover.imageUrl,
-    }),
+    openGraph: pageOpenGraph(
+      {
+        title: product.title,
+        description: product.summary,
+        imageUrl: product.cover.imageUrl,
+      },
+      content.settings.seo,
+    ),
     // Two pages that must stay out of search results, and neither is about the
     // route: a preview is one editor's unpublished draft, and an archived
     // product is one WeCreate has withdrawn — its page exists for the orders
@@ -82,24 +84,35 @@ export async function generateMetadata({
  */
 export default async function ProductRoute({ params }: ProductRouteProps) {
   const { slug } = await params;
-  const product = await readDigitalProduct(slug);
+  const content = await readBoutiquePage();
+  const product = findAtSlug(content.boutique.products, slug);
 
   if (!product) {
-    const movedTo = await readDigitalProductSlugRedirect(slug);
+    const movedTo = findSlugRedirect(content.boutique.products, slug);
     if (movedTo) {
       permanentRedirect(productPath(movedTo));
     }
     notFound();
   }
 
-  const boutique = await readBoutique();
-  const settings = await readSiteSettings();
-  const purchase = await readPurchaseContext();
-  const { inForce } = await readEffectiveLegalTerms();
   const { isEnabled: isPreview } = await draftMode();
+  const boutique = isPreview
+    ? content.boutique
+    : {
+        ...content.boutique,
+        products: content.boutique.products.filter(isDiscoverable),
+      };
+  const purchase = await readPurchaseContextFrom(content.legalDocuments);
+  const { inForce } = effectiveLegalTerms(
+    content.legalDocuments,
+    await readLegalDay(),
+  );
 
   return (
-    <>
+    <SitePage
+      settings={content.settings}
+      legalDocuments={content.legalDocuments}
+    >
       <JsonLdScript
         data={digitalProductJsonLd({
           product,
@@ -111,12 +124,12 @@ export default async function ProductRoute({ params }: ProductRouteProps) {
         product={product}
         boutique={boutique}
         purchase={purchase}
-        contact={settings.contact}
+        contact={content.settings.contact}
         licence={inForce.find(
           (revision) => revision.kind === DIGITAL_PRODUCT_LICENCE_KIND,
         )}
         showRequirements={isPreview}
       />
-    </>
+    </SitePage>
   );
 }

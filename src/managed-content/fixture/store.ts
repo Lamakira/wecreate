@@ -1,9 +1,10 @@
+import { randomBytes } from "node:crypto";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { DEFAULT_SITE_CONTENT } from "../default-content";
 import { mergeContent, type DeepPartial } from "../merge";
-import type { SiteContent } from "../types";
+import type { ContentPerspective, SiteContent } from "../types";
 
 /**
  * The fixture provider's storage: a JSON file holding both revisions of
@@ -123,4 +124,81 @@ export async function publishFixtureDrafts(): Promise<FixtureDataset> {
   };
   await writeFixtureDataset(updated);
   return updated;
+}
+
+/**
+ * How many times the fixture has been read.
+ *
+ * File-backed for the same reason the dataset is: a `"use cache"` fill and
+ * the test-hook route are not guaranteed to share a module instance, and
+ * the acceptance suite observes cache hits through these numbers.
+ */
+export interface FixtureReadActivity {
+  publishedReads: number;
+  draftReads: number;
+}
+
+const EMPTY_ACTIVITY: FixtureReadActivity = {
+  publishedReads: 0,
+  draftReads: 0,
+};
+
+function activityPath(): string {
+  const file = datasetPath();
+  return file.endsWith(".json")
+    ? `${file.slice(0, -".json".length)}.activity.json`
+    : `${file}.activity.json`;
+}
+
+async function readActivity(): Promise<FixtureReadActivity> {
+  try {
+    const raw = await readFile(
+      /* turbopackIgnore: true */ activityPath(),
+      "utf8",
+    );
+    const stored = JSON.parse(raw) as Partial<FixtureReadActivity>;
+    return {
+      publishedReads: Number(stored.publishedReads) || 0,
+      draftReads: Number(stored.draftReads) || 0,
+    };
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return { ...EMPTY_ACTIVITY };
+    }
+    throw error;
+  }
+}
+
+async function writeActivity(activity: FixtureReadActivity): Promise<void> {
+  const file = activityPath();
+  await mkdir(/* turbopackIgnore: true */ path.dirname(file), {
+    recursive: true,
+  });
+  const temporary = `${file}.${process.pid}.${randomBytes(6).toString("hex")}.tmp`;
+  await writeFile(
+    /* turbopackIgnore: true */ temporary,
+    `${JSON.stringify(activity)}\n`,
+    "utf8",
+  );
+  await rename(/* turbopackIgnore: true */ temporary, file);
+}
+
+export async function recordFixtureRead(
+  perspective: ContentPerspective,
+): Promise<void> {
+  const activity = await readActivity();
+  if (perspective === "published") {
+    activity.publishedReads += 1;
+  } else {
+    activity.draftReads += 1;
+  }
+  await writeActivity(activity);
+}
+
+export async function fixtureReadActivity(): Promise<FixtureReadActivity> {
+  return readActivity();
+}
+
+export async function resetFixtureReadActivity(): Promise<void> {
+  await writeActivity({ ...EMPTY_ACTIVITY });
 }

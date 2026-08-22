@@ -31,6 +31,7 @@ import type {
   ServicePack,
   ServiceUniverse,
   ServicesContent,
+  SiteContent,
   SiteSettings,
   SpokenContentSupport,
 } from "../types";
@@ -467,36 +468,41 @@ function toLegalDocuments(
   });
 }
 
+async function fetchSiteContent(
+  perspective: "published" | "drafts",
+): Promise<SiteContent> {
+  const client = getSanityClient(perspective);
+  const result = await client.fetch<SanityContentResult | null>(
+    SITE_CONTENT_QUERY,
+  );
+  const content = mergeContent(DEFAULT_SITE_CONTENT, {
+    settings: result?.settings ?? undefined,
+    homePage: result?.homePage ?? undefined,
+  });
+
+  return {
+    ...content,
+    portfolio: {
+      ...mergeContent(DEFAULT_SITE_CONTENT.portfolio, {
+        ...result?.portfolioPage,
+        projects: undefined,
+      }),
+      projects: (result?.portfolioProjects ?? [])
+        .filter((document): document is SanityProject => Boolean(document))
+        .map(toPortfolioProject),
+    },
+    boutique: toBoutique(result?.boutiquePage, result?.digitalProducts),
+    services: toServices(result?.servicesPage),
+    about: toAbout(result?.aboutPage),
+    contact: toContact(result?.contactPage),
+    legalDocuments: toLegalDocuments(result?.legalDocuments),
+  };
+}
+
 export const sanityContentProvider: ManagedContentProvider = {
   id: "sanity",
   async read(perspective) {
     assertSanityConfigured();
-
-    const client = getSanityClient(perspective);
-    const result = await client.fetch<SanityContentResult | null>(
-      SITE_CONTENT_QUERY,
-    );
-    const content = mergeContent(DEFAULT_SITE_CONTENT, {
-      settings: result?.settings ?? undefined,
-      homePage: result?.homePage ?? undefined,
-    });
-
-    return {
-      ...content,
-      portfolio: {
-        ...mergeContent(DEFAULT_SITE_CONTENT.portfolio, {
-          ...result?.portfolioPage,
-          projects: undefined,
-        }),
-        projects: (result?.portfolioProjects ?? [])
-          .filter((document): document is SanityProject => Boolean(document))
-          .map(toPortfolioProject),
-      },
-      boutique: toBoutique(result?.boutiquePage, result?.digitalProducts),
-      services: toServices(result?.servicesPage),
-      about: toAbout(result?.aboutPage),
-      contact: toContact(result?.contactPage),
-      legalDocuments: toLegalDocuments(result?.legalDocuments),
-    };
+    return fetchSiteContent(perspective);
   },
 };

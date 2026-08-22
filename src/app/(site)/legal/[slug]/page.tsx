@@ -3,7 +3,9 @@ import { draftMode } from "next/headers";
 import { notFound, permanentRedirect } from "next/navigation";
 
 import { LegalDocumentView } from "@/components/legal/legal-document-view";
+import { SitePage } from "@/components/shell/site-page";
 import {
+  readChrome,
   readEffectiveLegalTerms,
   readLegalDocumentInForce,
   readLegalSlugRedirect,
@@ -30,6 +32,7 @@ export async function generateMetadata({
   params,
 }: LegalRouteProps): Promise<Metadata> {
   const { slug } = await params;
+  const content = await readChrome();
   const inForce = await readLegalDocumentInForce(slug);
   if (!inForce) {
     return {};
@@ -42,10 +45,13 @@ export async function generateMetadata({
     title: document.title,
     description: document.summary,
     alternates: { canonical: legalPath(document.slug) },
-    openGraph: await pageOpenGraph({
-      title: document.title,
-      description: document.summary,
-    }),
+    openGraph: pageOpenGraph(
+      {
+        title: document.title,
+        description: document.summary,
+      },
+      content.settings.seo,
+    ),
     // Two ways a legal page must stay out of search results, and neither is
     // about the route: a preview is one editor's unpublished draft, and a
     // placeholder is not WeCreate's approved text. Presenting either as its
@@ -78,6 +84,7 @@ export async function generateMetadata({
  */
 export default async function LegalRoute({ params }: LegalRouteProps) {
   const { slug } = await params;
+  const content = await readChrome();
   const inForce = await readLegalDocumentInForce(slug);
 
   if (!inForce) {
@@ -95,5 +102,12 @@ export default async function LegalRoute({ params }: LegalRouteProps) {
     ? (await readEffectiveLegalTerms()).checkout
     : undefined;
 
-  return <LegalDocumentView inForce={inForce} checkout={checkout} />;
+  return (
+    <SitePage
+      settings={content.settings}
+      legalDocuments={content.legalDocuments}
+    >
+      <LegalDocumentView inForce={inForce} checkout={checkout} />
+    </SitePage>
+  );
 }

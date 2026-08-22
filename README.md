@@ -107,7 +107,10 @@ section visibility — comes through one interface: `ManagedContentProvider` in
 src/managed-content/
 ├── types.ts             the content model the whole application speaks
 ├── provider.ts          the interface, and which implementation is in use
-├── index.ts             the cached, draft-aware read API pages call
+├── tag.ts               cache tags a publish maps a document type onto
+├── published-read.ts    per-page published cache, one provider round trip
+├── invalidation.ts      expire those tags from a webhook or a bearer token
+├── index.ts             the draft-aware read API pages call
 ├── portfolio.ts         when a Portfolio Project may be published, and its poster
 ├── digital-products.ts  when a Digital Product may be sold, and its families
 ├── legal.ts             which legal revision is in force, and what a checkout
@@ -1173,7 +1176,7 @@ not an approximation. Under the hood:
 
 - Presentation calls `/api/draft/enable`, which validates the editor's Sanity
   session and sets Next.js's draft-mode cookie.
-- With that cookie, `readSiteContent()` reads the `drafts` perspective and the
+- With that cookie, every Managed Content read uses the `drafts` perspective and the
   response is marked private and uncached. Without it, every request gets
   published content from the shared cache. There is no path by which
   unpublished content reaches an ordinary visitor.
@@ -1186,20 +1189,45 @@ account, via `/api/draft/enable?secret=…&path=/`.
 ### Publishing and the cache
 
 Public pages are prerendered and cached, and Supabase is never on the browsing
-path (ADR-0003). A publish therefore has to invalidate that cache:
+path (ADR-0003). A publish therefore has to invalidate that cache, and only
+the slices the published document actually feeds:
 
 1. In the Sanity project, add a webhook to `POST {origin}/api/revalidate`, with
    a secret, firing on create/update/delete of `siteSettings`, `homePage`,
    `portfolioPage`, `portfolioProject`, `boutiquePage`, `digitalProduct`,
-   `servicesPage`, `aboutPage`,
-   `contactPage` and `legalDocument`.
+   `servicesPage`, `aboutPage`, `contactPage` and `legalDocument`. Leave the
+   default document projection (or project `{_type}`): the endpoint reads
+   `_type` to decide what to expire. A projection that strips `_type` is
+   treated as an unknown type and expires everything.
 2. Set the same value as `SANITY_WEBHOOK_SECRET`. The signature is verified
    against the raw request body.
-3. The endpoint expires the `managed-content` cache tag, so the very next
-   request renders the new content — an editor reloads and sees their change.
+3. The endpoint expires the cache tags that document type affects, so the very
+   next request to a page that reads it renders the new content — an editor
+   reloads and sees their change. Pages that do not read it stay cached.
 
-`WECREATE_REVALIDATE_SECRET` accepts the same call as a bearer token, for
-operators and for deployments with no Sanity webhook.
+| Document type     | Cached content it expires                                      |
+| ----------------- | -------------------------------------------------------------- |
+| `aboutPage`       | À propos                                                       |
+| `contactPage`     | Contact                                                        |
+| `servicesPage`    | Services                                                       |
+| `homePage`        | Homepage                                                       |
+| `portfolioPage`   | Portfolio listing and project pages                            |
+| `portfolioProject`| Portfolio, and the homepage recent-work reel                   |
+| `boutiquePage`    | Boutique listing and product pages                             |
+| `digitalProduct`  | Boutique, product pages, and the homepage shop preview         |
+| `legalDocument`   | Legal pages, footer legal links, checkout terms, and every public page's chrome |
+| `siteSettings`    | Header, footer and sitemap navigation on every public page     |
+| anything else     | Everything                                                     |
+
+A cold render of any public page still costs one Managed Content provider
+round trip: header, footer and the page body share a single fetch. Each
+page's title and Open Graph come from that same cached read. The shared
+layout's fallback title template is the bundled baseline, so the layout
+does not add a second round trip.
+
+`WECREATE_REVALIDATE_SECRET` accepts the same call as a bearer token and
+always expires every slice, for operators and for deployments with no Sanity
+webhook. That is also the recovery path when scoping is wrong.
 
 ## Setting up Supabase
 

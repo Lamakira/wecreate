@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 import { ManagedContent, enterPreview } from "./support/managed-content";
 
@@ -137,5 +137,158 @@ test.describe("Editing and publishing Managed Content", () => {
 
   test("accepts revalidation from an authenticated caller", async () => {
     expect(await content.triggerRevalidation()).toBe(200);
+  });
+});
+
+test.describe("Scoped cache invalidation", () => {
+  const ABOUT_KICKER = "À propos · Studio révisé";
+  const SERVICES_KICKER = "Services · Trois univers";
+  const SERVICES_REVISED = "Services · Révisés";
+  const HOME_HEADLINE = "Nous fabriquons des œuvres qui font vendre.";
+  const PORTFOLIO_KICKER = "Portfolio";
+
+  async function warmPublicPages(page: Page) {
+    await page.goto("/a-propos");
+    await page.goto("/services");
+    await page.goto("/portfolio");
+    await page.goto("/");
+    await content.resetReadCount();
+  }
+
+  test("a cold public page costs one published provider round trip", async ({
+    page,
+  }) => {
+    await page.goto("/a-propos");
+
+    expect(await content.publishedReads()).toBe(1);
+
+    await page.goto("/a-propos");
+
+    expect(await content.publishedReads()).toBe(1);
+  });
+
+  test("publishing About leaves Services, Portfolio and the homepage served from cache", async ({
+    page,
+  }) => {
+    await warmPublicPages(page);
+
+    await content.editDraft({ about: { kicker: ABOUT_KICKER } });
+    await content.publish("aboutPage");
+
+    await page.goto("/services");
+    await expect(page.getByText(SERVICES_KICKER)).toBeVisible();
+
+    await page.goto("/portfolio");
+    await expect(page.getByText(`${PORTFOLIO_KICKER} ·`)).toBeVisible();
+
+    await page.goto("/");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+      HOME_HEADLINE,
+    );
+
+    await page.goto("/a-propos");
+    await expect(page.getByText(ABOUT_KICKER)).toBeVisible();
+
+    // About is the only page whose cache was dropped. Prefetch of the expired
+    // About link and a first chrome/legal fill can add one or two reads on
+    // top of that miss. Four would mean another warmed page was expired too.
+    expect(await content.publishedReads()).toBeGreaterThanOrEqual(1);
+    expect(await content.publishedReads()).toBeLessThanOrEqual(3);
+  });
+
+  test("a webhook whose type is missing expires every cached page", async ({
+    page,
+  }) => {
+    await warmPublicPages(page);
+
+    await content.editDraft({
+      about: { kicker: ABOUT_KICKER },
+      services: { kicker: SERVICES_REVISED },
+    });
+    await content.persistPublished();
+    await content.resetReadCount();
+
+    expect(await content.triggerWebhook()).toBe(200);
+
+    await page.goto("/services");
+    await expect(page.getByText(SERVICES_REVISED)).toBeVisible();
+    await page.goto("/a-propos");
+    await expect(page.getByText(ABOUT_KICKER)).toBeVisible();
+    await page.goto("/");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+      HOME_HEADLINE,
+    );
+  });
+
+  test("an unrecognised webhook type expires every cached page", async ({
+    page,
+  }) => {
+    await warmPublicPages(page);
+
+    await content.editDraft({
+      about: { kicker: ABOUT_KICKER },
+      services: { kicker: SERVICES_REVISED },
+    });
+    await content.persistPublished();
+    await content.resetReadCount();
+
+    expect(await content.triggerWebhook("sanity.imageAsset")).toBe(200);
+
+    await page.goto("/a-propos");
+    await expect(page.getByText(ABOUT_KICKER)).toBeVisible();
+    await page.goto("/services");
+    await expect(page.getByText(SERVICES_REVISED)).toBeVisible();
+    await page.goto("/");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+      HOME_HEADLINE,
+    );
+  });
+
+  test("the operator bearer token still drops every cached page", async ({
+    page,
+  }) => {
+    await warmPublicPages(page);
+
+    await content.editDraft({
+      about: { kicker: ABOUT_KICKER },
+      services: { kicker: SERVICES_REVISED },
+    });
+    await content.persistPublished();
+    await content.resetReadCount();
+
+    expect(await content.triggerRevalidation()).toBe(200);
+
+    await page.goto("/services");
+    await expect(page.getByText(SERVICES_REVISED)).toBeVisible();
+    await page.goto("/");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+      HOME_HEADLINE,
+    );
+    await page.goto("/a-propos");
+    await expect(page.getByText(ABOUT_KICKER)).toBeVisible();
+  });
+
+  test("a signed About webhook expires About and leaves Services cached", async ({
+    page,
+  }) => {
+    await warmPublicPages(page);
+
+    await content.editDraft({ about: { kicker: ABOUT_KICKER } });
+    await content.persistPublished();
+    await content.resetReadCount();
+
+    expect(await content.triggerWebhook("aboutPage")).toBe(200);
+
+    await page.goto("/services");
+    await expect(page.getByText(SERVICES_KICKER)).toBeVisible();
+
+    await page.goto("/portfolio");
+    await expect(page.getByText(`${PORTFOLIO_KICKER} ·`)).toBeVisible();
+
+    await page.goto("/a-propos");
+    await expect(page.getByText(ABOUT_KICKER)).toBeVisible();
+
+    expect(await content.publishedReads()).toBeGreaterThanOrEqual(1);
+    expect(await content.publishedReads()).toBeLessThanOrEqual(2);
   });
 });

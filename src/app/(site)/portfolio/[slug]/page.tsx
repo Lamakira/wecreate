@@ -5,7 +5,9 @@ import { notFound } from "next/navigation";
 
 import { ProjectDetails } from "@/components/portfolio/project-details";
 import { ProjectPlayback } from "@/components/portfolio/project-playback";
-import { readPortfolioProject } from "@/managed-content";
+import { SitePage } from "@/components/shell/site-page";
+import { readPortfolioPage } from "@/managed-content";
+import { isPublishable } from "@/managed-content/portfolio";
 import { pageOpenGraph } from "@/seo/open-graph";
 
 /**
@@ -30,7 +32,13 @@ interface ProjectRouteProps {
 export async function generateMetadata({
   params,
 }: ProjectRouteProps): Promise<Metadata> {
-  const project = await readPortfolioProject((await params).slug);
+  const { slug } = await params;
+  const content = await readPortfolioPage();
+  const { isEnabled: isPreview } = await draftMode();
+  const projects = isPreview
+    ? content.portfolio.projects
+    : content.portfolio.projects.filter(isPublishable);
+  const project = projects.find((candidate) => candidate.slug === slug);
   if (!project) {
     return {};
   }
@@ -39,10 +47,13 @@ export async function generateMetadata({
     title: project.title,
     description: project.description,
     alternates: { canonical: `/portfolio/${project.slug}` },
-    openGraph: await pageOpenGraph({
-      title: project.title,
-      description: project.description,
-    }),
+    openGraph: pageOpenGraph(
+      {
+        title: project.title,
+        description: project.description,
+      },
+      content.settings.seo,
+    ),
   };
 }
 
@@ -61,8 +72,12 @@ export async function generateMetadata({
  */
 export default async function ProjectRoute({ params }: ProjectRouteProps) {
   const { slug } = await params;
-  const project = await readPortfolioProject(slug);
+  const content = await readPortfolioPage();
   const { isEnabled: isPreview } = await draftMode();
+  const projects = isPreview
+    ? content.portfolio.projects
+    : content.portfolio.projects.filter(isPublishable);
+  const project = projects.find((candidate) => candidate.slug === slug);
 
   // A project that has not passed the publication gate does not exist here, in
   // the same way an unpublished one does not: same answer, no hint that a
@@ -72,19 +87,24 @@ export default async function ProjectRoute({ params }: ProjectRouteProps) {
   }
 
   return (
-    <section className="wc-container py-section-xs">
-      <Link
-        href="/portfolio"
-        className="mb-heading-gap inline-block text-micro tracking-24 uppercase text-wc-muted-2 transition-colors duration-300 hover:text-wc-white"
-      >
-        ← Retour au portfolio
-      </Link>
+    <SitePage
+      settings={content.settings}
+      legalDocuments={content.legalDocuments}
+    >
+      <section className="wc-container py-section-xs">
+        <Link
+          href="/portfolio"
+          className="mb-heading-gap inline-block text-micro tracking-24 uppercase text-wc-muted-2 transition-colors duration-300 hover:text-wc-white"
+        >
+          ← Retour au portfolio
+        </Link>
 
-      <ProjectPlayback project={project} />
+        <ProjectPlayback project={project} />
 
-      <div className="pt-heading-gap">
-        <ProjectDetails project={project} as="h1" showRequirements={isPreview} />
-      </div>
-    </section>
+        <div className="pt-heading-gap">
+          <ProjectDetails project={project} as="h1" showRequirements={isPreview} />
+        </div>
+      </section>
+    </SitePage>
   );
 }
