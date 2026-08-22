@@ -69,8 +69,9 @@ it belongs to.
    *The commerce data plane* below.
 6. **Payments** — which provider takes the money, FedaPay's secret key, the
    endpoint secret its webhooks are signed with, and which of its two
-   environments this deployment uses. Sandbox unless something explicitly names
-   the live one.
+   environments this deployment uses. Sandbox unless `FEDAPAY_ENVIRONMENT=live`
+   *and* `WECREATE_LIVE_PAYMENTS_APPROVED_BY` names the owner who signed the
+   Commerce Launch Gate. Either one alone leaves the sandbox in force.
 7. **Transactional email** — which provider carries a buyer's receipt, its key,
    and the verified address that receipt comes from.
 8. **Monitoring** — which provider records failures, and the Sentry DSN when
@@ -381,7 +382,10 @@ total and its duration so the active state is on screen without scrolling. Five
 states share it — the guest form, a cart that needs a price accepted or a
 product removed, an empty cart, a checkout that is not open, and an order
 already with the payment provider — and they are told apart by words and
-structure, never by a status colour.
+structure, never by a status colour. The throwaway comparison that selected
+Variant C is on branch `prototype/digital-transactions`; this code recreates
+the structure and does not import the prototype HTML
+(`docs/design_handoff_wecreate_site/README.md`).
 
 **A second payment *while one is outstanding* is the thing this refuses
 hardest.** After a buyer has been redirected, WeCreate cannot know whether they
@@ -568,15 +572,17 @@ deployment, as every transaction surface on this site is.
 payment token, send the buyer to the URL it answers with — plus one signature to
 verify on the way back in. `FEDAPAY_SECRET_KEY` and `FEDAPAY_WEBHOOK_SECRET` are
 both server-only and there is no `NEXT_PUBLIC_FEDAPAY_*` anything, because no
-browser here ever holds a payment credential. `FEDAPAY_ENVIRONMENT` selects
-sandbox or live and defaults to sandbox; switching it is the Commerce Launch
-Gate's own irreversible decision — see *Before this goes live*.
+browser here ever holds a payment credential. `FEDAPAY_ENVIRONMENT` and
+`WECREATE_LIVE_PAYMENTS_APPROVED_BY` together select sandbox or live and
+default to sandbox; switching is the Commerce Launch Gate's own irreversible
+decision — see *Before this goes live*.
 
 ### Setting up FedaPay
 
 1. Create a FedaPay account and work in its **sandbox** until the Commerce
    Launch Gate says otherwise. Put the sandbox secret API key in
-   `FEDAPAY_SECRET_KEY`; leave `FEDAPAY_ENVIRONMENT` unset.
+   `FEDAPAY_SECRET_KEY`; leave `FEDAPAY_ENVIRONMENT` and
+   `WECREATE_LIVE_PAYMENTS_APPROVED_BY` unset.
 2. In *Workbench → Webhooks*, add an endpoint at
    `POST {origin}/api/paiement/fedapay` subscribed to the transaction events —
    `transaction.approved`, `transaction.canceled`, `transaction.declined` and
@@ -1277,8 +1283,8 @@ in the Paris region, with a retention that covers at least the personal-data
 period below. The restore drill is: restore into a *new* project, apply any
 migrations that landed after the backup, confirm `commerce` is still unlisted
 in exposed schemas, and walk one sandbox purchase through to Order Access.
-Record the date on the launch-gate issue. Do not restore over the live
-project.
+Record the date on [`docs/commerce-launch-gate.md`](./docs/commerce-launch-gate.md).
+Do not restore over the live project.
 
 The VPS snapshot taken before provisioning is not a data backup. Application
 state lives in Supabase, Sanity and Mux; a rebuild from this repository plus
@@ -1345,8 +1351,10 @@ mocked internals, no production credentials.
 ```
 tests/e2e/
 ├── homepage.spec.ts                  the approved design and its content
-├── portfolio.spec.ts                 filters, counts, the project dialog and its
-│                                     keyboard, playback fallback, publication
+├── portfolio.spec.ts                 filters, counts, empty-universe filters
+│                                     hidden, no fabricated project in source,
+│                                     the project dialog and its keyboard,
+│                                     playback fallback, publication
 ├── boutique.spec.ts                  family filters, crawlable product pages,
 │                                     draft exclusion, forthcoming and archived
 │                                     states, published price changes, redirects
@@ -1625,8 +1633,9 @@ assertions), visual references for the six public views, structured data,
 robots/sitemap, caching, and Firefox/WebKit walks of the critical public
 journeys.
 
-These remain a **manual** pass before launch, and are the Commerce Launch Gate
-evidence for the numbers a lab run cannot speak for:
+These remain a **manual** pass before launch, and are recorded on
+[`docs/commerce-launch-gate.md`](./docs/commerce-launch-gate.md) — the numbers
+a lab run cannot speak for:
 
 1. **Screen reader** — Accueil, Portfolio (dialog and filters), Services
    (comparison table), Boutique (product and cart drawer), Contact, one legal
@@ -1788,7 +1797,9 @@ Then fill in `/srv/wecreate/shared/env` from
 [`deploy/env.server.example`](./deploy/env.server.example), and apply
 `supabase/migrations/` to the target project before the deployment serves
 commerce — the back office's functions do not exist in a project that has not
-had them.
+had them. `/opt/wecreate-deploy/bin/check-env.sh` reports whether that file is
+complete without printing a value, and refuses to be quiet about a live
+payment key or a named-owner gap on the Commerce Launch Gate.
 
 **Verify that they landed rather than assuming it.** No test in this repository
 ever runs that SQL: the acceptance suite drives the fixture, so the migrations
@@ -1900,6 +1911,7 @@ visitors never see the difference.
 systemctl status wecreate
 journalctl -u wecreate -f            # the application's own output
 journalctl -u wecreate --since "1 hour ago"
+/opt/wecreate-deploy/bin/check-env.sh   # is shared/env complete, without printing a value
 ```
 
 Logs live in the journal — the process writes to stdout and systemd keeps it —
@@ -1999,12 +2011,18 @@ Access.
 
 ## Before this goes live
 
-Production purchasing stays disabled until the Commerce Launch Gate is signed
-off — see issue #1. Nothing in this repository may switch FedaPay to live; that
-is a deliberate, named decision by WeCreate. The switch itself is one
-environment variable, `FEDAPAY_ENVIRONMENT=live`, set once, in the deployment
-platform's own configuration, by the people whose money it is. Every default in
-source is the sandbox, and no code path selects the live API by inference.
+The Commerce Launch Gate is [`docs/commerce-launch-gate.md`](./docs/commerce-launch-gate.md):
+the checklist, the ownership table, the sandbox journey, the field checks, and
+the named-owner sign-off. The operator walkthrough is
+[`docs/operating.md`](./docs/operating.md). Issue #18 is the ticket.
+
+Production purchasing stays disabled until that file is signed. Nothing in this
+repository may switch FedaPay to live. The switch is two values, set once, in
+`/srv/wecreate/shared/env`, by the people whose money it is:
+`FEDAPAY_ENVIRONMENT=live` and `WECREATE_LIVE_PAYMENTS_APPROVED_BY` set to the
+owner's name. Either one alone, a deployment, or a copied environment file
+leaves the sandbox in force. Every default in source is the sandbox, and no
+code path selects the live API by inference.
 
 Four parts of that gate are already enforced in code, and they reinforce each
 other. Every legal document ships as provisional text, so
@@ -2044,7 +2062,7 @@ first real buyer.
 Staff MFA is one of the gate's own prerequisites, and it is enforced rather than
 documented: there is no path into `/commerce` that does not pass through an
 individual account and a second factor. What the gate still asks of WeCreate is
-the rest — approved legal text, validated prices, the real Paid Deliverables and
-covers, a verified sender domain, client-owned production accounts, sandbox
-end-to-end tests, backup and restore checks, monitoring alerts, and MTN/Moov
-field tests.
+recorded on [`docs/commerce-launch-gate.md`](./docs/commerce-launch-gate.md) —
+approved legal text, validated prices, the real Paid Deliverables and covers, a
+verified sender domain, client-owned production accounts, sandbox end-to-end
+tests, backup and restore checks, monitoring alerts, and MTN/Moov field tests.
