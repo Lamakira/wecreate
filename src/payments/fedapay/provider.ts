@@ -47,16 +47,23 @@ export type FedaPayEnvironment = keyof typeof API_ORIGINS;
 const REQUEST_TIMEOUT_MS = 15_000;
 
 /**
- * Which FedaPay this process talks to. Sandbox unless something explicitly
- * names the live one.
+ * Which FedaPay this process talks to. Sandbox unless two things are both
+ * true: the environment is explicitly named `live`, and a named WeCreate owner
+ * is recorded beside it.
  *
- * Live payments are the Commerce Launch Gate's own irreversible switch, and
- * issue #1 requires a named WeCreate owner to approve it. Nothing in this
- * repository selects it: it is a deployment environment variable, set once, by
- * the people whose money it is.
+ * Live payments are the Commerce Launch Gate's own irreversible switch
+ * (issue #18). Issue #1 requires a named owner to approve it, and for that
+ * approval to be recorded before production FedaPay is enabled. Naming `live`
+ * without the name is still only a name — a copied environment file, a
+ * deployment, a missing character. The sandbox is what a process reaches until
+ * both are set, and nothing in this repository supplies either.
  */
 export function fedaPayEnvironment(): FedaPayEnvironment {
-  return process.env.FEDAPAY_ENVIRONMENT === "live" ? "live" : "sandbox";
+  const approvedBy = process.env.WECREATE_LIVE_PAYMENTS_APPROVED_BY?.trim();
+  if (process.env.FEDAPAY_ENVIRONMENT === "live" && approvedBy) {
+    return "live";
+  }
+  return "sandbox";
 }
 
 export function fedaPayApiOrigin(): string {

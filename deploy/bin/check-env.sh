@@ -71,20 +71,26 @@ report WECREATE_COMMERCE_PROVIDER    "inferred from SUPABASE_URL when empty, so 
 report WECREATE_PAYMENT_EVENT_SECRET "NO PAYMENT IS EVER APPROVED — the buyer pays and the order stays at 'verifying payment' for ever" required
 
 step "Payments"
-report FEDAPAY_SECRET_KEY     "no payment provider: the checkout says online payment is not open yet" required
-report FEDAPAY_WEBHOOK_SECRET "NO PAYMENT IS EVER APPROVED — deliveries cannot be proved to come from FedaPay, so every one is refused" required
-report FEDAPAY_ENVIRONMENT    "defaults to sandbox" optional
+report FEDAPAY_SECRET_KEY                      "no payment provider: the checkout says online payment is not open yet" required
+report FEDAPAY_WEBHOOK_SECRET                  "NO PAYMENT IS EVER APPROVED — deliveries cannot be proved to come from FedaPay, so every one is refused" required
+report FEDAPAY_ENVIRONMENT                     "defaults to sandbox" optional
+report WECREATE_LIVE_PAYMENTS_APPROVED_BY      "live payments stay in the sandbox even if FEDAPAY_ENVIRONMENT is live" optional
 
 step "Email"
 report RESEND_API_KEY       "an approved payment still grants access, but the buyer is never told — the order reads 'delivery to take up again'" required
 report RESEND_FROM_ADDRESS  "same as above" required
 
 step "Two things worth refusing"
-# The one mistake on this deployment that costs real money.
+# The one mistake on this deployment that costs real money. Naming `live`
+# without recording who signed the Commerce Launch Gate is still only a name:
+# the application stays in the sandbox until both are set (issue #18).
 fedapay_env="${VALUE[FEDAPAY_ENVIRONMENT]:-sandbox}"
 fedapay_key="${VALUE[FEDAPAY_SECRET_KEY]:-}"
-if [[ "${fedapay_env}" == "live" ]]; then
-  note "FEDAPAY_ENVIRONMENT is 'live'. On a staging deployment this takes real money from real cards."
+approved_by="${VALUE[WECREATE_LIVE_PAYMENTS_APPROVED_BY]:-}"
+if [[ "${fedapay_env}" == "live" && "${approved_by}" =~ [^[:space:]] ]]; then
+  warn "FEDAPAY_ENVIRONMENT is 'live' and a named owner is recorded. This takes real money from real cards."
+elif [[ "${fedapay_env}" == "live" ]]; then
+  note "FEDAPAY_ENVIRONMENT is 'live' but WECREATE_LIVE_PAYMENTS_APPROVED_BY is empty. The application stays in the sandbox. Name the owner who signed docs/commerce-launch-gate.md before this takes real money."
 else
   ok "FEDAPAY_ENVIRONMENT is ${fedapay_env}"
 fi

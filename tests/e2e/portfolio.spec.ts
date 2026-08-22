@@ -139,6 +139,44 @@ test.describe("The portfolio", () => {
   });
 });
 
+test.describe("The portfolio before every universe has approved work", () => {
+  test("hides a universe that has no published project", async ({ page }) => {
+    // Issue #18: at least six approved real projects covering the advertised
+    // universes, or empty universe filters hidden. Until WeCreate has work in
+    // every universe, a filter that would open on nothing must not be offered.
+    await content.editDraft({
+      portfolio: {
+        projects: SAMPLE_PORTFOLIO_PROJECTS.filter(
+          (project) => project.universe !== "Mariage",
+        ),
+      },
+    });
+    await content.publish();
+
+    await page.goto("/portfolio");
+
+    const filters = page.getByRole("group", { name: "Filtrer par univers" });
+    await expect(filters.getByRole("button", { name: "Immobilier" })).toBeVisible();
+    await expect(filters.getByRole("button", { name: "Entreprises" })).toBeVisible();
+    await expect(filters.getByRole("button", { name: "Mariage" })).toHaveCount(0);
+  });
+
+  test("offers no filter, and no fabricated project, when nothing is published", async ({
+    page,
+  }) => {
+    // The shipped state: no Portfolio Project lives in application source.
+    await page.goto("/portfolio");
+
+    await expect(page.getByTestId("portfolio-empty")).toHaveText(
+      "Les projets publiés apparaîtront ici dès leur mise en ligne.",
+    );
+    await expect(page.getByRole("group", { name: "Filtrer par univers" })).toHaveCount(
+      0,
+    );
+    await expect(page.getByTestId("portfolio-grid")).toHaveCount(0);
+  });
+});
+
 test.describe("Opening a Portfolio Project", () => {
   test.beforeEach(async () => {
     await publishSampleProjects();

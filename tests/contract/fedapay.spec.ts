@@ -28,7 +28,9 @@ import {
  * contract under test is the adapter's, not a page's.
  *
  * **It never creates a live charge.** It refuses to run outside FedaPay's
- * sandbox, and a sandbox transaction is an intent to collect that nobody pays.
+ * sandbox — `fedaPayEnvironment()` stays there unless a named owner has
+ * approved live payments, and this suite asserts that before it calls the
+ * vendor — and a sandbox transaction is an intent to collect that nobody pays.
  * Run it with sandbox credentials in the environment:
  *
  *     FEDAPAY_SECRET_KEY=sk_sandbox_… pnpm test:contract
@@ -38,6 +40,53 @@ import {
  * delivered event needs an endpoint secret and a delivery somebody captured
  * with FedaPay's webhook tooling. Whichever is available runs.
  */
+
+/**
+ * Restore one environment variable to the value it had when this file loaded.
+ * `undefined` means it was unset, and has to be unset again rather than set
+ * to the string "undefined".
+ */
+function restoreEnv(name: string, previous: string | undefined): void {
+  if (previous === undefined) {
+    delete process.env[name];
+  } else {
+    process.env[name] = previous;
+  }
+}
+
+test.describe("This suite never talks to the live FedaPay API", () => {
+  const previous = {
+    environment: process.env.FEDAPAY_ENVIRONMENT,
+    approvedBy: process.env.WECREATE_LIVE_PAYMENTS_APPROVED_BY,
+  };
+
+  test.afterEach(() => {
+    restoreEnv("FEDAPAY_ENVIRONMENT", previous.environment);
+    restoreEnv("WECREATE_LIVE_PAYMENTS_APPROVED_BY", previous.approvedBy);
+  });
+
+  test("stays on the sandbox origin when live is named without a signed owner", () => {
+    // Issue #18: naming `live` without recording who signed the Commerce
+    // Launch Gate is still only a name. This suite calls the vendor; the
+    // origin it would reach has to stay the sandbox even if a copied
+    // environment file said otherwise. Both values together are never set
+    // here — that is the combination that would collect real money.
+    delete process.env.WECREATE_LIVE_PAYMENTS_APPROVED_BY;
+
+    delete process.env.FEDAPAY_ENVIRONMENT;
+    expect(fedaPayApiOrigin()).toBe("https://sandbox-api.fedapay.com");
+
+    process.env.FEDAPAY_ENVIRONMENT = "live";
+    expect(fedaPayApiOrigin()).toBe("https://sandbox-api.fedapay.com");
+
+    process.env.FEDAPAY_ENVIRONMENT = "LIVE";
+    expect(fedaPayApiOrigin()).toBe("https://sandbox-api.fedapay.com");
+
+    process.env.FEDAPAY_ENVIRONMENT = "live";
+    process.env.WECREATE_LIVE_PAYMENTS_APPROVED_BY = "   ";
+    expect(fedaPayApiOrigin()).toBe("https://sandbox-api.fedapay.com");
+  });
+});
 
 test.describe("Creating a hosted payment", () => {
   test.skip(
