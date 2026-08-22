@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 
 import { writeAccessToken } from "@/fulfillment/session";
 import { isAccessToken } from "@/fulfillment/token";
+import { capture } from "@/monitoring/provider";
+import { consume } from "@/security/rate-limit";
+import { requestAddress } from "@/security/request-address";
 
 /**
  * The address in the buyer's receipt: where the token comes in, and where it
@@ -24,12 +27,24 @@ import { isAccessToken } from "@/fulfillment/token";
  * for and a page in Next.js cannot write one.
  */
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ jeton: string }> },
 ): Promise<Response> {
   const { jeton } = await params;
   if (isAccessToken(jeton)) {
-    await writeAccessToken(jeton);
+    const address = requestAddress(request.headers);
+    if (!consume("order-access-token", address)) {
+      // The page the buyer lands on still says nothing: an expired token, a
+      // guess and a caller who has been asked to slow down are the same
+      // surface. The event is what makes the guessing noticeable (issue #1).
+      await capture({
+        kind: "token-guessing",
+        source: "server",
+        message: "Order Access token guesses exceeded the limit.",
+      });
+    } else {
+      await writeAccessToken(jeton);
+    }
   }
 
   // A relative `Location`, which the browser resolves against the address it

@@ -40,7 +40,8 @@ export const instant = false;
  * expired token, a replaced one, a cookie somebody edited and a browser that
  * simply arrived here all produce the surface below, which names no product and
  * no order. Working through guesses therefore never reveals that an order
- * exists — and rate limiting on that is issue #17's.
+ * exists — and rate limiting on the way in, at `[jeton]`, is what makes a
+ * spray noticeable without ever saying that one did.
  *
  * Out of search results whatever the deployment, as every transaction surface
  * on this site is.

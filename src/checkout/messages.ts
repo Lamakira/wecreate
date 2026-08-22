@@ -16,7 +16,8 @@ export type CheckoutMessageKey =
   | "productWithdrawn"
   | "paymentUnreachable"
   | "alreadyWithProvider"
-  | "orderUnavailable";
+  | "orderUnavailable"
+  | "tooManyAttempts";
 
 export const CHECKOUT_MESSAGES: Record<CheckoutMessageKey, string> = {
   notOpen: "La commande n'est pas ouverte pour le moment. Réessayez plus tard.",
@@ -30,6 +31,8 @@ export const CHECKOUT_MESSAGES: Record<CheckoutMessageKey, string> = {
     "Un paiement est déjà en cours pour cette commande. Suivez-le avant d'en lancer un autre.",
   orderUnavailable:
     "Cette commande n'est plus en attente de paiement. Repartez de votre panier.",
+  tooManyAttempts:
+    "Trop de tentatives de paiement sur cette commande. Réessayez dans quelques minutes.",
 };
 
 export function checkoutMessage(key: CheckoutMessageKey | null): string | null {

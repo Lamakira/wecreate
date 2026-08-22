@@ -2,7 +2,10 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { getCommerceProvider } from "@/commerce/provider";
 import { deliverApprovedOrder } from "@/fulfillment";
+import { capture } from "@/monitoring/provider";
 import { getPaymentProvider } from "@/payments/provider";
+import { consume } from "@/security/rate-limit";
+import { requestAddress } from "@/security/request-address";
 
 /**
  * Where the payment provider says what happened, and the only thing in this
@@ -69,7 +72,13 @@ const ACKNOWLEDGED = { received: true } as const;
 function refused(status: number): NextResponse {
   // No reason, and never the provider's or the order's. A public endpoint says
   // what happened with its status code and nothing else (issue #1).
-  return NextResponse.json({ received: false }, { status });
+  return NextResponse.json(
+    { received: false },
+    {
+      status,
+      headers: { "cache-control": "no-store, must-revalidate" },
+    },
+  );
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
@@ -105,7 +114,16 @@ export async function POST(request: NextRequest): Promise<Response> {
       // Logged without the body: an unverified payload is attacker-controlled
       // text, and issue #1 asks for signature failures to be alerted on.
       console.warn("A payment event arrived without a valid signature.");
-      return refused(401);
+      await capture({
+        kind: "signature-failure",
+        source: "webhook",
+        message: "A payment event arrived without a valid signature.",
+      });
+      return refused(
+        consume("webhook-unsigned", requestAddress(request.headers))
+          ? 401
+          : 429,
+      );
     case "malformed":
       console.warn("A signed payment event could not be read.");
       return refused(400);
@@ -150,6 +168,13 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
   } catch (error) {
     console.error("Recording a payment event failed.", error);
+    await capture({
+      kind: "webhook-failure",
+      source: "webhook",
+      message: "Recording a payment event failed.",
+      providerEventId: reading.event.providerEventId,
+      providerTransactionId: reading.event.providerTransactionId,
+    });
     // The provider will try again, which is the correct outcome: an event this
     // deployment could not write down has not been processed.
     return refused(500);

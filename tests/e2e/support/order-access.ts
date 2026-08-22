@@ -268,25 +268,40 @@ const DOWNLOAD_PATH = "/commande/acces/telechargement";
 export async function pressDownload(page: Page, sku: string): Promise<string> {
   let handed = "";
 
+  const webkit = page.context().browser()?.browserType().name() === "webkit";
+
   await page.route(`**${DOWNLOAD_PATH}`, async (route) => {
     const answer = await route.fetch({ maxRedirects: 0 });
     handed = answer.headers()["location"] ?? "";
+    const location = handed.startsWith("http") ? "/commande/acces" : handed;
+    // WebKit's protocol cannot fulfill a route with a 3xx status. Chromium
+    // follows a 303 from a form POST the way a buyer's browser does; WebKit
+    // is answered with a document and this helper takes it back itself, so a
+    // later `goto` is not racing a queued redirect.
+    if (webkit) {
+      await route.fulfill({
+        status: 200,
+        contentType: "text/html; charset=utf-8",
+        body: "<!doctype html><title></title>",
+      });
+      return;
+    }
     await route.fulfill({
       status: 303,
-      headers: { location: handed.startsWith("http") ? "/commande/acces" : handed },
+      headers: { location },
     });
   });
 
-  // Armed before the press, and it cannot resolve against the page already
-  // loaded: only a response that arrives from here on counts.
-  const returned = page.waitForResponse(
-    (response) =>
-      response.request().isNavigationRequest() &&
-      response.request().method() === "GET" &&
-      new URL(response.url()).pathname === "/commande/acces",
-  );
   await accessRow(page, sku).getByTestId("access-download").click();
-  await returned;
+  const back = handed.startsWith("http") ? "/commande/acces" : handed || "/commande/acces";
+  if (webkit) {
+    await page.goto(back);
+  } else {
+    await page.waitForURL((url) => {
+      const expected = new URL(back, url.origin);
+      return url.pathname === expected.pathname && url.search === expected.search;
+    });
+  }
   await page.unroute(`**${DOWNLOAD_PATH}`);
 
   return handed;
@@ -311,11 +326,9 @@ const ACCESS_COOKIE = "wc_acces";
  * which serialises the presses and would test nothing about two of them racing.
  *
  * They carry the buyer's own credential the way their browser carries it — as
- * the access cookie, in the header, on a real POST to the real route. Sending
- * it by hand rather than letting the cookie jar do it is not a shortcut: the
- * cookie is `Secure`, a browser will send it to `127.0.0.1` over plain HTTP and
- * an HTTP client outside a browser will not, so a helper that relied on the jar
- * would answer `unknownAccess` to every press and prove nothing.
+ * the access cookie, in the header, on a real POST to the real route. Playwright's
+ * request context does not share the browser cookie jar, so the helper sends
+ * the cookie itself: without it every press would answer `unknownAccess`.
  *
  * The redirect is read rather than followed, because `stockage.wecreate.test`
  * deliberately does not resolve and what is under test is the answer rather

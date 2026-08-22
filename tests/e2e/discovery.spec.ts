@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { ManagedContent, enterPreview, leavePreview } from "./support/managed-content";
+import { approvedLegalDocuments } from "./support/sample-content";
 import { graphOfType, jsonLdGraphs, robotsMeta } from "./support/seo";
 
 /**
@@ -28,6 +29,11 @@ let content: ManagedContent;
 test.beforeEach(async ({ request }) => {
   content = new ManagedContent(request);
   await content.reset();
+  // Shipped legal text is a placeholder, kept out of the sitemap. The public
+  // views this file walks include a legal page a crawler should see, so the
+  // suite seeds the approved revision an editor would publish past the gate.
+  await content.editDraft({ legalDocuments: approvedLegalDocuments() });
+  await content.publish();
 });
 
 test.afterEach(async () => {

@@ -60,6 +60,48 @@ export class CommerceDataPlane {
     await this.act({ action: "emptyPrivateStore" });
   }
 
+  /**
+   * Apply the personal-data retention this deployment has decided is in force.
+   *
+   * The period is not passed in: the hook asks the application, and an
+   * unconfigured or gated process forgets nothing. What comes back is that
+   * status, so a scenario can assert the gate without inventing a number of
+   * its own (issue #17).
+   */
+  async applyRetention(): Promise<{
+    status: "unconfigured" | "gated" | "configured";
+    days?: number;
+    forgotten?: number;
+  }> {
+    const response = await this.request.post("/api/test/commerce", {
+      data: { action: "applyRetention" },
+    });
+    if (response.status() === 404) {
+      throw new Error(
+        "The commerce test hook is not mounted. Playwright reuses an " +
+          "already-running server outside CI, so this usually means a server " +
+          "started by hand is holding the port. Stop it and re-run.",
+      );
+    }
+    if (!response.ok()) {
+      throw new Error(
+        `Commerce test hook failed: ${response.status()} ${await response.text()}`,
+      );
+    }
+    const body = (await response.json()) as {
+      retention: {
+        status: "unconfigured" | "gated" | "configured";
+        days?: number;
+      };
+      forgotten?: number;
+    };
+    return {
+      status: body.retention.status,
+      days: body.retention.days,
+      forgotten: body.forgotten,
+    };
+  }
+
   private async act(body: Record<string, unknown>): Promise<void> {
     const response = await this.request.post("/api/test/commerce", {
       data: body,
@@ -197,6 +239,10 @@ export async function openDossier(page: Page, reference: string): Promise<void> 
  * than for a submission: `press()` is for the actions, which post.
  */
 export async function searchOrders(page: Page, query: string): Promise<void> {
+  const here = new URL(page.url());
+  if (here.pathname !== "/commerce/commandes") {
+    await page.goto("/commerce/commandes");
+  }
   await page.getByLabel("Référence ou e-mail").fill(query);
   await page.getByRole("button", { name: "Chercher" }).click();
   await page.waitForURL(

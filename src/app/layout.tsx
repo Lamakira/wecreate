@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { ClientErrorReporter } from "@/components/monitoring/client-reporter";
+
 import "./globals.css";
 
 /**
@@ -33,7 +35,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           crossOrigin="anonymous"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <ClientErrorReporter />
+        {children}
+      </body>
     </html>
   );
 }

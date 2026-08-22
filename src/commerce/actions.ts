@@ -2,10 +2,13 @@
 
 import { createHash } from "node:crypto";
 
-import { updateTag } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { readBoutique } from "@/managed-content";
+import { consumeAll } from "@/security/rate-limit";
+import { requestAddress } from "@/security/request-address";
 
 import type { CommerceMessageKey } from "./messages";
 import { administersCommerce, mayEnrolSecondFactor } from "./operators";
@@ -38,6 +41,10 @@ import type { CommerceOperator, OperatorCredentials } from "./types";
  */
 
 function back(path: string, message?: CommerceMessageKey): never {
+  // A refusal that does not change the cookie is a redirect to this same
+  // page with a query string. Without an invalidation, Next.js can treat
+  // that as a no-op and leave the form pending (issue #17).
+  revalidatePath(path);
   redirect(message ? `${path}?message=${message}` : path);
 }
 
@@ -89,8 +96,19 @@ export async function signInAction(formData: FormData): Promise<void> {
   const provider = await getCommerceProvider();
   if (!provider) back("/commerce/connexion", "signInRefused");
 
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const address = requestAddress(await headers());
+  if (
+    !consumeAll([
+      { surface: "staff-login", key: email || address },
+      { surface: "staff-login", key: `ip:${address}` },
+    ])
+  ) {
+    back("/commerce/connexion", "tooManyAttempts");
+  }
+
   const outcome = await provider.signIn(
-    String(formData.get("email") ?? ""),
+    email,
     String(formData.get("password") ?? ""),
   );
   if (outcome.status === "refused") {
@@ -106,6 +124,20 @@ export async function verifySecondFactorAction(formData: FormData): Promise<void
   const provider = await getCommerceProvider();
   const credentials = await readOperatorCredentials();
   if (!provider || !credentials) back("/commerce/connexion", "sessionExpired");
+
+  const operator = await readSignedInOperator();
+  const address = requestAddress(await headers());
+  if (
+    !consumeAll([
+      {
+        surface: "staff-mfa",
+        key: operator?.email.toLowerCase() ?? address,
+      },
+      { surface: "staff-mfa", key: `ip:${address}` },
+    ])
+  ) {
+    back("/commerce/connexion", "tooManyAttempts");
+  }
 
   const outcome = await provider.verifySecondFactor(credentials, {
     factorId: String(formData.get("factorId") ?? ""),

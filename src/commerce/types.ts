@@ -606,4 +606,12 @@ export interface OrderDossier {
   anomalies: OrderAnomaly[];
   /** What staff have done to this order, newest first. */
   audit: CommerceAuditEntry[];
+  /**
+   * Whether the buyer's contact details have been forgotten.
+   *
+   * The Order Snapshot's own columns are never rewritten (issue #1); this is a
+   * side fact, and the dossier is where it is applied — the fields above are
+   * already empty when this is true.
+   */
+  personalDataForgotten: boolean;
 }

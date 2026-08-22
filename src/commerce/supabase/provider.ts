@@ -342,6 +342,7 @@ interface DossierRow {
   access: AccessRow | null;
   anomalies: AnomalyRow[];
   audit: AuditRow[];
+  personal_data_forgotten: boolean;
 }
 
 function toDossier(row: DossierRow): OrderDossier {
@@ -367,6 +368,7 @@ function toDossier(row: DossierRow): OrderDossier {
     access: row.access ? toAccess(row.access) : null,
     anomalies: (row.anomalies ?? []).map(toAnomaly),
     audit: (row.audit ?? []).map(toAuditEntry),
+    personalDataForgotten: Boolean(row.personal_data_forgotten),
   };
 }
 

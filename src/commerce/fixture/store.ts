@@ -90,6 +90,14 @@ export interface StoredOrder {
    * buyer's own.
    */
   correction: ContactCorrection | null;
+  /**
+   * When this order's buyer contact was forgotten, or nothing.
+   *
+   * Beside the buyer's own details rather than over them: `refuse_order_rewrite`
+   * keeps those four columns exactly as they were typed, and forgetting is a
+   * later fact the dossier applies when it is read (issue #17).
+   */
+  personalDataForgottenAt: string | null;
   attempts: StoredPaymentAttempt[];
 }
 
@@ -418,6 +426,9 @@ export async function ageCommerceFixture(seconds: number): Promise<void> {
       fulfillmentClaimedAt: order.fulfillmentClaimedAt
         ? shift(order.fulfillmentClaimedAt)
         : null,
+      personalDataForgottenAt: order.personalDataForgottenAt
+        ? shift(order.personalDataForgottenAt)
+        : null,
       attempts: order.attempts.map((attempt) => ({
         ...attempt,
         createdAt: shift(attempt.createdAt),
@@ -433,6 +444,34 @@ export async function ageCommerceFixture(seconds: number): Promise<void> {
       linkExpiresAt: grant.linkExpiresAt ? shift(grant.linkExpiresAt) : null,
     }));
   });
+}
+
+/**
+ * Mark contact details forgotten on every order older than this many days.
+ *
+ * The buyer's own columns are not touched. What is written is the side fact
+ * the dossier reads, the same way `commerce.forget_personal_data` does — so a
+ * scenario that ages an order and then applies retention is asserting what
+ * the application concludes, not a rewrite the data plane refuses.
+ *
+ * Only the fixture has it. The hook that reaches it asks the application for
+ * the period first and does not invent one of its own (issue #17).
+ */
+export async function forgetPersonalData(days: number): Promise<number> {
+  const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+  const forgottenAt = new Date().toISOString();
+  let forgotten = 0;
+
+  await changeCommerceFixture((dataset) => {
+    dataset.orders = dataset.orders.map((order) => {
+      if (order.personalDataForgottenAt) return order;
+      if (Date.parse(order.createdAt) > cutoff) return order;
+      forgotten += 1;
+      return { ...order, personalDataForgottenAt: forgottenAt };
+    });
+  });
+
+  return forgotten;
 }
 
 /**

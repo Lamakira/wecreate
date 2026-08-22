@@ -73,9 +73,15 @@ it belongs to.
    the live one.
 7. **Transactional email** — which provider carries a buyer's receipt, its key,
    and the verified address that receipt comes from.
-8. **Preview and revalidation secrets** — who may open a preview session and who
+8. **Monitoring** — which provider records failures, and the Sentry DSN when
+   that is Sentry. There is no `NEXT_PUBLIC_SENTRY_*` anything: the browser
+   posts to `/api/observation` and the server forwards a scrubbed event.
+9. **Personal-data retention** — how many days a buyer's contact is kept, once
+   the privacy policy in force has approved a period. Unset means nothing is
+   forgotten.
+10. **Preview and revalidation secrets** — who may open a preview session and who
    may drop the content cache.
-9. **Acceptance-test hooks** — set by `playwright.config.ts`, never by hand.
+11. **Acceptance-test hooks** — set by `playwright.config.ts`, never by hand.
 
 Secrets are server-only. On a deployment they live in two places, and which one
 decides which: `NEXT_PUBLIC_*` is compiled into the bundle by `next build`, so
@@ -1251,6 +1257,78 @@ Nothing about production purchasing follows from this setup. Uploading and
 activating a Paid Deliverable Version is one of the Commerce Launch Gate's
 prerequisites, not a way past it — see *Before this goes live*.
 
+### Environments, backups and restore
+
+Staging and production must not share a Sanity dataset, a Supabase project or
+bucket, a FedaPay environment or webhook, a Resend sender, Mux credentials, a
+deployment secret, a domain, an analytics property or a Sentry project. Sanity
+caps a project at two datasets, so production keeps `production` and every
+non-production environment shares `development` — that is the one exception,
+and it is documented above.
+
+**Staging currently shares the production Supabase project.** That is safe only
+while no real order exists and is the first thing to split before the Commerce
+Launch Gate opens. Until it is split, a restore drill on that project is a
+production restore drill.
+
+Supabase's own daily backups are the baseline. Point-in-time recovery is a
+paid add-on; enable it on the production project before the first real buyer,
+in the Paris region, with a retention that covers at least the personal-data
+period below. The restore drill is: restore into a *new* project, apply any
+migrations that landed after the backup, confirm `commerce` is still unlisted
+in exposed schemas, and walk one sandbox purchase through to Order Access.
+Record the date on the launch-gate issue. Do not restore over the live
+project.
+
+The VPS snapshot taken before provisioning is not a data backup. Application
+state lives in Supabase, Sanity and Mux; a rebuild from this repository plus
+`/srv/wecreate/shared/env` restores the deployment. Secrets in that file are
+runtime-only. Anything `NEXT_PUBLIC_*` is compiled in by CI and is never a
+secret — HTTPS terminates at nginx in front of Node, which listens on
+loopback.
+
+### Observability
+
+Failures leave through `src/monitoring/`: one `capture()` call, scrubbed of
+emails, telephones, Order Access tokens, bearer headers and the secrets in
+the environment. The Sentry adapter is a raw envelope `POST`. There is no
+`@sentry/nextjs` SDK and no DSN in the browser. Client errors post to
+`/api/observation`, which assigns `kind: "client-error"` itself.
+
+Configure Sentry alerts on `signature-failure`, `token-guessing`,
+`unusual-payment-retries` and `fulfillment-backlog`. The other kinds
+(`client-error`, `server-error`, `webhook-failure`, `storage-failure`,
+`email-failure`) are the same failures captured so they can be found.
+
+`SENTRY_DSN` is server-only. Set `WECREATE_MONITORING_PROVIDER=sentry` on a
+deployment that has a DSN, or leave it unset and the adapter is selected when
+the DSN is present. `none` reports nothing.
+
+### Personal-data retention
+
+There is no default period in code. Set
+`WECREATE_PERSONAL_DATA_RETENTION_DAYS` to a positive integer *and* publish an
+approved privacy policy that names that period. Either missing, and nothing is
+forgotten — a placeholder revision is not a period anybody agreed to.
+
+Forgetting is a side fact (`personal_data_forgotten_at`), not a rewrite of the
+Order Snapshot. The dossier then shows that the contact has been forgotten;
+search still finds the order by its reference and no longer by an address.
+
+The application is what decides the period: `applyPersonalDataRetention()`
+reads the env and the privacy policy in force, and forgets nobody when either
+is missing. The acceptance suite goes through that function. On a real
+project there is no service role, so the data-plane job is SQL — with the
+**same integer** `WECREATE_PERSONAL_DATA_RETENTION_DAYS` names, and only
+while the published privacy policy is approved:
+
+```sql
+select commerce.forget_personal_data(30);
+```
+
+That function is not granted to `anon` or `authenticated`. Run it from the SQL
+editor on a schedule. Do not pass a number the policy has not named.
+
 ## The acceptance seam
 
 ```bash
@@ -1325,6 +1403,15 @@ tests/e2e/
 │                                     that opens it, granting a later version,
 │                                     settling a duplicate payment, and what no
 │                                     support action may touch
+├── security-regression.spec.ts       rate limits, captured failures, cache
+│                                     headers, secret leakage, cookies, and
+│                                     personal-data retention
+├── transaction-journeys.spec.ts      checkout validation, Variant C, retry,
+│                                     Order Access, a download, the dossier and
+│                                     a provider that cannot be reached — also
+│                                     on Firefox and WebKit
+├── public-journeys.spec.ts           the public views, on Firefox and WebKit
+│                                     as well as Chromium
 ├── site-shell.spec.ts                header, navigation, cart, footer, fonts
 ├── managed-content-publishing.spec.ts draft, preview, publish, revalidate
 ├── resilience.spec.ts                reduced motion, no JS, nothing published
@@ -1340,6 +1427,7 @@ tests/e2e/
     │                                 emailed address, what a temporary private
     │                                 link must be, presses made at once, and
     │                                 what the data plane durably holds
+    ├── observation.ts                captured failures, over HTTP
     └── sample-content.ts             stand-in projects and products
 ```
 
@@ -1347,8 +1435,9 @@ Tests act as a Content Editor would, through `/api/test/managed-content`, and as
 a Commerce Operator would, through the back office itself — signing in with a
 password and a code their authenticator really produces, uploading through the
 real form. `/api/test/commerce` exists only for the things no operator can do —
-returning the data plane to its seeded state between scenarios, moving time, and
-taking away the bytes behind the versions it holds.
+returning the data plane to its seeded state between scenarios, moving time,
+taking away the bytes behind the versions it holds, and applying the
+personal-data retention the rest of the application has decided is in force.
 
 The Digital Cart is the one place a test writes state directly, and both reasons
 are themselves under test: a cart that survives a closed browser for thirty days
@@ -1367,7 +1456,7 @@ are sent as bytes, because a signature is over bytes and Playwright re-serialise
 a string that is not already valid JSON — which would quietly turn every
 malformed-delivery scenario into a test of nothing.
 
-Four things the suite reaches for that no actor can, and each is at an outbound
+Five things the suite reaches for that no actor can, and each is at an outbound
 boundary rather than inside anything. **The outbox**, through `/api/test/email`:
 a receipt goes to an address there is no mailbox for on this machine, so the
 fixture email provider keeps what it was asked to send and a scenario reads it
@@ -1385,7 +1474,11 @@ and for a claim left behind by a request nobody is waiting on any more. **A
 private store that cannot answer for an object it should have**, through
 `emptyPrivateStore`, because a file address that could not be produced must cost
 a buyer no part of their allowance and deleting a version is a thing the data
-plane refuses.
+plane refuses. **Captured failures**, through `/api/test/observation`: the
+fixture monitoring provider keeps what it was asked to record so a scenario
+can assert that a forged webhook, a guessed token or a failed delivery was
+reported without a secret in the event, and resetting also empties the
+rate-limit buckets that live in the same process.
 
 One thing the suite fakes that is not a provider: a browser following an address
 to `stockage.wecreate.test`. Chromium resolves the host of a redirected form
@@ -1412,7 +1505,7 @@ spells out the storage signature.
 
 Each hook responds 404 unless `WECREATE_TEST_HOOKS=1` **and** its own provider is
 the fixture, so none can be reached on a deployment backed by a real Sanity
-project, a real Supabase project or a real mail account. The fixture data plane
+project, a real Supabase project, a real mail account or a real Sentry project. The fixture data plane
 ships published staff credentials, which is safe only because it is never
 selected by inference: an unconfigured deployment has no data plane at all
 rather than falling back to this one.
@@ -1426,13 +1519,13 @@ Browsers are installed once with `pnpm exec playwright install chromium firefox 
 `tests/contract/` against a real vendor sandbox, with its own configuration, no
 browser and no server. It checks what a fake cannot: that the request the
 FedaPay adapter sends is one FedaPay accepts, that the answer still has a payment
-page in it, and that a delivery FedaPay really signed verifies and parses. Its
-two halves are gated separately, because they need different things —
+page in it, and that a delivery FedaPay really signed verifies and parses; and
+the same shape for Sanity, Supabase, Mux, Resend and Calendly, each skipped
+when its own credentials are absent. FedaPay's two halves are gated separately —
 `FEDAPAY_SECRET_KEY` for the first, `FEDAPAY_WEBHOOK_SECRET` and a captured
-`FEDAPAY_WEBHOOK_DELIVERY` for the second — and each skips itself when its own
-is absent, which is every run that has not deliberately been given them. It
-refuses to run at all against the live API. It supplements the acceptance suite
-and never replaces it (issue #1).
+`FEDAPAY_WEBHOOK_DELIVERY` for the second. It refuses to run at all against the
+live FedaPay API or the production Sanity dataset. It supplements the acceptance
+suite and never replaces it (issue #1).
 
 ## The hero background
 

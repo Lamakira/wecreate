@@ -3,6 +3,7 @@ import "server-only";
 import { cookies } from "next/headers";
 
 import { isOrderReference, ORDER_PAYABLE_SECONDS } from "@/commerce/orders";
+import { cookiesAreSecure } from "@/site-config";
 
 /**
  * The order this browser is in the middle of paying for.
@@ -34,7 +35,7 @@ function cookieOptions() {
   return {
     httpOnly: true,
     sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
+    secure: cookiesAreSecure(),
     path: COOKIE_PATH,
     maxAge: ORDER_PAYABLE_SECONDS,
   };

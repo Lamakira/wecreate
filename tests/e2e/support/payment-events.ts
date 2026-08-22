@@ -76,11 +76,13 @@ export async function deliver(
   request: APIRequestContext,
   body: string,
   signature: string = sign(body),
+  extraHeaders: Record<string, string> = {},
 ): Promise<number> {
   const response = await request.post(WEBHOOK_PATH, {
     headers: {
       "content-type": "application/json",
       [SIGNATURE_HEADER]: signature,
+      ...extraHeaders,
     },
     data: Buffer.from(body, "utf8"),
   });
