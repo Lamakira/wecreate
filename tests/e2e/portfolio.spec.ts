@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { PNG } from "pngjs";
 
 import { enterPreview, leavePreview, ManagedContent } from "./support/managed-content";
 import {
@@ -136,6 +137,71 @@ test.describe("The portfolio", () => {
 
     expect(ratios).toContain("9 / 16");
     expect(ratios).toContain("16 / 9");
+  });
+});
+
+/**
+ * How far apart the brightest and darkest pixel of a flat area are, 0–255.
+ *
+ * The film grain is a white line every three pixels. Wherever it is painted
+ * over a flat colour the area turns into stripes about a dozen levels apart,
+ * so a spread of a level or two means nothing is drawn across it.
+ */
+async function brightnessSpread(
+  page: Page,
+  clip: { x: number; y: number; width: number; height: number },
+): Promise<number> {
+  const shot = PNG.sync.read(await page.screenshot({ clip }));
+  let lowest = 255;
+  let highest = 0;
+  for (let i = 0; i < shot.data.length; i += 4) {
+    const level = (shot.data[i] + shot.data[i + 1] + shot.data[i + 2]) / 3;
+    lowest = Math.min(lowest, level);
+    highest = Math.max(highest, level);
+  }
+  return highest - lowest;
+}
+
+test.describe("The film grain", () => {
+  // Reveals and hover transitions would otherwise still be settling when the
+  // pixels are read.
+  test.use({ contextOptions: { reducedMotion: "reduce" } });
+
+  test.beforeEach(async () => {
+    await publishSampleProjects();
+  });
+
+  test("is never drawn over a project card or the open film", async ({
+    page,
+  }) => {
+    await page.goto("/portfolio");
+
+    // The card's own surface, in the padding under its caption: flat colour,
+    // no text, no border.
+    const card = page.getByRole("link", { name: /Résidence Aurora/ });
+    await card.evaluate((element) => element.scrollIntoView({ block: "end" }));
+    const box = await card.boundingBox();
+    expect(box).not.toBeNull();
+    expect(
+      await brightnessSpread(page, {
+        x: box!.x + box!.width - 50,
+        y: box!.y + box!.height - 14,
+        width: 40,
+        height: 9,
+      }),
+    ).toBeLessThanOrEqual(3);
+
+    // The lightbox's backdrop, in the margin beside the film.
+    await openProject(page, "Résidence Aurora");
+    const viewport = page.viewportSize()!;
+    expect(
+      await brightnessSpread(page, {
+        x: 2,
+        y: Math.round(viewport.height / 2),
+        width: 10,
+        height: 12,
+      }),
+    ).toBeLessThanOrEqual(3);
   });
 });
 

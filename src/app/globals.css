@@ -358,7 +358,7 @@
 }
 
 /* Skip link: off-screen until a keyboard user tabs to it, then above the
- * grain overlay and the header so the control they just focused is actually
+ * header and every panel so the control they just focused is actually
  * visible. */
 .skip-to-content {
   position: absolute;
