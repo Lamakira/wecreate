@@ -27,14 +27,19 @@ import {
 import { PaymentVerification } from "@/components/checkout/payment-verification";
 import { readAccessForOrder } from "@/fulfillment";
 import { fulfillmentRecovery } from "@/fulfillment/messages";
-import { readSiteSettings } from "@/managed-content";
+import { readChrome, readSiteSettings } from "@/managed-content";
 import { SiteChrome } from "@/components/shell/site-page";
+import { pageMetadata } from "@/seo/page-metadata";
 import { keepOutOfSearchResults } from "@/site-config";
 
-export const metadata: Metadata = {
-  title: "Retour de paiement",
-  ...keepOutOfSearchResults(),
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const content = await readChrome();
+
+  return {
+    ...pageMetadata(content.settings.seo, { title: "Retour de paiement" }),
+    ...keepOutOfSearchResults(),
+  };
+}
 
 export const instant = false;
 

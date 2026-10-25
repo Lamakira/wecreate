@@ -4,26 +4,20 @@ import { draftMode } from "next/headers";
 import { readPurchaseContextFrom } from "@/commerce";
 import { BoutiqueCatalogue } from "@/components/boutique/boutique-catalogue";
 import { SitePage } from "@/components/shell/site-page";
-import { readBoutiquePage } from "@/managed-content";
-import { isDiscoverable } from "@/managed-content/digital-products";
-import { pageOpenGraph } from "@/seo/open-graph";
+import { gateBoutique, readBoutiquePage } from "@/managed-content";
+import { pageMetadata } from "@/seo/page-metadata";
 
 export async function generateMetadata(): Promise<Metadata> {
   const content = await readBoutiquePage();
   const { seo } = content.boutique;
 
   return {
-    title: seo.title,
-    description: seo.description,
+    ...pageMetadata(content.settings.seo, {
+      title: seo.title,
+      description: seo.description,
+      imageUrl: seo.openGraphImageUrl,
+    }),
     alternates: { canonical: "/boutique" },
-    openGraph: pageOpenGraph(
-      {
-        title: seo.title,
-        description: seo.description,
-        imageUrl: seo.openGraphImageUrl,
-      },
-      content.settings.seo,
-    ),
   };
 }
 
@@ -43,12 +37,7 @@ export default async function BoutiquePage() {
   const content = await readBoutiquePage();
   const purchase = await readPurchaseContextFrom(content.legalDocuments);
   const { isEnabled: isPreview } = await draftMode();
-  const boutique = isPreview
-    ? content.boutique
-    : {
-        ...content.boutique,
-        products: content.boutique.products.filter(isDiscoverable),
-      };
+  const boutique = gateBoutique(content.boutique, isPreview);
 
   return (
     <SitePage

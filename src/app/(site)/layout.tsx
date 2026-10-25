@@ -7,37 +7,31 @@ import { GrainOverlay } from "@/components/shell/grain-overlay";
 import { DigitalCartProvider } from "@/digital-cart/use-digital-cart";
 import { DEFAULT_SITE_CONTENT } from "@/managed-content/default-content";
 import { SiteMeasurement } from "@/measurement";
-import { pageOpenGraph } from "@/seo/open-graph";
+import { pageMetadata } from "@/seo/page-metadata";
 import { isIndexable, siteUrl } from "@/site-config";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const { seo } = DEFAULT_SITE_CONTENT.settings;
-
+/**
+ * What every public route inherits, and nothing an editor owns.
+ *
+ * `metadataBase` and `robots` are deployment facts. Title, description, site
+ * name and Open Graph are editorial, and a layout cannot read them without a
+ * Managed Content read of its own — a second provider round trip on every
+ * render. Each route therefore sets those itself, from the cached read its body
+ * already uses (`pageMetadata` in `@/seo/page-metadata`).
+ *
+ * The bundled defaults below are the last resort, and exist for one case: the
+ * 404 page for an unknown URL. A not-found file cannot export metadata, so that
+ * page carries these rather than the editor's `siteSettings.seo`. A missing
+ * project or product does not hit this, because those routes render the
+ * not-found body themselves with their own metadata.
+ */
+export function generateMetadata(): Metadata {
   return {
     metadataBase: new URL(siteUrl()),
-    title: {
-      default: seo.defaultTitle,
-      template: seo.titleTemplate,
-    },
-    description: seo.defaultDescription,
-    applicationName: seo.siteName,
-    openGraph: pageOpenGraph(
-      {
-        title: seo.defaultTitle,
-        description: seo.defaultDescription,
-        imageUrl: seo.openGraphImageUrl,
-      },
-      seo,
-    ),
+    ...pageMetadata(DEFAULT_SITE_CONTENT.settings.seo),
     // Staging is noindex on every page. Preview is a second, per-session
     // rule: DraftModeBanner emits its own robots meta, because calling
     // draftMode() here would make every public page's metadata dynamic.
-    //
-    // Title, description and Open Graph for a given page come from that
-    // page's own cached read, so a siteSettings publish still updates them.
-    // The fallback above is the bundled baseline, used only when a route
-    // does not supply its own — a second provider round trip here would
-    // split every public render in two.
     robots: !isIndexable()
       ? { index: false, follow: false }
       : { index: true, follow: true },

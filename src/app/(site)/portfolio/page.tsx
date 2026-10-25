@@ -3,26 +3,20 @@ import { draftMode } from "next/headers";
 
 import { PortfolioGallery } from "@/components/portfolio/portfolio-gallery";
 import { SitePage } from "@/components/shell/site-page";
-import { readPortfolioPage } from "@/managed-content";
-import { isPublishable } from "@/managed-content/portfolio";
-import { pageOpenGraph } from "@/seo/open-graph";
+import { gatePortfolio, readPortfolioPage } from "@/managed-content";
+import { pageMetadata } from "@/seo/page-metadata";
 
 export async function generateMetadata(): Promise<Metadata> {
   const content = await readPortfolioPage();
   const { seo } = content.portfolio;
 
   return {
-    title: seo.title,
-    description: seo.description,
+    ...pageMetadata(content.settings.seo, {
+      title: seo.title,
+      description: seo.description,
+      imageUrl: seo.openGraphImageUrl,
+    }),
     alternates: { canonical: "/portfolio" },
-    openGraph: pageOpenGraph(
-      {
-        title: seo.title,
-        description: seo.description,
-        imageUrl: seo.openGraphImageUrl,
-      },
-      content.settings.seo,
-    ),
   };
 }
 
@@ -37,12 +31,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function PortfolioPage() {
   const content = await readPortfolioPage();
   const { isEnabled: isPreview } = await draftMode();
-  const portfolio = isPreview
-    ? content.portfolio
-    : {
-        ...content.portfolio,
-        projects: content.portfolio.projects.filter(isPublishable),
-      };
+  const portfolio = gatePortfolio(content.portfolio, isPreview);
 
   return (
     <SitePage

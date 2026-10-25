@@ -5,24 +5,19 @@ import { GettingStartedSection } from "@/components/contact/getting-started-sect
 import { SplitHeading } from "@/components/primitives/split-heading";
 import { SitePage } from "@/components/shell/site-page";
 import { readContactPage } from "@/managed-content";
-import { pageOpenGraph } from "@/seo/open-graph";
+import { pageMetadata } from "@/seo/page-metadata";
 
 export async function generateMetadata(): Promise<Metadata> {
   const content = await readContactPage();
   const { seo } = content.contact;
 
   return {
-    title: seo.title,
-    description: seo.description,
+    ...pageMetadata(content.settings.seo, {
+      title: seo.title,
+      description: seo.description,
+      imageUrl: seo.openGraphImageUrl,
+    }),
     alternates: { canonical: "/contact" },
-    openGraph: pageOpenGraph(
-      {
-        title: seo.title,
-        description: seo.description,
-        imageUrl: seo.openGraphImageUrl,
-      },
-      content.settings.seo,
-    ),
   };
 }
 

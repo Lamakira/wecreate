@@ -38,14 +38,11 @@ export async function GET(): Promise<Response> {
     return NOT_FOUND;
   }
 
-  const { draftReadCount, publishedReadCount } = await import(
-    "@/managed-content/fixture/provider"
+  const { publishedReadCount } = await import(
+    "@/managed-content/fixture/store"
   );
   return NextResponse.json(
-    {
-      publishedReads: await publishedReadCount(),
-      draftReads: await draftReadCount(),
-    },
+    { publishedReads: await publishedReadCount() },
     { headers: { "cache-control": "no-store, must-revalidate" } },
   );
 }
@@ -57,14 +54,11 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   const body = (await request.json()) as TestContentRequest;
   const store = await import("@/managed-content/fixture/store");
-  const { resetReadCounts } = await import(
-    "@/managed-content/fixture/provider"
-  );
 
   switch (body.action) {
     case "reset":
       await store.resetFixtureDataset();
-      await resetReadCounts();
+      await store.resetPublishedReadCount();
       expireAllManagedContent();
       break;
     case "patchDrafts":
@@ -77,7 +71,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       }
       break;
     case "resetReadCount":
-      await resetReadCounts();
+      await store.resetPublishedReadCount();
       break;
     default:
       return NextResponse.json({ error: "Unknown action" }, { status: 400 });

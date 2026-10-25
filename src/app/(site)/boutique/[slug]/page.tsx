@@ -1,21 +1,25 @@
 import type { Metadata } from "next";
 import { draftMode } from "next/headers";
-import { notFound, permanentRedirect } from "next/navigation";
+import { permanentRedirect } from "next/navigation";
 
 import { readPurchaseContextFrom } from "@/commerce";
 import { ProductView } from "@/components/boutique/product-view";
+import { NotFoundContent } from "@/components/shell/not-found-content";
 import { SitePage } from "@/components/shell/site-page";
-import { readBoutiquePage, readLegalDay } from "@/managed-content";
+import {
+  gateBoutique,
+  readBoutiquePage,
+  readLegalDay,
+} from "@/managed-content";
 import { findAtSlug, findSlugRedirect } from "@/managed-content/addresses";
 import {
   DIGITAL_PRODUCT_LICENCE_KIND,
-  isDiscoverable,
   productPath,
 } from "@/managed-content/digital-products";
 import { effectiveLegalTerms } from "@/managed-content/legal";
 import { digitalProductJsonLd } from "@/seo/json-ld";
 import { JsonLdScript } from "@/seo/json-ld-script";
-import { pageOpenGraph } from "@/seo/open-graph";
+import { pageMetadata } from "@/seo/page-metadata";
 import { keepOutOfSearchResults, siteUrl } from "@/site-config";
 
 /**
@@ -38,26 +42,26 @@ export async function generateMetadata({
   const content = await readBoutiquePage();
   const product = findAtSlug(content.boutique.products, slug);
   if (!product) {
-    return {};
+    // The route renders the not-found body itself (see below), so the noindex
+    // that `notFound()` would have added has to be said here.
+    return {
+      ...pageMetadata(content.settings.seo, { title: "Page introuvable" }),
+      ...keepOutOfSearchResults(),
+    };
   }
 
   const { isEnabled: isPreview } = await draftMode();
 
   return {
-    title: product.title,
-    description: product.summary,
+    ...pageMetadata(content.settings.seo, {
+      title: product.title,
+      description: product.summary,
+      imageUrl: product.cover.imageUrl,
+    }),
     // The canonical address is the product's current one even when the visitor
     // arrived at a former slug, so a moved product does not compete with itself
     // in search.
     alternates: { canonical: productPath(product.slug) },
-    openGraph: pageOpenGraph(
-      {
-        title: product.title,
-        description: product.summary,
-        imageUrl: product.cover.imageUrl,
-      },
-      content.settings.seo,
-    ),
     // Two pages that must stay out of search results, and neither is about the
     // route: a preview is one editor's unpublished draft, and an archived
     // product is one WeCreate has withdrawn — its page exists for the orders
@@ -75,8 +79,13 @@ export async function generateMetadata({
  * and it is served — archived included, because an Order Snapshot, an Order
  * Access grant and a receipt all point here and have to keep resolving. The
  * address is one the product used to have, and the request is redirected to
- * where it moved (issue #1). Or neither, and it resolves to the site's not-found
- * page.
+ * where it moved (issue #1). Or neither, and the not-found body is rendered
+ * inside this route's own `SitePage`, built from the content already read,
+ * rather than through `notFound()`: that would hand over to the 404 page, which
+ * reads the site again — a second provider round trip for the one answer that
+ * has nothing to show. The answer is 200 with `noindex`, which
+ * `generateMetadata` adds itself, because the status is already committed by
+ * the time the slug is known.
  *
  * The redirect below is the fallback rather than the mechanism: `src/proxy.ts`
  * has already answered 308 for a former address, because by the time this runs
@@ -92,16 +101,21 @@ export default async function ProductRoute({ params }: ProductRouteProps) {
     if (movedTo) {
       permanentRedirect(productPath(movedTo));
     }
-    notFound();
+
+    return (
+      <SitePage
+        settings={content.settings}
+        legalDocuments={content.legalDocuments}
+      >
+        <NotFoundContent />
+      </SitePage>
+    );
   }
 
   const { isEnabled: isPreview } = await draftMode();
-  const boutique = isPreview
-    ? content.boutique
-    : {
-        ...content.boutique,
-        products: content.boutique.products.filter(isDiscoverable),
-      };
+  // The product above is looked up in the ungated list, so an archived one
+  // still answers at its own address; only the listing passed on is gated.
+  const boutique = gateBoutique(content.boutique, isPreview);
   const purchase = await readPurchaseContextFrom(content.legalDocuments);
   const { inForce } = effectiveLegalTerms(
     content.legalDocuments,

@@ -1,10 +1,9 @@
-import { randomBytes } from "node:crypto";
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { appendFile, mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { DEFAULT_SITE_CONTENT } from "../default-content";
 import { mergeContent, type DeepPartial } from "../merge";
-import type { ContentPerspective, SiteContent } from "../types";
+import type { SiteContent } from "../types";
 
 /**
  * The fixture provider's storage: a JSON file holding both revisions of
@@ -127,78 +126,51 @@ export async function publishFixtureDrafts(): Promise<FixtureDataset> {
 }
 
 /**
- * How many times the fixture has been read.
+ * How many times the fixture has served published content.
  *
- * File-backed for the same reason the dataset is: a `"use cache"` fill and
- * the test-hook route are not guaranteed to share a module instance, and
- * the acceptance suite observes cache hits through these numbers.
+ * The acceptance suite observes cache behaviour through this number: a page
+ * served from cache does not read the provider, so it adds nothing here.
+ *
+ * It is a log of one line per read rather than a counter, and a file rather
+ * than memory, for two reasons. A `"use cache"` fill and the test-hook route
+ * are not guaranteed to share a module instance, so the number has to live
+ * outside the process. And several fills can be in flight at once — which is
+ * exactly the fan-out the suite is trying to see — so a counter updated by
+ * read-modify-write would lose increments and hide it. An append is atomic for
+ * a line this short, so every read leaves its mark and the count is the number
+ * of lines.
  */
-export interface FixtureReadActivity {
-  publishedReads: number;
-  draftReads: number;
-}
-
-const EMPTY_ACTIVITY: FixtureReadActivity = {
-  publishedReads: 0,
-  draftReads: 0,
-};
-
-function activityPath(): string {
+function readLogPath(): string {
   const file = datasetPath();
   return file.endsWith(".json")
-    ? `${file.slice(0, -".json".length)}.activity.json`
-    : `${file}.activity.json`;
+    ? `${file.slice(0, -".json".length)}.reads.log`
+    : `${file}.reads.log`;
 }
 
-async function readActivity(): Promise<FixtureReadActivity> {
+export async function recordPublishedRead(): Promise<void> {
+  const file = readLogPath();
+  await mkdir(/* turbopackIgnore: true */ path.dirname(file), {
+    recursive: true,
+  });
+  await appendFile(/* turbopackIgnore: true */ file, "published\n", "utf8");
+}
+
+export async function publishedReadCount(): Promise<number> {
   try {
-    const raw = await readFile(
-      /* turbopackIgnore: true */ activityPath(),
-      "utf8",
-    );
-    const stored = JSON.parse(raw) as Partial<FixtureReadActivity>;
-    return {
-      publishedReads: Number(stored.publishedReads) || 0,
-      draftReads: Number(stored.draftReads) || 0,
-    };
+    const raw = await readFile(/* turbopackIgnore: true */ readLogPath(), "utf8");
+    return raw.split("\n").filter(Boolean).length;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      return { ...EMPTY_ACTIVITY };
+      return 0;
     }
     throw error;
   }
 }
 
-async function writeActivity(activity: FixtureReadActivity): Promise<void> {
-  const file = activityPath();
+export async function resetPublishedReadCount(): Promise<void> {
+  const file = readLogPath();
   await mkdir(/* turbopackIgnore: true */ path.dirname(file), {
     recursive: true,
   });
-  const temporary = `${file}.${process.pid}.${randomBytes(6).toString("hex")}.tmp`;
-  await writeFile(
-    /* turbopackIgnore: true */ temporary,
-    `${JSON.stringify(activity)}\n`,
-    "utf8",
-  );
-  await rename(/* turbopackIgnore: true */ temporary, file);
-}
-
-export async function recordFixtureRead(
-  perspective: ContentPerspective,
-): Promise<void> {
-  const activity = await readActivity();
-  if (perspective === "published") {
-    activity.publishedReads += 1;
-  } else {
-    activity.draftReads += 1;
-  }
-  await writeActivity(activity);
-}
-
-export async function fixtureReadActivity(): Promise<FixtureReadActivity> {
-  return readActivity();
-}
-
-export async function resetFixtureReadActivity(): Promise<void> {
-  await writeActivity({ ...EMPTY_ACTIVITY });
+  await writeFile(/* turbopackIgnore: true */ file, "", "utf8");
 }

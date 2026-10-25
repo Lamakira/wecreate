@@ -1196,38 +1196,72 @@ the slices the published document actually feeds:
    a secret, firing on create/update/delete of `siteSettings`, `homePage`,
    `portfolioPage`, `portfolioProject`, `boutiquePage`, `digitalProduct`,
    `servicesPage`, `aboutPage`, `contactPage` and `legalDocument`. Leave the
-   default document projection (or project `{_type}`): the endpoint reads
-   `_type` to decide what to expire. A projection that strips `_type` is
-   treated as an unknown type and expires everything.
+   default document projection (or project `{_type}`): the endpoint reads the
+   top-level `_type` of the signed body to decide what to expire. A projection
+   that strips `_type`, and any type not in that list, is treated as unknown and
+   expires everything.
 2. Set the same value as `SANITY_WEBHOOK_SECRET`. The signature is verified
    against the raw request body.
 3. The endpoint expires the cache tags that document type affects, so the very
    next request to a page that reads it renders the new content — an editor
    reloads and sees their change. Pages that do not read it stay cached.
 
-| Document type     | Cached content it expires                                      |
-| ----------------- | -------------------------------------------------------------- |
-| `aboutPage`       | À propos                                                       |
-| `contactPage`     | Contact                                                        |
-| `servicesPage`    | Services                                                       |
-| `homePage`        | Homepage                                                       |
-| `portfolioPage`   | Portfolio listing and project pages                            |
-| `portfolioProject`| Portfolio, and the homepage recent-work reel                   |
-| `boutiquePage`    | Boutique listing and product pages                             |
-| `digitalProduct`  | Boutique, product pages, and the homepage shop preview         |
-| `legalDocument`   | Legal pages, footer legal links, checkout terms, and every public page's chrome |
-| `siteSettings`    | Header, footer and sitemap navigation on every public page     |
-| anything else     | Everything                                                     |
+Each document type has exactly one cache tag, and each cached entry is tagged
+with every document type whose content appears on the pages that read it. So
+the pages a type expires are the entries carrying its tag:
 
-A cold render of any public page still costs one Managed Content provider
-round trip: header, footer and the page body share a single fetch. Each
-page's title and Open Graph come from that same cached read. The shared
-layout's fallback title template is the bundled baseline, so the layout
-does not add a second round trip.
+| Document type      | Public pages it expires                                              |
+| ------------------ | -------------------------------------------------------------------- |
+| `aboutPage`        | À propos                                                             |
+| `contactPage`      | Contact                                                              |
+| `servicesPage`     | Services                                                             |
+| `homePage`         | Homepage                                                             |
+| `portfolioPage`    | Portfolio listing and project pages                                  |
+| `portfolioProject` | Portfolio listing and project pages, and the homepage recent-work reel |
+| `boutiquePage`     | Boutique listing and product pages                                   |
+| `digitalProduct`   | Boutique listing and product pages, and the homepage shop teaser     |
+| `siteSettings`     | Every public page: header, footer, navigation, titles and descriptions |
+| `legalDocument`    | Every public page: footer legal links                                |
+| anything else      | Everything                                                           |
+
+Portfolio projects and digital products also expire the homepage, because it
+shows them. The Portfolio and Boutique *page* copy (`portfolioPage`,
+`boutiquePage`) does not appear on the homepage, so those two leave it cached.
+
+Besides the per-page entries there is one **site entry**, tagged with every
+document type. It serves everything that is not a public page of its own and
+often combines several reads: legal pages, checkout, Order Access, the sitemap,
+the redirect and API routes and the commerce back office. They share one entry so
+that a surface which needs, say, the chrome and the products together costs one
+provider round trip rather than one per reader. The price is that those surfaces
+expire on **any** publish, whatever its type. (The Boutique's former-address
+lookup is the one exception: it fills the Boutique entry, because the proxy asks
+for it just before a product page renders.)
+
+A cold render of any public page costs at most one Managed Content provider
+round trip: header, footer, the page body and the page's metadata all come from
+the one entry that page reads. That includes the sitemap, checkout, and a
+missing project, product, legal document or legal revision, which renders its not-found body inside its own
+route rather than handing over to a second read.
+
+Titles, descriptions and Open Graph are editor-owned too (`siteSettings.seo`:
+title template, site name, default description, default image), but they are
+set by each route from the same read its body uses, not by the shared layout —
+a layout cannot read Managed Content without a second round trip. Every route
+under `src/app/(site)/` builds its metadata through `pageMetadata()`
+(`src/seo/page-metadata.ts`), which applies the CMS title template itself. The
+homepage's title is the one exception: it is its own, untemplated.
+
+Known limitation: the 404 page for a URL no route answers carries the layout's bundled-default title, header,
+footer and legal links rather than the editor's. Next.js renders the not-found
+file into every public response, so it cannot read Managed Content without
+costing every page a second round trip, and a not-found file cannot export its
+own metadata.
 
 `WECREATE_REVALIDATE_SECRET` accepts the same call as a bearer token and
-always expires every slice, for operators and for deployments with no Sanity
-webhook. That is also the recovery path when scoping is wrong.
+always expires every slice, whatever the body says, for operators and for
+deployments with no Sanity webhook. That is also the recovery path when scoping
+is wrong.
 
 ## Setting up Supabase
 
@@ -1474,6 +1508,13 @@ real form. `/api/test/commerce` exists only for the things no operator can do �
 returning the data plane to its seeded state between scenarios, moving time,
 taking away the bytes behind the versions it holds, and applying the
 personal-data retention the rest of the application has decided is in force.
+
+The Managed Content hook also reports how many times the fixture provider has
+served published content. The fixture appends one line per read to a log beside
+the dataset (an append cannot lose a count the way a read-modify-write would
+when several fills overlap), and that number is how the suite pins down "a cold
+render costs one provider round trip" exactly and proves, by staleness, that a
+publish left an untouched page cached.
 
 The Digital Cart is the one place a test writes state directly, and both reasons
 are themselves under test: a cart that survives a closed browser for thirty days

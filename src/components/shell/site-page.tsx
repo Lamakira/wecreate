@@ -48,7 +48,13 @@ export async function SitePage({
 
 /**
  * The same chrome, for surfaces that are not a public page of their own —
- * checkout, Order Access, the 404 page.
+ * checkout and Order Access. It reads the site entry itself, which is the one
+ * entry those surfaces' other reads (products, legal terms) share.
+ *
+ * Not for the 404 page: that is rendered into every public response, so a read
+ * there would cost every cold render a second provider round trip. Routes that
+ * can be missing something (projects, products, legal documents) render
+ * `NotFoundContent` in their own `SitePage` instead.
  */
 export async function SiteChrome({ children }: { children: ReactNode }) {
   const content = await readChrome();

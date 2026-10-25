@@ -14,12 +14,18 @@ import {
 } from "@/components/checkout/checkout-layout";
 import { OrderAccessRows } from "@/components/checkout/order-access-rows";
 import { SiteChrome } from "@/components/shell/site-page";
+import { readChrome } from "@/managed-content";
+import { pageMetadata } from "@/seo/page-metadata";
 import { keepOutOfSearchResults } from "@/site-config";
 
-export const metadata: Metadata = {
-  title: "Vos accès",
-  ...keepOutOfSearchResults(),
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const content = await readChrome();
+
+  return {
+    ...pageMetadata(content.settings.seo, { title: "Vos accès" }),
+    ...keepOutOfSearchResults(),
+  };
+}
 
 /**
  * Nothing here can be prerendered: what it shows belongs to whoever is holding

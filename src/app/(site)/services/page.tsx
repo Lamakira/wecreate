@@ -7,7 +7,7 @@ import { ServiceEnquiryNotice } from "@/components/services/service-enquiry-noti
 import { ServiceUniverseSection } from "@/components/services/service-universe-section";
 import { SitePage } from "@/components/shell/site-page";
 import { readServicesPage } from "@/managed-content";
-import { pageOpenGraph } from "@/seo/open-graph";
+import { pageMetadata } from "@/seo/page-metadata";
 import type { ServiceEnquiryContext } from "@/service-enquiry/enquiry";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -15,17 +15,12 @@ export async function generateMetadata(): Promise<Metadata> {
   const { seo } = content.services;
 
   return {
-    title: seo.title,
-    description: seo.description,
+    ...pageMetadata(content.settings.seo, {
+      title: seo.title,
+      description: seo.description,
+      imageUrl: seo.openGraphImageUrl,
+    }),
     alternates: { canonical: "/services" },
-    openGraph: pageOpenGraph(
-      {
-        title: seo.title,
-        description: seo.description,
-        imageUrl: seo.openGraphImageUrl,
-      },
-      content.settings.seo,
-    ),
   };
 }
 

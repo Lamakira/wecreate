@@ -7,24 +7,19 @@ import { CapabilityColumn } from "@/components/about/capability-column";
 import { SplitHeading } from "@/components/primitives/split-heading";
 import { SitePage } from "@/components/shell/site-page";
 import { readAboutPage } from "@/managed-content";
-import { pageOpenGraph } from "@/seo/open-graph";
+import { pageMetadata } from "@/seo/page-metadata";
 
 export async function generateMetadata(): Promise<Metadata> {
   const content = await readAboutPage();
   const { seo } = content.about;
 
   return {
-    title: seo.title,
-    description: seo.description,
+    ...pageMetadata(content.settings.seo, {
+      title: seo.title,
+      description: seo.description,
+      imageUrl: seo.openGraphImageUrl,
+    }),
     alternates: { canonical: "/a-propos" },
-    openGraph: pageOpenGraph(
-      {
-        title: seo.title,
-        description: seo.description,
-        imageUrl: seo.openGraphImageUrl,
-      },
-      content.settings.seo,
-    ),
   };
 }
 

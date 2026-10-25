@@ -1,22 +1,5 @@
 import type { ManagedContentProvider } from "../provider";
-import {
-  fixtureReadActivity,
-  readFixtureDataset,
-  recordFixtureRead,
-  resetFixtureReadActivity,
-} from "./store";
-
-export async function publishedReadCount(): Promise<number> {
-  return (await fixtureReadActivity()).publishedReads;
-}
-
-export async function draftReadCount(): Promise<number> {
-  return (await fixtureReadActivity()).draftReads;
-}
-
-export async function resetReadCounts(): Promise<void> {
-  await resetFixtureReadActivity();
-}
+import { readFixtureDataset, recordPublishedRead } from "./store";
 
 /**
  * A deterministic Managed Content provider backed by a JSON fixture.
@@ -25,20 +8,19 @@ export async function resetReadCounts(): Promise<void> {
  * against, and the one an unconfigured checkout falls back to so the site can
  * be developed without Sanity credentials.
  *
- * Read counts are how the suite observes cache hits: a public page served from
- * cache does not increment `publishedReads`. They live beside the dataset file
- * so a `"use cache"` fill and the test-hook route see the same numbers.
+ * Published reads are logged beside the dataset (see `store.ts`) so the suite
+ * can count the provider round trips a render really cost: a public page
+ * served from cache does not add to it.
  */
 
 export const fixtureContentProvider: ManagedContentProvider = {
   id: "fixture",
   async read(perspective) {
     if (perspective === "drafts") {
-      await recordFixtureRead("drafts");
       return (await readFixtureDataset()).drafts;
     }
 
-    await recordFixtureRead("published");
+    await recordPublishedRead();
     return (await readFixtureDataset()).published;
   },
 };

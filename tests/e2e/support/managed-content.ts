@@ -20,7 +20,10 @@ import type { SiteContent } from "../../../src/managed-content/types";
 export class ManagedContent {
   constructor(private readonly request: APIRequestContext) {}
 
-  /** Return all content to its shipped baseline. */
+  /**
+   * Return all content to its shipped baseline, drop every cached slice and
+   * zero the published-read count.
+   */
   async reset(): Promise<void> {
     await this.post({ action: "reset" });
   }
@@ -57,21 +60,19 @@ export class ManagedContent {
 
   /**
    * Forget how many times the fixture has been read, without touching the
-   * cache. A scenario that has already warmed the pages uses this so the next
-   * counts are only the reads a publish caused.
+   * cache or the content. A scenario that has had to seed content first uses
+   * this so the next count is only the reads the render under test caused.
    */
   async resetReadCount(): Promise<void> {
     await this.post({ action: "resetReadCount" });
   }
 
-  /** Published reads the fixture has served since the last reset of the count. */
+  /** Published reads the fixture has served since the last reset. */
   async publishedReads(): Promise<number> {
-    return (await this.activity()).publishedReads;
-  }
-
-  /** Draft reads the fixture has served since the last reset of the count. */
-  async draftReads(): Promise<number> {
-    return (await this.activity()).draftReads;
+    const response = await this.request.get("/api/test/managed-content");
+    const text = await response.text();
+    this.assertHook(response.status(), text);
+    return (JSON.parse(text) as { publishedReads: number }).publishedReads;
   }
 
   /** The cache revalidation a bearer-token operator call performs. */
@@ -101,19 +102,6 @@ export class ManagedContent {
       data: Buffer.from(body, "utf8"),
     });
     return response.status();
-  }
-
-  private async activity(): Promise<{
-    publishedReads: number;
-    draftReads: number;
-  }> {
-    const response = await this.request.get("/api/test/managed-content");
-    const text = await response.text();
-    this.assertHook(response.status(), text);
-    return JSON.parse(text) as {
-      publishedReads: number;
-      draftReads: number;
-    };
   }
 
   private async post(body: unknown): Promise<void> {

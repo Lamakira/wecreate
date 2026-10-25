@@ -4,33 +4,39 @@
  * Kept in their own module so route handlers can invalidate them without
  * importing the server-only read API.
  *
- * Each public page is one `"use cache"` entry tagged with the slices it
- * reads — the page itself plus header, footer and default SEO. A scoped
- * publish expires only those tags. The operator bearer token, and any
- * webhook whose type is missing or unknown, expire every tag.
+ * There is one tag per document type, 1:1, and no read sets any other. What a
+ * publish expires is therefore exactly the cached entries tagged with that
+ * type, and what an entry depends on is written once, as the list of tags it
+ * is filled under (`published-read.ts`) — there is no second, hand-kept table
+ * saying "a project change is also visible on the homepage". The homepage
+ * entry simply carries the projects and products tags.
+ *
+ * The operator bearer token, and any webhook whose type is missing or unknown,
+ * expire every tag.
  */
 
-export const MANAGED_CONTENT_TAG = "managed-content";
-
 export const SETTINGS_TAG = "managed-content:settings";
+export const LEGAL_TAG = "managed-content:legal";
 export const HOME_TAG = "managed-content:home";
-export const PORTFOLIO_TAG = "managed-content:portfolio";
-export const BOUTIQUE_TAG = "managed-content:boutique";
+export const PORTFOLIO_PAGE_TAG = "managed-content:portfolio-page";
+export const PORTFOLIO_PROJECTS_TAG = "managed-content:portfolio-projects";
+export const BOUTIQUE_PAGE_TAG = "managed-content:boutique-page";
+export const DIGITAL_PRODUCTS_TAG = "managed-content:digital-products";
 export const SERVICES_TAG = "managed-content:services";
 export const ABOUT_TAG = "managed-content:about";
 export const CONTACT_TAG = "managed-content:contact";
-export const LEGAL_TAG = "managed-content:legal";
 
 export const ALL_MANAGED_CONTENT_TAGS = [
-  MANAGED_CONTENT_TAG,
   SETTINGS_TAG,
+  LEGAL_TAG,
   HOME_TAG,
-  PORTFOLIO_TAG,
-  BOUTIQUE_TAG,
+  PORTFOLIO_PAGE_TAG,
+  PORTFOLIO_PROJECTS_TAG,
+  BOUTIQUE_PAGE_TAG,
+  DIGITAL_PRODUCTS_TAG,
   SERVICES_TAG,
   ABOUT_TAG,
   CONTACT_TAG,
-  LEGAL_TAG,
 ] as const;
 
 /**
@@ -56,24 +62,17 @@ export const MANAGED_CONTENT_DOCUMENT_TYPES = [
 export type ManagedContentDocumentType =
   (typeof MANAGED_CONTENT_DOCUMENT_TYPES)[number];
 
-const DOCUMENT_TYPE_TAGS: Record<
-  ManagedContentDocumentType,
-  readonly string[]
-> = {
-  siteSettings: [SETTINGS_TAG],
-  homePage: [HOME_TAG],
-  // The homepage reel is the portfolio's own list, so a project change is
-  // visible there as well as on /portfolio.
-  portfolioPage: [PORTFOLIO_TAG],
-  portfolioProject: [PORTFOLIO_TAG, HOME_TAG],
-  boutiquePage: [BOUTIQUE_TAG],
-  // Featured products on the homepage are this catalogue, so a product
-  // change is visible there as well as on /boutique.
-  digitalProduct: [BOUTIQUE_TAG, HOME_TAG],
-  servicesPage: [SERVICES_TAG],
-  aboutPage: [ABOUT_TAG],
-  contactPage: [CONTACT_TAG],
-  legalDocument: [LEGAL_TAG],
+const DOCUMENT_TYPE_TAGS: Record<ManagedContentDocumentType, string> = {
+  siteSettings: SETTINGS_TAG,
+  homePage: HOME_TAG,
+  portfolioPage: PORTFOLIO_PAGE_TAG,
+  portfolioProject: PORTFOLIO_PROJECTS_TAG,
+  boutiquePage: BOUTIQUE_PAGE_TAG,
+  digitalProduct: DIGITAL_PRODUCTS_TAG,
+  servicesPage: SERVICES_TAG,
+  aboutPage: ABOUT_TAG,
+  contactPage: CONTACT_TAG,
+  legalDocument: LEGAL_TAG,
 };
 
 /**
@@ -86,9 +85,12 @@ const DOCUMENT_TYPE_TAGS: Record<
 export function cacheTagsForDocumentType(
   type: string | null | undefined,
 ): readonly string[] {
-  if (!type || !(type in DOCUMENT_TYPE_TAGS)) {
+  // `Object.hasOwn` rather than `in`: a webhook `_type` of "constructor" or
+  // "toString" is on the prototype chain, and would otherwise resolve to a
+  // function instead of falling back to expiring everything.
+  if (!type || !Object.hasOwn(DOCUMENT_TYPE_TAGS, type)) {
     return ALL_MANAGED_CONTENT_TAGS;
   }
 
-  return DOCUMENT_TYPE_TAGS[type as ManagedContentDocumentType];
+  return [DOCUMENT_TYPE_TAGS[type as ManagedContentDocumentType]];
 }
