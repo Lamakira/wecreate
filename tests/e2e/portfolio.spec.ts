@@ -30,8 +30,9 @@ async function publishSampleProjects(): Promise<void> {
  *
  * Asserted as behaviour rather than as a status code: a route with a dynamic
  * segment has already begun streaming by the time the project is known to be
- * missing, so Next.js answers 200 and marks the page `noindex` instead. See
- * `src/app/(site)/not-found.tsx`.
+ * missing, so Next.js answers 200 and marks the page `noindex` instead. The
+ * route renders the not-found body itself; see
+ * `src/app/(site)/portfolio/[slug]/page.tsx`.
  */
 async function expectNotFound(page: Page): Promise<void> {
   await expect(page.getByTestId("not-found")).toBeVisible();

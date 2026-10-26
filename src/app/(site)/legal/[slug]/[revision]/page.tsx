@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 
 import { LegalDocumentView } from "@/components/legal/legal-document-view";
-import { readLegalDocumentInForce } from "@/managed-content";
+import { NotFoundContent } from "@/components/shell/not-found-content";
+import { SitePage } from "@/components/shell/site-page";
+import { readChrome, readLegalDocumentInForce } from "@/managed-content";
+import { pageMetadata } from "@/seo/page-metadata";
 import { keepOutOfSearchResults } from "@/site-config";
 
 /** Same reason as the document's own route: no shared shell knows the address. */
@@ -21,8 +23,13 @@ interface LegalRevisionRouteProps {
  * they had found. `follow` stays on so the link back to the current version is
  * still worth something.
  */
-export function generateMetadata(): Metadata {
-  return keepOutOfSearchResults();
+export async function generateMetadata(): Promise<Metadata> {
+  const content = await readChrome();
+
+  return {
+    ...pageMetadata(content.settings.seo),
+    ...keepOutOfSearchResults(),
+  };
 }
 
 /**
@@ -36,19 +43,38 @@ export function generateMetadata(): Metadata {
  * Only revisions that are or have been in force are addressable. A revision
  * dated in the future is prepared, not published to anyone — it is absent from
  * the history for the same reason, so the two cannot disagree.
+ *
+ * A revision that is not there renders the not-found body inside this route's
+ * own `SitePage`, with the editor's chrome; the route's metadata is already
+ * `noindex`.
  */
 export default async function LegalRevisionRoute({
   params,
 }: LegalRevisionRouteProps) {
   const { slug, revision: revisionId } = await params;
+  const content = await readChrome();
   const inForce = await readLegalDocumentInForce(slug);
 
   const revision = inForce?.history.find(
     (candidate) => candidate.id === revisionId,
   );
   if (!inForce || !revision) {
-    notFound();
+    return (
+      <SitePage
+        settings={content.settings}
+        legalDocuments={content.legalDocuments}
+      >
+        <NotFoundContent />
+      </SitePage>
+    );
   }
 
-  return <LegalDocumentView inForce={inForce} revision={revision} />;
+  return (
+    <SitePage
+      settings={content.settings}
+      legalDocuments={content.legalDocuments}
+    >
+      <LegalDocumentView inForce={inForce} revision={revision} />
+    </SitePage>
+  );
 }

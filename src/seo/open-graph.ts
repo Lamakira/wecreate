@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { readSiteSettings } from "@/managed-content";
+import type { SeoDefaults } from "@/managed-content/types";
 
 /**
  * Open Graph fields a public page must repeat itself.
@@ -9,13 +9,19 @@ import { readSiteSettings } from "@/managed-content";
  * locale and site name from the site layout would otherwise vanish on every
  * page that publishes its own title. This helper is how a page title cannot
  * drop the locale an editor already maintains.
+ *
+ * `seo` is passed in rather than read here, so a page that already loaded
+ * Managed Content does not pay a second provider round trip for site name
+ * and locale.
  */
-export async function pageOpenGraph(page: {
-  title: string;
-  description: string;
-  imageUrl?: string | null;
-}): Promise<NonNullable<Metadata["openGraph"]>> {
-  const { seo } = await readSiteSettings();
+export function pageOpenGraph(
+  page: {
+    title: string;
+    description: string;
+    imageUrl?: string | null;
+  },
+  seo: SeoDefaults,
+): NonNullable<Metadata["openGraph"]> {
   const image = page.imageUrl ?? seo.openGraphImageUrl;
 
   return {
