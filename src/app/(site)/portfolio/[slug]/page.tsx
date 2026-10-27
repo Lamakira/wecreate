@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import { draftMode } from "next/headers";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 
 import { ProjectDetails } from "@/components/portfolio/project-details";
 import { ProjectPlayback } from "@/components/portfolio/project-playback";
-import { readPortfolioProject } from "@/managed-content";
-import { pageOpenGraph } from "@/seo/open-graph";
+import { NotFoundContent } from "@/components/shell/not-found-content";
+import { SitePage } from "@/components/shell/site-page";
+import { gatePortfolio, readPortfolioPage } from "@/managed-content";
+import { pageMetadata } from "@/seo/page-metadata";
+import { keepOutOfSearchResults } from "@/site-config";
 
 /**
  * This route is not held to the instant-navigation bar.
@@ -30,19 +32,26 @@ interface ProjectRouteProps {
 export async function generateMetadata({
   params,
 }: ProjectRouteProps): Promise<Metadata> {
-  const project = await readPortfolioProject((await params).slug);
+  const { slug } = await params;
+  const content = await readPortfolioPage();
+  const { isEnabled: isPreview } = await draftMode();
+  const { projects } = gatePortfolio(content.portfolio, isPreview);
+  const project = projects.find((candidate) => candidate.slug === slug);
   if (!project) {
-    return {};
+    // The route renders the not-found body itself (see below), so the noindex
+    // that `notFound()` would have added has to be said here.
+    return {
+      ...pageMetadata(content.settings.seo, { title: "Page introuvable" }),
+      ...keepOutOfSearchResults(),
+    };
   }
 
   return {
-    title: project.title,
-    description: project.description,
-    alternates: { canonical: `/portfolio/${project.slug}` },
-    openGraph: await pageOpenGraph({
+    ...pageMetadata(content.settings.seo, {
       title: project.title,
       description: project.description,
     }),
+    alternates: { canonical: `/portfolio/${project.slug}` },
   };
 }
 
@@ -54,37 +63,54 @@ export async function generateMetadata({
  * the same project instead. The two show the same thing because they render the
  * same component.
  *
- * A missing project resolves to the site's not-found page. That answer is 200
- * with `noindex` rather than 404 — Cache Components streams this route's shell
- * before the slug is known, so the status is already committed. See
- * `src/app/(site)/not-found.tsx`.
+ * A missing project renders the not-found body inside this route's own
+ * `SitePage`, built from the content already read, rather than calling
+ * `notFound()`: that would hand over to the 404 page, which reads the site
+ * again — a second provider round trip for the one answer that has nothing to
+ * show. The answer is 200 with `noindex` rather than 404 — Cache Components
+ * streams this route's shell before the slug is known, so the status is
+ * already committed — and `generateMetadata` adds the `noindex` itself.
  */
 export default async function ProjectRoute({ params }: ProjectRouteProps) {
   const { slug } = await params;
-  const project = await readPortfolioProject(slug);
+  const content = await readPortfolioPage();
   const { isEnabled: isPreview } = await draftMode();
+  const { projects } = gatePortfolio(content.portfolio, isPreview);
+  const project = projects.find((candidate) => candidate.slug === slug);
 
   // A project that has not passed the publication gate does not exist here, in
   // the same way an unpublished one does not: same answer, no hint that a
   // different one would be given to someone else.
   if (!project) {
-    notFound();
+    return (
+      <SitePage
+        settings={content.settings}
+        legalDocuments={content.legalDocuments}
+      >
+        <NotFoundContent />
+      </SitePage>
+    );
   }
 
   return (
-    <section className="wc-container py-section-xs">
-      <Link
-        href="/portfolio"
-        className="mb-heading-gap inline-block text-micro tracking-24 uppercase text-wc-muted-2 transition-colors duration-300 hover:text-wc-white"
-      >
-        ← Retour au portfolio
-      </Link>
+    <SitePage
+      settings={content.settings}
+      legalDocuments={content.legalDocuments}
+    >
+      <section className="wc-container py-section-xs">
+        <Link
+          href="/portfolio"
+          className="mb-heading-gap inline-block text-micro tracking-24 uppercase text-wc-muted-2 transition-colors duration-300 hover:text-wc-white"
+        >
+          ← Retour au portfolio
+        </Link>
 
-      <ProjectPlayback project={project} />
+        <ProjectPlayback project={project} />
 
-      <div className="pt-heading-gap">
-        <ProjectDetails project={project} as="h1" showRequirements={isPreview} />
-      </div>
-    </section>
+        <div className="pt-heading-gap">
+          <ProjectDetails project={project} as="h1" showRequirements={isPreview} />
+        </div>
+      </section>
+    </SitePage>
   );
 }

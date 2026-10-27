@@ -134,10 +134,10 @@ function PublicationChecklist({ schemaType }: { schemaType: SchemaType }) {
   };
 
   return (
-    <Stack space={3} marginBottom={4}>
+    <Stack gap={3} marginBottom={4}>
       {errors.length > 0 ? (
         <Card padding={3} radius={2} border tone="critical">
-          <Stack space={3}>
+          <Stack gap={3}>
             <Text size={1} weight="semibold">
               {errors.length === 1
                 ? "Il manque encore 1 élément pour publier"
@@ -152,7 +152,7 @@ function PublicationChecklist({ schemaType }: { schemaType: SchemaType }) {
       ) : null}
       {warnings.length > 0 ? (
         <Card padding={3} radius={2} border tone="caution">
-          <Stack space={3}>
+          <Stack gap={3}>
             <Text size={1} weight="semibold">
               À vérifier
             </Text>
@@ -172,7 +172,7 @@ function EntryList({
   onSelect: (entry: Entry) => void;
 }) {
   return (
-    <Stack space={1}>
+    <Stack gap={1}>
       {entries.map((entry) => (
         <Button
           key={entry.key}

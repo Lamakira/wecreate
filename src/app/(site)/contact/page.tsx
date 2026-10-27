@@ -3,21 +3,21 @@ import type { Metadata } from "next";
 import { ContactChannelsSection } from "@/components/contact/contact-channels-section";
 import { GettingStartedSection } from "@/components/contact/getting-started-section";
 import { SplitHeading } from "@/components/primitives/split-heading";
-import { readContact, readSiteSettings } from "@/managed-content";
-import { pageOpenGraph } from "@/seo/open-graph";
+import { SitePage } from "@/components/shell/site-page";
+import { readContactPage } from "@/managed-content";
+import { pageMetadata } from "@/seo/page-metadata";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const { seo } = await readContact();
+  const content = await readContactPage();
+  const { seo } = content.contact;
 
   return {
-    title: seo.title,
-    description: seo.description,
-    alternates: { canonical: "/contact" },
-    openGraph: await pageOpenGraph({
+    ...pageMetadata(content.settings.seo, {
       title: seo.title,
       description: seo.description,
       imageUrl: seo.openGraphImageUrl,
     }),
+    alternates: { canonical: "/contact" },
   };
 }
 
@@ -34,11 +34,14 @@ export async function generateMetadata(): Promise<Metadata> {
  * no state, no endpoint and no stored lead (ADR-0006).
  */
 export default async function ContactPage() {
-  const contact = await readContact();
-  const settings = await readSiteSettings();
+  const content = await readContactPage();
+  const { contact, settings } = content;
 
   return (
-    <>
+    <SitePage
+      settings={content.settings}
+      legalDocuments={content.legalDocuments}
+    >
       <section className="wc-container pt-[clamp(28px,5vw,64px)] pb-section-sm">
         <p className="m-0 mb-[22px] text-micro tracking-32 uppercase text-wc-muted-2">
           {contact.kicker}
@@ -61,6 +64,6 @@ export default async function ContactPage() {
         />
         <GettingStartedSection gettingStarted={contact.gettingStarted} />
       </div>
-    </>
+    </SitePage>
   );
 }
