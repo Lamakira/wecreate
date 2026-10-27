@@ -25,6 +25,13 @@ export const BASE_URL = `http://127.0.0.1:${PORT}`;
 export const TEST_PREVIEW_SECRET = "acceptance-preview-secret";
 export const TEST_REVALIDATE_SECRET = "acceptance-revalidate-secret";
 /**
+ * The secret personal questionnaire links are encrypted with.
+ *
+ * Exported because the acceptance suite mints links by hand, spelling the
+ * token format out in `tests/e2e/support/brand-questionnaire.ts`.
+ */
+export const TEST_QUESTIONNAIRE_SECRET = "acceptance-questionnaire-secret";
+/**
  * The secret Sanity signs publish webhooks with.
  *
  * The suite has to send a delivery the application accepts and one whose type
@@ -98,6 +105,7 @@ const serverEnv: Record<string, string> = {
   WECREATE_TEST_HOOKS: "1",
   WECREATE_PREVIEW_SECRET: TEST_PREVIEW_SECRET,
   WECREATE_REVALIDATE_SECRET: TEST_REVALIDATE_SECRET,
+  WECREATE_QUESTIONNAIRE_SECRET: TEST_QUESTIONNAIRE_SECRET,
   SANITY_WEBHOOK_SECRET: TEST_SANITY_WEBHOOK_SECRET,
   // Isolated from any content a developer has been editing locally.
   WECREATE_FIXTURE_FILE: path.join(

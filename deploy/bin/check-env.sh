@@ -80,6 +80,9 @@ step "Email"
 report RESEND_API_KEY       "an approved payment still grants access, but the buyer is never told — the order reads 'delivery to take up again'" required
 report RESEND_FROM_ADDRESS  "same as above" required
 
+step "Brand questionnaire"
+report WECREATE_QUESTIONNAIRE_SECRET "no personal questionnaire link opens, and none can be made" required
+
 step "Two things worth refusing"
 # The one mistake on this deployment that costs real money. Naming `live`
 # without recording who signed the Commerce Launch Gate is still only a name:

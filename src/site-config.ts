@@ -57,6 +57,9 @@ export const NON_INDEXABLE_PATHS = [
   // Checkout. Issue #1 keeps every transaction surface out of search results,
   // and this one is a page a crawler could otherwise reach from the cart.
   "/commande",
+  // The Brand Questionnaire opens from a personal link and means nothing to a
+  // visitor who arrives without one.
+  "/questionnaire",
 ] as const;
 
 /** Whether a path may appear in search results and in the sitemap. */

@@ -80,9 +80,11 @@ it belongs to.
 9. **Personal-data retention** — how many days a buyer's contact is kept, once
    the privacy policy in force has approved a period. Unset means nothing is
    forgotten.
-10. **Preview and revalidation secrets** — who may open a preview session and who
-   may drop the content cache.
-11. **Acceptance-test hooks** — set by `playwright.config.ts`, never by hand.
+10. **Brand questionnaire secret** — the key personal questionnaire links are
+    encrypted with. Unset means the questionnaire is closed.
+11. **Preview and revalidation secrets** — who may open a preview session and who
+    may drop the content cache.
+12. **Acceptance-test hooks** — set by `playwright.config.ts`, never by hand.
 
 Secrets are server-only. On a deployment they live in two places, and which one
 decides which: `NEXT_PUBLIC_*` is compiled into the bundle by `next build`, so
@@ -1069,6 +1071,40 @@ changes a number once and the whole site follows. Each link's `href` is the real
 destination: no redirect, no tracker, and one that opens a new tab says so in its
 accessible name.
 
+## The brand questionnaire
+
+A Branding client who has agreed a pack fills a five-step questionnaire (issue
+#57): the business, the target, the personality, the visual tastes and the
+supports. It is reached only through a **personal link**.
+
+`/questionnaire/<token>` is a route handler that moves the token into an
+http-only cookie (`wc_questionnaire`, scoped to `/questionnaire`) and redirects
+to `/questionnaire`, so the page the client reads, reloads or shows somebody
+carries no credential. The page opens the token again on every request; a
+missing, altered or expired one shows a calm explanation and never a question.
+
+The token is the invitation, encrypted: AES-256-GCM over the client, brand, pack
+and reference, with an expiry inside the authenticated payload. The format is
+spelled out at the top of
+[`src/brand-questionnaire/invitation.ts`](./src/brand-questionnaire/invitation.ts),
+and a link stays valid for 30 days. It needs `WECREATE_QUESTIONNAIRE_SECRET`
+(see *Environment*); rotating the secret invalidates every link already sent.
+Issue #63 builds the staff tool that makes links, on `sealInvitation` and
+`invitationUrl` and on nothing else.
+
+**What is emailed, and to whom.** One message to WeCreate's contact address
+(`settings.contact.email`, from Managed Content) with the client's address as
+its reply-to, and one copy to the client. Both carry every answer and every
+attachment. Attachments are capped at 5 files and 10 MB in all, images and PDF
+only; the browser checks that before anything is uploaded and the server checks
+it again.
+
+**Nothing is stored.** No database, no storage, no file and no log of an answer.
+The draft lives only in the client's own browser (IndexedDB) until it is sent,
+and is deleted then. A failed send keeps every answer and file on screen, and a
+double submit sends once: the emails' idempotency keys are derived from the
+content.
+
 ## Legal documents
 
 Five documents and exactly five — CGV, livraison et remboursement, licence,
@@ -1490,6 +1526,11 @@ tests/e2e/
 ├── public-journeys.spec.ts           the public views, on Firefox and WebKit
 │                                     as well as Chromium
 ├── site-shell.spec.ts                header, navigation, cart, footer, fonts
+├── brand-questionnaire.spec.ts       personal links, tampered and expired ones,
+│                                     the five steps by keyboard, logo cards,
+│                                     attachment caps, one email each way,
+│                                     double submit, a failed send, and nothing
+│                                     stored
 ├── managed-content-publishing.spec.ts draft, preview, publish, revalidate
 ├── resilience.spec.ts                reduced motion, no JS, nothing published
 └── support/
@@ -1505,6 +1546,8 @@ tests/e2e/
     │                                 link must be, presses made at once, and
     │                                 what the data plane durably holds
     ├── observation.ts                captured failures, over HTTP
+    ├── brand-questionnaire.ts        minting personal links by hand, and
+    │                                 reading the outbox
     └── sample-content.ts             stand-in projects and products
 ```
 
