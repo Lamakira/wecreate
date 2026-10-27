@@ -52,12 +52,25 @@ export function RecentWorkSection({ section, projects }: RecentWorkSectionProps)
           testId="recent-work-empty"
         />
       ) : (
-        // `items-start` because the reel mixes 9:16 and 16:9 cards: without it
-        // a landscape card is stretched to the height of the portrait card
-        // beside it and gains a large empty area under its caption.
-        <ul className="grid list-none grid-cols-[repeat(auto-fit,minmax(240px,1fr))] items-start gap-grid-gap-sm p-0">
+        // Columns rather than a grid, the same mosaic as `/portfolio`. The reel
+        // mixes 9:16 and 16:9 cards, and a grid lines them up in rows: every
+        // landscape card beside a portrait one leaves a hole the height of the
+        // difference under it. Columns stack each card straight under the one
+        // above, so the reel keeps its mixed formats and loses the holes.
+        <ul
+          data-testid="recent-work-reel"
+          className="m-0 list-none p-0"
+          style={{
+            columns: "3 300px",
+            columnGap: "var(--spacing-grid-gap-sm)",
+          }}
+        >
           {reel.map((project) => (
-            <Reveal as="li" key={project.id}>
+            <Reveal
+              as="li"
+              key={project.id}
+              className="mb-grid-gap-sm break-inside-avoid"
+            >
               {/* The handoff opens the reel's cards in the lightbox too. Here
                   they navigate instead: the dialog, its focus trap and the
                   player would all have to ship with the landing page, which is

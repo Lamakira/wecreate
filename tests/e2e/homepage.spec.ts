@@ -89,6 +89,55 @@ test.describe("Homepage", () => {
     ).toHaveAttribute("href", "/portfolio");
   });
 
+  test.describe("with motion reduced", () => {
+    // The reveal's slide-in would move the cards while they are measured.
+    test.use({ contextOptions: { reducedMotion: "reduce" } });
+
+    test("stacks recent work without leaving holes between the cards", async ({
+      page,
+    }) => {
+      // A landscape film first, so the card after the first row lands under a
+      // short card rather than a tall one — where a grid of rows leaves a hole.
+      const landscapeFirst = [...SAMPLE_PORTFOLIO_PROJECTS].sort(
+        (a, b) =>
+          Number(b.media.ratio === "16 / 9") - Number(a.media.ratio === "16 / 9"),
+      );
+      await content.editDraft({ portfolio: { projects: landscapeFirst } });
+      await content.publish();
+
+      await page.goto("/");
+
+      const reel = page.getByTestId("recent-work-reel");
+      const reelTop = (await reel.boundingBox())!.y;
+      const cards = await reel
+        .getByRole("listitem")
+        .evaluateAll((items) =>
+          items.map((item) => {
+            const { left, right, top, bottom } = item.getBoundingClientRect();
+            return { left, right, top, bottom };
+          }),
+        );
+
+      // The reel mixes verticals and landscapes. Each card starts either at
+      // the top of the reel or right under the card above it in its column —
+      // never under an empty space left by a shorter neighbour.
+      for (const card of cards) {
+        const above = cards.filter(
+          (other) =>
+            other !== card &&
+            other.bottom <= card.top &&
+            other.left < card.right &&
+            other.right > card.left,
+        );
+        const gap =
+          above.length === 0
+            ? card.top - reelTop
+            : card.top - Math.max(...above.map((other) => other.bottom));
+        expect(gap).toBeLessThanOrEqual(24);
+      }
+    });
+  });
+
   test("states the four proof points on the light band", async ({ page }) => {
     await page.goto("/");
 
