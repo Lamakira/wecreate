@@ -147,7 +147,18 @@ export const portfolioProject = defineType({
       initialValue: false,
       description:
         "Sans cette autorisation, le projet reste visible en prévisualisation et n'est jamais publié.",
-      validation: (rule) => rule.required(),
+      // An unticked box is accepted, because deciding not to publish yet is
+      // normal, but the editor is told what it means for the site.
+      validation: (rule) => [
+        rule.required(),
+        rule
+          .custom((value) =>
+            value === true
+              ? true
+              : "Tant que cette case n'est pas cochée, le projet n'apparaîtra pas sur le site.",
+          )
+          .warning(),
+      ],
     }),
     defineField({
       name: "spokenContent",
