@@ -182,6 +182,13 @@ refuses, with nothing on screen to explain it. The client's permission is the
 one deliberate exception — the Studio accepts an unticked box, because deciding
 not to publish yet is a normal thing for an editor to do.
 
+A checklist panel sits at the top of every Studio document form
+(`src/sanity/form/`). It lists what still blocks publishing, then what is only
+worth a look, using the validation the schema already declares. Clicking an
+entry switches to the right tab, scrolls to the field and highlights it — the
+Mux video input never takes focus, so focus alone would not show where to look.
+The unticked permission box shows up there as a warning rather than an error.
+
 **Video goes through its own boundary** (ADR-0007, ADR-0008):
 
 ```

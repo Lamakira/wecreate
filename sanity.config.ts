@@ -6,6 +6,10 @@ import { muxInput } from "sanity-plugin-mux-input";
 
 import { apiVersion, dataset, projectId } from "./src/sanity/env";
 import { SINGLETON_TYPES, schemaTypes } from "./src/sanity/schema";
+import {
+  PublicationChecklistField,
+  PublicationChecklistInput,
+} from "./src/sanity/form/publication-checklist";
 import { structure } from "./src/sanity/structure";
 import { siteUrl } from "./src/site-config";
 
@@ -43,6 +47,16 @@ export default defineConfig({
             ["publish", "discardChanges", "restore"].includes(action ?? ""),
           )
         : actions,
+  },
+
+  form: {
+    // Wraps every input and field; the input only adds its panel at the
+    // document root, and the field marks itself so the panel can scroll to it.
+    // See `src/sanity/form/publication-checklist.tsx`.
+    components: {
+      input: PublicationChecklistInput,
+      field: PublicationChecklistField,
+    },
   },
 
   plugins: [

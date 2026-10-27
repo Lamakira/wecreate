@@ -18,6 +18,8 @@
     "@heroicons/react": "^2.2.0",
     "@mux/mux-player-react": "^3.13.2",
     "@sanity/client": "^7.26.2",
+    "@sanity/icons": "^5.2.1",
+    "@sanity/ui": "^3.5.2",
     "@sanity/vision": "^6.9.1",
     "@supabase/supabase-js": "^2.112.3",
     "next": "16.3.0",
