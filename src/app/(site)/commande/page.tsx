@@ -2,12 +2,23 @@ import type { Metadata } from "next";
 
 import { readCheckout } from "@/checkout";
 import { CheckoutView } from "@/components/checkout/checkout-view";
+import { SiteChrome } from "@/components/shell/site-page";
+import { readChrome } from "@/managed-content";
+import { pageMetadata } from "@/seo/page-metadata";
 import { keepOutOfSearchResults } from "@/site-config";
 
-export const metadata: Metadata = {
-  title: "Commande",
-  ...keepOutOfSearchResults(),
-};
+/**
+ * Read from the same entry `SiteChrome` reads, so the title follows the
+ * editor's `siteSettings.seo` without a second provider round trip.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const content = await readChrome();
+
+  return {
+    ...pageMetadata(content.settings.seo, { title: "Commande" }),
+    ...keepOutOfSearchResults(),
+  };
+}
 
 /**
  * Nothing here can be prerendered, and saying so is honest rather than a
@@ -30,5 +41,9 @@ export const instant = false;
  * on this site.
  */
 export default async function CheckoutRoute() {
-  return <CheckoutView state={await readCheckout()} />;
+  return (
+    <SiteChrome>
+      <CheckoutView state={await readCheckout()} />
+    </SiteChrome>
+  );
 }

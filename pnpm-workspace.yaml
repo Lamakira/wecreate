@@ -6,19 +6,41 @@ allowBuilds:
 # Transitive dependencies pinned forward past a published advisory, because the
 # package that pulls them in has not moved yet.
 #
-# All three arrive the same way — `sanity` -> `@sanity/cli` -> tooling — so none
-# of them is in anything this application serves. They are pinned anyway rather
-# than waived: `.github/workflows/audit.yml` fails on a high advisory, and an
-# audit that has to be argued with every time it runs is one nobody reads. Each
-# entry is a note to delete once the dependency above it catches up.
+# Almost all of them are build, CLI or lint tooling (`@sanity/cli`, `eslint`,
+# the CSS build), so nothing the public site serves. The exception is
+# `dompurify`, which `sanity` bundles into the Studio at `/studio`. They are
+# pinned anyway rather than waived:
+# `.github/workflows/audit.yml` fails on a high advisory, and an audit that has
+# to be argued with every time it runs is one nobody reads. Each entry is a note
+# to delete once the dependency above it catches up.
 #
-# The major-qualified keys matter. Only the flagged line is moved: `js-yaml@4`
-# and `undici@6` are resolved elsewhere in the tree and are not affected by
-# these advisories.
+# The major-qualified keys matter. Only the flagged line is moved, so a line
+# that is not affected by an advisory is left where its parent put it.
 overrides:
   # GHSA-5p4m-2wfm-xmqj and the merge-key chain advisory: quadratic CPU
-  # consumption parsing hostile YAML. Reached through `@vercel/frameworks`.
-  js-yaml@3: ^3.15.1
-  # Cross-user information disclosure and a parse-time crash via degenerate
-  # private cache directives. Reached through `@module-federation/dts-plugin`.
-  undici@7: ^7.29.0
+  # consumption parsing hostile YAML. 3.x is reached through
+  # `@vercel/frameworks`, 4.x through the Studio tooling and eslint.
+  js-yaml@3: ^3.15.2
+  js-yaml@4: ^4.3.2
+  # Cross-user information disclosure, TLS certificate validation bypass, and
+  # denial of service via unhandled requests. Reached through
+  # `@module-federation/dts-plugin`.
+  undici@7: ^7.30.1
+  # DOMPurify SAFE_FOR_TEMPLATES bypass and IN_PLACE hook advisories (critical).
+  # Reached through `isomorphic-dompurify` in `sanity`, so it ships in the
+  # Studio, and through `@sanity/cli-build`.
+  dompurify@3: ^3.4.17
+  # Denial of service via malformed TOML. Reached through `@sanity/cli` and
+  # `@vercel/frameworks`.
+  smol-toml@1: ^1.7.1
+  # Denial of service via uncontrolled recursion in brace expansion. One entry
+  # per flagged line: reached through `minimatch` in eslint and sanity tooling.
+  brace-expansion@1: ^1.1.20
+  brace-expansion@2: ^2.1.6
+  brace-expansion@5: ^5.0.11
+  # Event-loop denial of service. Reached through `@tailwindcss/node` and
+  # `css-tree` under `jsdom`.
+  source-map-js@1: ^1.2.2
+  # Memory exhaustion validating oversized input. Reached through `@sanity/cli`
+  # and `@sanity/cli-core`.
+  zod@4: ^4.6.6

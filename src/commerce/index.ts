@@ -2,7 +2,9 @@ import "server-only";
 
 import { cacheLife, cacheTag } from "next/cache";
 
-import { readEffectiveLegalTerms } from "@/managed-content";
+import { readEffectiveLegalTerms, readLegalDay } from "@/managed-content";
+import { effectiveLegalTerms, type EffectiveLegalTerms } from "@/managed-content/legal";
+import type { LegalDocument } from "@/managed-content/types";
 import {
   DIGITAL_PRODUCT_LICENCE_KIND,
   type PurchaseContext,
@@ -68,8 +70,25 @@ export async function readActivePaidDeliverableSkus(): Promise<string[]> {
  * module stays a pure rule over content with no idea a commerce system exists.
  */
 export async function readPurchaseContext(): Promise<PurchaseContext> {
-  const { inForce } = await readEffectiveLegalTerms();
-  const licence = inForce.find(
+  return purchaseContextFrom(await readEffectiveLegalTerms());
+}
+
+/**
+ * The same answers, from legal documents a page has already loaded so it
+ * does not pay a second Managed Content round trip for the licence.
+ */
+export async function readPurchaseContextFrom(
+  legalDocuments: LegalDocument[],
+): Promise<PurchaseContext> {
+  return purchaseContextFrom(
+    effectiveLegalTerms(legalDocuments, await readLegalDay()),
+  );
+}
+
+async function purchaseContextFrom(
+  terms: EffectiveLegalTerms,
+): Promise<PurchaseContext> {
+  const licence = terms.inForce.find(
     (revision) => revision.kind === DIGITAL_PRODUCT_LICENCE_KIND,
   );
 

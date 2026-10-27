@@ -2,6 +2,7 @@ import "server-only";
 
 import { cacheLife, cacheTag } from "next/cache";
 import { draftMode } from "next/headers";
+import { cache } from "react";
 
 import { findAtSlug, findSlugRedirect, slugRedirects } from "./addresses";
 import { isDiscoverable } from "./digital-products";
@@ -13,143 +14,157 @@ import {
 } from "./legal";
 import { isPublishable } from "./portfolio";
 import { getManagedContentProvider } from "./provider";
+import {
+  readPublishedAbout,
+  readPublishedBoutique,
+  readPublishedContact,
+  readPublishedHome,
+  readPublishedPortfolio,
+  readPublishedServices,
+  readPublishedSite,
+} from "./published-read";
+import { LEGAL_TAG } from "./tag";
 import type {
-  AboutContent,
   BoutiqueContent,
-  ContactContent,
   DigitalProduct,
-  HomePage,
   LegalDocument,
   LegalRevision,
   PortfolioContent,
-  PortfolioProject,
-  ServicesContent,
   SiteContent,
   SiteSettings,
 } from "./types";
 
 export * from "./types";
-export { MANAGED_CONTENT_TAG } from "./tag";
-
-import { MANAGED_CONTENT_TAG } from "./tag";
-
-/**
- * The published site, cached and tagged.
- *
- * Public pages prerender from this, so an ordinary visit reaches a cached
- * response and never a content provider — which is what keeps the browsing
- * path off any transactional service (ADR-0003). Publishing invalidates the
- * tag through `/api/revalidate`.
- */
-async function readPublishedContent(): Promise<SiteContent> {
-  "use cache";
-  cacheTag(MANAGED_CONTENT_TAG);
-  cacheLife("managedContent");
-
-  const provider = await getManagedContentProvider();
-  return provider.read("published");
-}
 
 /**
  * The draft site. Deliberately uncached: a preview must show what the editor
- * just typed, and its result must never be served to anyone else.
+ * just typed, and its result must never be served to anyone else. React cache
+ * still collapses the several readers in one preview request into a single
+ * provider call.
  */
-async function readDraftContent(): Promise<SiteContent> {
+const loadDraftContent = cache(async (): Promise<SiteContent> => {
   const provider = await getManagedContentProvider();
   return provider.read("drafts");
+});
+
+async function publishedOrDraft<T>(
+  published: () => Promise<T>,
+  select: (content: SiteContent) => T,
+): Promise<T> {
+  const { isEnabled } = await draftMode();
+  return isEnabled ? select(await loadDraftContent()) : published();
 }
 
 /**
- * Read Managed Content for the current request.
+ * Everything, from the one entry every non-page surface shares.
  *
- * Draft mode is the only way to reach unpublished content. Next.js sets a
- * signed bypass cookie when preview is enabled, which both selects the draft
- * perspective here and takes the response out of the shared cache.
+ * Header, footer, default SEO and legal links for checkout, Order Access and
+ * the legal pages — and the entry every standalone reader below is built on, so a
+ * caller that combines several of them (the sitemap, checkout) is one provider
+ * round trip however many it uses. See `readPublishedSite`.
  */
-export async function readSiteContent(): Promise<SiteContent> {
-  const { isEnabled } = await draftMode();
-  return isEnabled ? readDraftContent() : readPublishedContent();
+export async function readChrome(): Promise<SiteContent> {
+  return publishedOrDraft(readPublishedSite, (content) => content);
+}
+
+/**
+ * Published reads for the public pages are tagged per page, so publishing
+ * About cannot drop Services. Header, footer, metadata and the page body share
+ * that one cached fetch — a cold render is one provider round trip.
+ */
+export async function readHome(): Promise<SiteContent> {
+  return publishedOrDraft(readPublishedHome, (content) => content);
+}
+
+export async function readAboutPage(): Promise<SiteContent> {
+  return publishedOrDraft(readPublishedAbout, (content) => content);
+}
+
+export async function readServicesPage(): Promise<SiteContent> {
+  return publishedOrDraft(readPublishedServices, (content) => content);
+}
+
+export async function readContactPage(): Promise<SiteContent> {
+  return publishedOrDraft(readPublishedContact, (content) => content);
+}
+
+export async function readPortfolioPage(): Promise<SiteContent> {
+  return publishedOrDraft(readPublishedPortfolio, (content) => content);
+}
+
+export async function readBoutiquePage(): Promise<SiteContent> {
+  return publishedOrDraft(readPublishedBoutique, (content) => content);
 }
 
 export async function readSiteSettings(): Promise<SiteSettings> {
-  return (await readSiteContent()).settings;
-}
-
-export async function readHomePage(): Promise<HomePage> {
-  return (await readSiteContent()).homePage;
-}
-
-/**
- * The service catalogue.
- *
- * No gate of its own: unlike a Portfolio Project, a service pack carries no
- * rights or media requirements — it is a price and a description WeCreate
- * decides to publish. Draft and published still separate the same way.
- */
-export async function readServices(): Promise<ServicesContent> {
-  return (await readSiteContent()).services;
+  return publishedOrDraft(
+    async () => (await readPublishedSite()).settings,
+    (content) => content.settings,
+  );
 }
 
 /**
- * The two editorial pages, read the same way the service catalogue is.
- *
- * Neither carries a gate of its own: they hold WeCreate's own words about
- * itself, not client work, so there is no permission or media requirement to
- * satisfy before a visitor may see them. Draft and published still separate.
- */
-export async function readAbout(): Promise<AboutContent> {
-  return (await readSiteContent()).about;
-}
-
-export async function readContact(): Promise<ContactContent> {
-  return (await readSiteContent()).contact;
-}
-
-/**
- * The portfolio, with the publication gate already applied.
+ * The portfolio with the publication gate applied.
  *
  * A Portfolio Project that is missing an editorial or a rights field does not
  * reach a visitor at all — it is not hidden behind a flag further down, it is
  * absent from the list, so no page, count, sitemap entry or detail route can
  * accidentally expose one. Preview is the exception and the point: an editor
  * sees every project they are working on, including what each still needs.
+ *
+ * Pure, and shared by {@link readPortfolio} and the pages that already hold
+ * the content they were handed, so there is one gate rather than one per page.
  */
-export async function readPortfolio(): Promise<PortfolioContent> {
-  const { isEnabled } = await draftMode();
-  const portfolio = (await readSiteContent()).portfolio;
-
-  return isEnabled
+export function gatePortfolio(
+  portfolio: PortfolioContent,
+  isPreview: boolean,
+): PortfolioContent {
+  return isPreview
     ? portfolio
     : { ...portfolio, projects: portfolio.projects.filter(isPublishable) };
 }
 
-/** One Portfolio Project by slug, or `undefined` if it is not visible here. */
-export async function readPortfolioProject(
-  slug: string,
-): Promise<PortfolioProject | undefined> {
-  const { projects } = await readPortfolio();
-  return projects.find((project) => project.slug === slug);
-}
-
 /**
- * The Boutique, with archived products already gone.
+ * The Boutique with archived products already gone.
  *
  * Archiving is not a flag the page is left to remember: a withdrawn product is
  * absent from the list, so nothing counts it, links to it, lists it in the
- * sitemap or shows it in the homepage teaser. Its page and its identity survive
- * — `readDigitalProduct()` still resolves it — because an Order Snapshot, an
- * Order Access grant and a receipt all point at it.
+ * sitemap or shows it in the homepage teaser. Its page and its identity
+ * survive — the unfiltered product list still resolves it — because an Order
+ * Snapshot, an Order Access grant and a receipt all point at it. A page that
+ * resolves one product by slug therefore looks it up in the ungated content and
+ * passes only the listing through this gate.
  *
  * In preview the products are exactly what the editor has, archived ones
  * included, so they can see what they have withdrawn.
  */
-export async function readBoutique(): Promise<BoutiqueContent> {
-  const { isEnabled } = await draftMode();
-  const boutique = (await readSiteContent()).boutique;
-
-  return isEnabled
+export function gateBoutique(
+  boutique: BoutiqueContent,
+  isPreview: boolean,
+): BoutiqueContent {
+  return isPreview
     ? boutique
     : { ...boutique, products: boutique.products.filter(isDiscoverable) };
+}
+
+/** The portfolio, gated, for a caller that has not read the site itself. */
+export async function readPortfolio(): Promise<PortfolioContent> {
+  const { isEnabled } = await draftMode();
+  const portfolio = isEnabled
+    ? (await loadDraftContent()).portfolio
+    : (await readPublishedSite()).portfolio;
+
+  return gatePortfolio(portfolio, isEnabled);
+}
+
+/** The Boutique, gated, for a caller that has not read the site itself. */
+export async function readBoutique(): Promise<BoutiqueContent> {
+  const { isEnabled } = await draftMode();
+  const boutique = isEnabled
+    ? (await loadDraftContent()).boutique
+    : (await readPublishedSite()).boutique;
+
+  return gateBoutique(boutique, isEnabled);
 }
 
 /**
@@ -158,36 +173,13 @@ export async function readBoutique(): Promise<BoutiqueContent> {
  * What the Digital Cart resolves its identifiers against, and deliberately not
  * `readBoutique()`'s list: a shopper whose product was withdrawn while it sat
  * in their cart has to be told so, which needs the product to still answer to
- * its identity. Same reason `readDigitalProduct()` ignores the filter.
+ * its identity.
  */
 export async function readDigitalProducts(): Promise<DigitalProduct[]> {
-  return (await readSiteContent()).boutique.products;
-}
-
-/**
- * One Digital Product by slug, archived ones included.
- *
- * Deliberately not `readBoutique()`'s filtered list: a withdrawn product has to
- * keep answering at its own address, or every link in a past receipt breaks.
- * What it does not keep is a place in the Boutique, in search or in the
- * sitemap, and the page says out loud that it is no longer sold.
- */
-export async function readDigitalProduct(
-  slug: string,
-): Promise<DigitalProduct | undefined> {
-  return findAtSlug((await readSiteContent()).boutique.products, slug);
-}
-
-/**
- * The address a product's prior published address now points at.
- *
- * Only consulted once `readDigitalProduct()` has found nothing, so a slug that
- * has become another product's own address is served rather than redirected.
- */
-export async function readDigitalProductSlugRedirect(
-  slug: string,
-): Promise<string | undefined> {
-  return findSlugRedirect((await readSiteContent()).boutique.products, slug);
+  return publishedOrDraft(
+    async () => (await readPublishedSite()).boutique.products,
+    (content) => content.boutique.products,
+  );
 }
 
 /**
@@ -197,18 +189,28 @@ export async function readDigitalProductSlugRedirect(
  * address into a real 308 before the page starts rendering. Published content
  * only — the proxy carries no preview session, and a draft slug is not an
  * address anyone has ever been able to link to.
+ *
+ * The one standalone reader that does not use the site entry. The proxy asks
+ * for this map on every request to `/boutique/<slug>`, just before the product
+ * page renders, so the two must fill the same entry — the Boutique's — or a cold
+ * product page costs a provider round trip for each.
  */
 export async function readDigitalProductSlugRedirects(): Promise<
   Record<string, string>
 > {
-  return slugRedirects((await readSiteContent()).boutique.products);
+  return slugRedirects(
+    await publishedOrDraft(
+      async () => (await readPublishedBoutique()).boutique.products,
+      (content) => content.boutique.products,
+    ),
+  );
 }
 
 /**
  * Today, as the effective-date rule sees it.
  *
  * Cached because Cache Components refuses a moving clock in a prerender, and
- * tagged with the content tag because of what it decides. An editor publishing
+ * tagged with the legal slice because of what it decides. An editor publishing
  * terms dated today must see them in force at once; a day frozen at yesterday
  * would leave the site serving the previous revision until the clock cache
  * happened to turn over. The publish drops both, so the two are always read
@@ -216,7 +218,7 @@ export async function readDigitalProductSlugRedirects(): Promise<
  */
 export async function readLegalDay(): Promise<string> {
   "use cache";
-  cacheTag(MANAGED_CONTENT_TAG);
+  cacheTag(LEGAL_TAG);
   cacheLife("managedContent");
 
   return legalToday();
@@ -232,7 +234,10 @@ export async function readLegalDay(): Promise<string> {
  * by them.
  */
 export async function readLegalDocuments(): Promise<LegalDocument[]> {
-  return (await readSiteContent()).legalDocuments;
+  return publishedOrDraft(
+    async () => (await readPublishedSite()).legalDocuments,
+    (content) => content.legalDocuments,
+  );
 }
 
 /** The legal document at an address, or `undefined` if nothing is there. */

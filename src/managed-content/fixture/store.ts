@@ -1,4 +1,4 @@
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { appendFile, mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { DEFAULT_SITE_CONTENT } from "../default-content";
@@ -123,4 +123,54 @@ export async function publishFixtureDrafts(): Promise<FixtureDataset> {
   };
   await writeFixtureDataset(updated);
   return updated;
+}
+
+/**
+ * How many times the fixture has served published content.
+ *
+ * The acceptance suite observes cache behaviour through this number: a page
+ * served from cache does not read the provider, so it adds nothing here.
+ *
+ * It is a log of one line per read rather than a counter, and a file rather
+ * than memory, for two reasons. A `"use cache"` fill and the test-hook route
+ * are not guaranteed to share a module instance, so the number has to live
+ * outside the process. And several fills can be in flight at once — which is
+ * exactly the fan-out the suite is trying to see — so a counter updated by
+ * read-modify-write would lose increments and hide it. An append is atomic for
+ * a line this short, so every read leaves its mark and the count is the number
+ * of lines.
+ */
+function readLogPath(): string {
+  const file = datasetPath();
+  return file.endsWith(".json")
+    ? `${file.slice(0, -".json".length)}.reads.log`
+    : `${file}.reads.log`;
+}
+
+export async function recordPublishedRead(): Promise<void> {
+  const file = readLogPath();
+  await mkdir(/* turbopackIgnore: true */ path.dirname(file), {
+    recursive: true,
+  });
+  await appendFile(/* turbopackIgnore: true */ file, "published\n", "utf8");
+}
+
+export async function publishedReadCount(): Promise<number> {
+  try {
+    const raw = await readFile(/* turbopackIgnore: true */ readLogPath(), "utf8");
+    return raw.split("\n").filter(Boolean).length;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return 0;
+    }
+    throw error;
+  }
+}
+
+export async function resetPublishedReadCount(): Promise<void> {
+  const file = readLogPath();
+  await mkdir(/* turbopackIgnore: true */ path.dirname(file), {
+    recursive: true,
+  });
+  await writeFile(/* turbopackIgnore: true */ file, "", "utf8");
 }

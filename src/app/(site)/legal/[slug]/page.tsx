@@ -1,15 +1,18 @@
 import type { Metadata } from "next";
 import { draftMode } from "next/headers";
-import { notFound, permanentRedirect } from "next/navigation";
+import { permanentRedirect } from "next/navigation";
 
 import { LegalDocumentView } from "@/components/legal/legal-document-view";
+import { NotFoundContent } from "@/components/shell/not-found-content";
+import { SitePage } from "@/components/shell/site-page";
 import {
+  readChrome,
   readEffectiveLegalTerms,
   readLegalDocumentInForce,
   readLegalSlugRedirect,
 } from "@/managed-content";
 import { legalPath } from "@/managed-content/legal";
-import { pageOpenGraph } from "@/seo/open-graph";
+import { pageMetadata } from "@/seo/page-metadata";
 import { keepOutOfSearchResults } from "@/site-config";
 
 /**
@@ -30,22 +33,26 @@ export async function generateMetadata({
   params,
 }: LegalRouteProps): Promise<Metadata> {
   const { slug } = await params;
+  const content = await readChrome();
   const inForce = await readLegalDocumentInForce(slug);
   if (!inForce) {
-    return {};
+    // The route renders the not-found body itself (see below), so the noindex
+    // that `notFound()` would have added has to be said here.
+    return {
+      ...pageMetadata(content.settings.seo, { title: "Page introuvable" }),
+      ...keepOutOfSearchResults(),
+    };
   }
 
   const { document, current } = inForce;
   const { isEnabled: isPreview } = await draftMode();
 
   return {
-    title: document.title,
-    description: document.summary,
-    alternates: { canonical: legalPath(document.slug) },
-    openGraph: await pageOpenGraph({
+    ...pageMetadata(content.settings.seo, {
       title: document.title,
       description: document.summary,
     }),
+    alternates: { canonical: legalPath(document.slug) },
     // Two ways a legal page must stay out of search results, and neither is
     // about the route: a preview is one editor's unpublished draft, and a
     // placeholder is not WeCreate's approved text. Presenting either as its
@@ -65,7 +72,11 @@ export async function generateMetadata({
  * with a revision in force, and it is served. The address is one the document
  * used to have, and the request is redirected to where it moved — a link
  * somebody saved or a crawler indexed has to keep arriving (issue #1). Or
- * neither, and it resolves to the site's not-found page.
+ * neither, and the not-found body is rendered inside this route's own
+ * `SitePage`, built from the content already read, rather than through
+ * `notFound()`: that would hand over to the 404 page, which carries only the
+ * bundled chrome. The answer is 200 with `noindex`, which `generateMetadata`
+ * adds itself.
  *
  * A document whose every revision is dated in the future has no page here. It
  * is published content an editor prepared ahead of time, but nobody is bound by
@@ -78,6 +89,7 @@ export async function generateMetadata({
  */
 export default async function LegalRoute({ params }: LegalRouteProps) {
   const { slug } = await params;
+  const content = await readChrome();
   const inForce = await readLegalDocumentInForce(slug);
 
   if (!inForce) {
@@ -85,7 +97,15 @@ export default async function LegalRoute({ params }: LegalRouteProps) {
     if (movedTo) {
       permanentRedirect(legalPath(movedTo));
     }
-    notFound();
+
+    return (
+      <SitePage
+        settings={content.settings}
+        legalDocuments={content.legalDocuments}
+      >
+        <NotFoundContent />
+      </SitePage>
+    );
   }
 
   // In preview only: whether WeCreate may sell yet, and what is holding it. It
@@ -95,5 +115,12 @@ export default async function LegalRoute({ params }: LegalRouteProps) {
     ? (await readEffectiveLegalTerms()).checkout
     : undefined;
 
-  return <LegalDocumentView inForce={inForce} checkout={checkout} />;
+  return (
+    <SitePage
+      settings={content.settings}
+      legalDocuments={content.legalDocuments}
+    >
+      <LegalDocumentView inForce={inForce} checkout={checkout} />
+    </SitePage>
+  );
 }

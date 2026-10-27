@@ -27,13 +27,19 @@ import {
 import { PaymentVerification } from "@/components/checkout/payment-verification";
 import { readAccessForOrder } from "@/fulfillment";
 import { fulfillmentRecovery } from "@/fulfillment/messages";
-import { readSiteSettings } from "@/managed-content";
+import { readChrome, readSiteSettings } from "@/managed-content";
+import { SiteChrome } from "@/components/shell/site-page";
+import { pageMetadata } from "@/seo/page-metadata";
 import { keepOutOfSearchResults } from "@/site-config";
 
-export const metadata: Metadata = {
-  title: "Retour de paiement",
-  ...keepOutOfSearchResults(),
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const content = await readChrome();
+
+  return {
+    ...pageMetadata(content.settings.seo, { title: "Retour de paiement" }),
+    ...keepOutOfSearchResults(),
+  };
+}
 
 export const instant = false;
 
@@ -79,15 +85,17 @@ export default async function PaymentReturnRoute() {
 
   if (!order) {
     return (
-      <CheckoutSurface>
-        <CheckoutStage
-          kicker="Commande"
-          heading="Aucune commande à afficher."
-          lede="Cette page suit un paiement en cours. Si vous venez de payer, le reçu et vos accès arrivent par email."
-        >
-          <BoutiqueLink />
-        </CheckoutStage>
-      </CheckoutSurface>
+      <SiteChrome>
+        <CheckoutSurface>
+          <CheckoutStage
+            kicker="Commande"
+            heading="Aucune commande à afficher."
+            lede="Cette page suit un paiement en cours. Si vous venez de payer, le reçu et vos accès arrivent par email."
+          >
+            <BoutiqueLink />
+          </CheckoutStage>
+        </CheckoutSurface>
+      </SiteChrome>
     );
   }
 
@@ -105,6 +113,7 @@ export default async function PaymentReturnRoute() {
   const supportEmail = (await readSiteSettings()).contact.email;
 
   return (
+    <SiteChrome>
     <CheckoutSplit
       ticket={
         <OrderTicket
@@ -240,6 +249,7 @@ export default async function PaymentReturnRoute() {
         )}
       </CheckoutStage>
     </CheckoutSplit>
+    </SiteChrome>
   );
 }
 
