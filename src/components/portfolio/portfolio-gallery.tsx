@@ -71,7 +71,7 @@ export function PortfolioGallery({
       <section className="wc-container pt-[clamp(28px,5vw,64px)]">
         <p
           data-testid="portfolio-count"
-          className="m-0 mb-[22px] text-micro tracking-32 uppercase text-wc-muted-2"
+          className="m-0 mb-[22px] text-micro tracking-32 uppercase text-wc-text-muted"
         >
           {kicker} · {projectCount(visible.length)}
         </p>
@@ -85,7 +85,7 @@ export function PortfolioGallery({
           <div
             role="group"
             aria-label="Filtrer par univers"
-            className="mt-[clamp(30px,4vw,48px)] flex flex-wrap gap-2.5 border-t border-wc-line-dark pt-[26px]"
+            className="mt-[clamp(30px,4vw,48px)] flex flex-wrap gap-2.5 border-t border-wc-line pt-[26px]"
           >
             <FilterPill
               label={allUniversesLabel}
@@ -124,14 +124,14 @@ export function PortfolioGallery({
                 <Link
                   href={`/portfolio/${project.slug}`}
                   onClick={(event) => open(event, project)}
-                  className="group block border border-wc-line-dark bg-wc-surface transition-colors duration-500 hover:border-wc-muted"
+                  className="group block border border-wc-line bg-wc-surface transition-colors duration-500 hover:border-wc-rule"
                 >
                   <ProjectPoster project={project} />
                   <div className="px-[18px] pt-[18px] pb-[22px]">
                     <h2 className="m-0 mb-[7px] font-display text-[21px] leading-[1.15] font-medium">
                       {project.title}
                     </h2>
-                    <p className="m-0 text-micro tracking-18 uppercase text-wc-muted-2">
+                    <p className="m-0 text-micro tracking-18 uppercase text-wc-text-muted">
                       {project.client} · {project.projectType}
                     </p>
                   </div>
@@ -172,8 +172,8 @@ function FilterPill({ label, isActive, onSelect }: FilterPillProps) {
       aria-pressed={isActive}
       className={`border px-5 py-3 text-micro font-semibold tracking-20 uppercase transition-colors duration-300 ${
         isActive
-          ? "border-wc-white bg-wc-white text-wc-pure"
-          : "border-wc-border bg-transparent text-wc-soft hover:border-wc-white"
+          ? "border-wc-text bg-wc-inverse text-wc-inverse-text"
+          : "border-wc-line-strong bg-transparent text-wc-text-soft hover:border-wc-text"
       }`}
     >
       {label}

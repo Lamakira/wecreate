@@ -37,7 +37,7 @@ export function LegalRevisionHistory({
   return (
     <section
       aria-labelledby="legal-history-heading"
-      className="mt-section-xs border-t border-wc-line-dark pt-heading-gap"
+      className="mt-section-xs border-t border-wc-line pt-heading-gap"
     >
       <SectionKicker as="h2" id="legal-history-heading">
         Historique des révisions
@@ -47,20 +47,20 @@ export function LegalRevisionHistory({
           <li
             key={revision.id}
             data-testid="legal-revision-entry"
-            className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-body-sm font-light text-wc-soft"
+            className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-body-sm font-light text-wc-text-soft"
           >
             <span>{formatEffectiveDate(revision.effectiveFrom)}</span>
-            <span className="text-micro tracking-20 uppercase text-wc-muted-2">
+            <span className="text-micro tracking-20 uppercase text-wc-text-muted">
               {revision.id}
             </span>
             {revision.id === current.id ? (
-              <span className="text-micro tracking-20 uppercase text-wc-white">
+              <span className="text-micro tracking-20 uppercase text-wc-text">
                 En vigueur
               </span>
             ) : (
               <Link
                 href={legalRevisionPath(slug, revision.id)}
-                className="border-b border-wc-muted pb-px transition-colors duration-300 hover:border-wc-white hover:text-wc-white"
+                className="border-b border-wc-rule pb-px transition-colors duration-300 hover:border-wc-text hover:text-wc-text"
               >
                 Lire cette version
               </Link>

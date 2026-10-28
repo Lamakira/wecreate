@@ -58,15 +58,15 @@ export function GuestForm({ totalXof, mustAccept }: GuestFormProps) {
         <div
           role="alert"
           data-testid="checkout-errors"
-          className="border border-wc-error p-5"
+          className="border border-wc-inverse-error p-5"
         >
-          <p className="m-0 text-body font-semibold text-wc-error">
+          <p className="m-0 text-body font-semibold text-wc-inverse-error">
             {message ?? "Votre commande n'a pas pu être lancée."}
           </p>
           {refused.length > 0 ? (
             <ul className="m-0 mt-3 flex list-none flex-col gap-1.5 p-0">
               {refused.map((refusal) => (
-                <li key={refusal} className="text-body-sm font-light text-wc-error">
+                <li key={refusal} className="text-body-sm font-light text-wc-inverse-error">
                   {GUEST_REFUSAL_LABELS[refusal]}
                 </li>
               ))}
@@ -122,7 +122,7 @@ export function GuestForm({ totalXof, mustAccept }: GuestFormProps) {
       */}
       {mustAccept.length === 0 ? null : (
         <fieldset className="m-0 border-0 p-0">
-          <legend className="m-0 mb-4 p-0 text-micro tracking-26 uppercase text-wc-muted-on-light">
+          <legend className="m-0 mb-4 p-0 text-micro tracking-26 uppercase text-wc-inverse-muted">
             Conditions de la vente
           </legend>
 
@@ -139,9 +139,9 @@ export function GuestForm({ totalXof, mustAccept }: GuestFormProps) {
                   aria-describedby={
                     state.refusals.legal ? "error-legal" : undefined
                   }
-                  className="mt-1 size-4 shrink-0 accent-wc-pure"
+                  className="mt-1 size-4 shrink-0 accent-wc-inverse-text"
                 />
-                <p className="m-0 text-body font-light text-wc-ink">
+                <p className="m-0 text-body font-light text-wc-inverse-ink">
                   <label htmlFor={`accept-${revision.kind}`}>
                     J&apos;accepte «&nbsp;{revision.title}&nbsp;» en vigueur.
                   </label>{" "}
@@ -149,7 +149,7 @@ export function GuestForm({ totalXof, mustAccept }: GuestFormProps) {
                     href={revision.path}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="border-b border-wc-muted-on-light pb-0.5 transition-colors duration-300 hover:border-wc-pure"
+                    className="border-b border-wc-inverse-muted pb-0.5 transition-colors duration-300 hover:border-wc-inverse-text"
                   >
                     Lire {revision.title}
                     <span className="sr-only"> - nouvel onglet</span>
@@ -167,7 +167,7 @@ export function GuestForm({ totalXof, mustAccept }: GuestFormProps) {
 
       <p
         data-testid="checkout-no-marketing"
-        className="m-0 text-body-sm font-light text-wc-muted-on-light"
+        className="m-0 text-body-sm font-light text-wc-inverse-muted"
       >
         Vos coordonnées servent à livrer cette commande et à répondre à vos
         questions. Cet achat ne crée aucune inscription à une lettre
@@ -183,7 +183,7 @@ export function GuestForm({ totalXof, mustAccept }: GuestFormProps) {
           disabled={isPending}
           aria-busy={isPending}
           data-testid="checkout-submit"
-          className={`${ACTION_SIZES.default} bg-wc-pure text-wc-white transition-opacity duration-300 hover:opacity-80 disabled:bg-wc-muted-on-light`}
+          className={`${ACTION_SIZES.default} bg-wc-ground-deep text-wc-text transition-opacity duration-300 hover:opacity-80 disabled:bg-wc-inverse-muted`}
         >
           {isPending
             ? "Ouverture du paiement…"
@@ -226,7 +226,7 @@ function Field({
     <div className={wide ? "sm:col-span-2" : undefined}>
       <label
         htmlFor={field}
-        className="block text-micro tracking-26 uppercase text-wc-muted-on-light"
+        className="block text-micro tracking-26 uppercase text-wc-inverse-muted"
       >
         {label}
       </label>
@@ -242,16 +242,16 @@ function Field({
         aria-describedby={described || undefined}
         // A refused field is red as well as thicker: the weight alone reads as
         // emphasis, and an error a buyer cannot spot is one they cannot fix.
-        className={`mt-2.5 block w-full bg-transparent px-4 py-3.5 text-body font-light text-wc-pure ${
+        className={`mt-2.5 block w-full bg-transparent px-4 py-3.5 text-body font-light text-wc-inverse-text ${
           refusal
-            ? "border-2 border-wc-error"
-            : "border border-wc-muted-on-light"
+            ? "border-2 border-wc-inverse-error"
+            : "border border-wc-inverse-muted"
         }`}
       />
       {hint ? (
         <p
           id={`hint-${field}`}
-          className="m-0 mt-2 text-body-sm font-light text-wc-muted-on-light"
+          className="m-0 mt-2 text-body-sm font-light text-wc-inverse-muted"
         >
           {hint}
         </p>
@@ -272,7 +272,7 @@ function FieldError({
     <p
       id={`error-${field}`}
       data-testid={`error-${field}`}
-      className="m-0 mt-2 text-body-sm font-semibold text-wc-error"
+      className="m-0 mt-2 text-body-sm font-semibold text-wc-inverse-error"
     >
       {GUEST_REFUSAL_LABELS[refusal]}
     </p>

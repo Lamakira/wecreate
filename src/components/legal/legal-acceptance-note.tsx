@@ -22,12 +22,12 @@ export function LegalAcceptanceNote({ kind }: LegalAcceptanceNoteProps) {
   return (
     <div
       data-testid="legal-acceptance-note"
-      className="flex flex-col gap-3 border-l border-wc-border pl-5 text-body-sm font-light text-wc-soft"
+      className="flex flex-col gap-3 border-l border-wc-line-strong pl-5 text-body-sm font-light text-wc-text-soft"
     >
       <p className="m-0">
         {isTransactional ? (
           <>
-            <strong className="font-semibold text-wc-white">
+            <strong className="font-semibold text-wc-text">
               Conditions transactionnelles.
             </strong>{" "}
             Leur acceptation explicite est demandée avant tout paiement d&apos;un
@@ -36,7 +36,7 @@ export function LegalAcceptanceNote({ kind }: LegalAcceptanceNoteProps) {
           </>
         ) : (
           <>
-            <strong className="font-semibold text-wc-white">
+            <strong className="font-semibold text-wc-text">
               Document d&apos;information.
             </strong>{" "}
             Aucune acceptation n&apos;est demandée ici.

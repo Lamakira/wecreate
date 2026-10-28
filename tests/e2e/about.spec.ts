@@ -119,7 +119,7 @@ test.describe("À propos", () => {
 
     // The method sits on the light band, which inverts the focus ring so
     // keyboard focus stays visible against white.
-    await expect(method).toHaveAttribute("data-surface", "light");
+    await expect(method).toHaveAttribute("data-surface", "inverse");
   });
 
   test("lists what the studio is made of, by role rather than by name", async ({

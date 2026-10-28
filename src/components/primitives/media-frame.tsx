@@ -3,12 +3,12 @@ import Image from "next/image";
 import type { MediaFrameContent } from "@/managed-content/types";
 
 const SURFACES = {
-  /** Grey gradient on a dark section. */
-  dark: "bg-[linear-gradient(140deg,#1A1A1A,#3A3A3A_50%,#0F0F0F)]",
+  /** Placeholder gradient on the ground. */
+  ground: "bg-(image:--wc-placeholder)",
   /** Slightly lighter variant used by the universe cards. */
-  "dark-soft": "bg-[linear-gradient(150deg,#1A1A1A,#333_55%,#111)]",
-  /** Grey gradient on a white section. */
-  light: "bg-[linear-gradient(135deg,#EEE,#BBB_55%,#DDD)]",
+  "ground-soft": "bg-(image:--wc-placeholder-soft)",
+  /** Placeholder gradient on an inverted band. */
+  inverse: "bg-(image:--wc-placeholder-inverse)",
 } as const;
 
 interface MediaFrameProps {
@@ -27,7 +27,7 @@ interface MediaFrameProps {
  */
 export function MediaFrame({
   media,
-  surface = "dark",
+  surface = "ground",
   sizes = "(max-width: 768px) 100vw, 33vw",
   className,
 }: MediaFrameProps) {
@@ -47,7 +47,7 @@ export function MediaFrame({
       ) : (
         <span
           aria-hidden="true"
-          className="font-mono text-micro tracking-18 text-wc-muted-2"
+          className="font-mono text-micro tracking-18 text-wc-text-muted"
         >
           {media.placeholderLabel}
         </span>

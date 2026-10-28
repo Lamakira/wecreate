@@ -5,11 +5,13 @@ import { useState, type ReactNode } from "react";
 import { CartDrawer } from "@/components/shell/cart-drawer";
 import { NavDrawer } from "@/components/shell/nav-drawer";
 import { SiteHeader } from "@/components/shell/site-header";
+import type { Discipline } from "@/discipline";
 import { useDigitalCart } from "@/digital-cart/use-digital-cart";
 import type { SiteSettings } from "@/managed-content/types";
 
 interface SiteShellProps {
   settings: SiteSettings;
+  discipline: Discipline;
   children: ReactNode;
 }
 
@@ -25,7 +27,7 @@ interface SiteShellProps {
  * *Ajouter au panier* opens the drawer from a product page, far outside this
  * component. What stays here is the rule that only one panel is ever open.
  */
-export function SiteShell({ settings, children }: SiteShellProps) {
+export function SiteShell({ settings, discipline, children }: SiteShellProps) {
   const cart = useDigitalCart();
   const [isMenuRequested, setIsMenuRequested] = useState(false);
 
@@ -38,6 +40,7 @@ export function SiteShell({ settings, children }: SiteShellProps) {
     <>
       <SiteHeader
         settings={settings}
+        discipline={discipline}
         isMenuOpen={isMenuOpen}
         onOpenCart={cart.open}
         onOpenMenu={() => {

@@ -63,11 +63,11 @@ export function ProductView({
   );
 
   return (
-    <div data-surface="light" className="bg-wc-white text-wc-pure">
+    <div data-surface="inverse" className="bg-wc-inverse text-wc-inverse-text">
       <section className="wc-container pt-[clamp(28px,5vw,64px)] pb-section-sm">
         <Link
           href="/boutique"
-          className="mb-heading-gap inline-block text-micro tracking-24 uppercase text-wc-muted-on-light transition-colors duration-300 hover:text-wc-pure"
+          className="mb-heading-gap inline-block text-micro tracking-24 uppercase text-wc-inverse-muted transition-colors duration-300 hover:text-wc-inverse-text"
         >
           ← {boutique.backLabel}
         </Link>
@@ -76,30 +76,30 @@ export function ProductView({
           <div className="relative">
             <MediaFrame
               media={product.cover}
-              surface="light"
+              surface="inverse"
               sizes="(max-width: 900px) 100vw, 50vw"
             />
-            <span className="absolute top-4 left-4 bg-wc-pure px-2.5 py-1.5 text-badge tracking-20 uppercase text-wc-white">
+            <span className="absolute top-4 left-4 bg-wc-ground-deep px-2.5 py-1.5 text-badge tracking-20 uppercase text-wc-text">
               {product.format}
             </span>
           </div>
 
           <div>
             {product.family ? (
-              <p className="m-0 mb-4 text-micro tracking-28 uppercase text-wc-muted-on-light">
+              <p className="m-0 mb-4 text-micro tracking-28 uppercase text-wc-inverse-muted">
                 {DIGITAL_PRODUCT_FAMILY_LABELS[product.family]}
               </p>
             ) : null}
             <h1 className="m-0 mb-5 font-display text-[clamp(32px,4.6vw,62px)] leading-[1.04] font-medium">
               {product.title}
             </h1>
-            <p className="m-0 text-body-lg font-light text-wc-ink">
+            <p className="m-0 text-body-lg font-light text-wc-inverse-ink">
               {product.summary}
             </p>
             {product.description ? (
               <p
                 data-testid="product-description"
-                className="m-0 mt-5 text-body-lg font-light text-wc-ink"
+                className="m-0 mt-5 text-body-lg font-light text-wc-inverse-ink"
               >
                 {product.description}
               </p>
@@ -109,11 +109,11 @@ export function ProductView({
               <section
                 data-testid="product-inclusions"
                 aria-labelledby="product-inclusions-heading"
-                className="mt-8 border-t border-wc-line-light pt-6"
+                className="mt-8 border-t border-wc-inverse-line pt-6"
               >
                 <h2
                   id="product-inclusions-heading"
-                  className="m-0 mb-3.5 text-micro tracking-26 uppercase text-wc-muted-on-light"
+                  className="m-0 mb-3.5 text-micro tracking-26 uppercase text-wc-inverse-muted"
                 >
                   {boutique.inclusionsKicker}
                 </h2>
@@ -121,9 +121,9 @@ export function ProductView({
                   {product.inclusions.map((inclusion) => (
                     <li
                       key={inclusion}
-                      className="flex gap-3 text-body font-light text-wc-ink"
+                      className="flex gap-3 text-body font-light text-wc-inverse-ink"
                     >
-                      <span aria-hidden="true" className="text-wc-pure">
+                      <span aria-hidden="true" className="text-wc-inverse-text">
                         -
                       </span>
                       {inclusion}
@@ -133,7 +133,7 @@ export function ProductView({
               </section>
             ) : null}
 
-            <div className="mt-8 flex flex-wrap items-center gap-5 border-t border-wc-line-light pt-6">
+            <div className="mt-8 flex flex-wrap items-center gap-5 border-t border-wc-inverse-line pt-6">
               <span
                 data-testid="product-price"
                 className="font-display text-[34px] leading-none"
@@ -156,9 +156,9 @@ export function ProductView({
             {product.isArchived ? (
               <p
                 data-testid="product-archived-notice"
-                className="m-0 mt-5 border border-wc-muted-on-light p-5 text-body-sm font-light text-wc-ink"
+                className="m-0 mt-5 border border-wc-inverse-muted p-5 text-body-sm font-light text-wc-inverse-ink"
               >
-                <strong className="font-semibold text-wc-pure">
+                <strong className="font-semibold text-wc-inverse-text">
                   Retiré de la vente.
                 </strong>{" "}
                 Ce produit n&apos;est plus proposé à l&apos;achat. Cette page
@@ -176,30 +176,30 @@ export function ProductView({
 
             <section
               aria-labelledby="product-licence-heading"
-              className="mt-8 border-t border-wc-line-light pt-6"
+              className="mt-8 border-t border-wc-inverse-line pt-6"
             >
               <h2
                 id="product-licence-heading"
-                className="m-0 mb-3.5 text-micro tracking-26 uppercase text-wc-muted-on-light"
+                className="m-0 mb-3.5 text-micro tracking-26 uppercase text-wc-inverse-muted"
               >
                 {boutique.licence.kicker}
               </h2>
               <p
                 data-testid="product-licence"
-                className="m-0 text-body font-light text-wc-ink"
+                className="m-0 text-body font-light text-wc-inverse-ink"
               >
                 {boutique.licence.note}
               </p>
               {licence ? (
-                <p className="m-0 mt-3.5 text-body-sm font-light text-wc-ink">
+                <p className="m-0 mt-3.5 text-body-sm font-light text-wc-inverse-ink">
                   <Link
                     href={licence.path}
-                    className="border-b border-wc-muted-on-light pb-1 transition-colors duration-300 hover:border-wc-pure"
+                    className="border-b border-wc-inverse-muted pb-1 transition-colors duration-300 hover:border-wc-inverse-text"
                   >
                     {boutique.licence.linkLabel}
                     <span className="sr-only"> - {licence.title}</span>
                   </Link>{" "}
-                  <span className="text-wc-muted-on-light">
+                  <span className="text-wc-inverse-muted">
                     · en vigueur depuis le{" "}
                     {formatEffectiveDate(licence.effectiveFrom)}
                   </span>
@@ -209,17 +209,17 @@ export function ProductView({
 
             <section
               aria-labelledby="product-support-heading"
-              className="mt-8 border-t border-wc-line-light pt-6"
+              className="mt-8 border-t border-wc-inverse-line pt-6"
             >
               <h2
                 id="product-support-heading"
-                className="m-0 mb-3.5 text-micro tracking-26 uppercase text-wc-muted-on-light"
+                className="m-0 mb-3.5 text-micro tracking-26 uppercase text-wc-inverse-muted"
               >
                 {boutique.support.kicker}
               </h2>
               <p
                 data-testid="product-support"
-                className="m-0 mb-4 text-body font-light text-wc-ink"
+                className="m-0 mb-4 text-body font-light text-wc-inverse-ink"
               >
                 {boutique.support.note}
               </p>
@@ -228,14 +228,14 @@ export function ProductView({
                   href={whatsAppMessageUrl(contact.whatsappUrl, question)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="border-b border-wc-muted-on-light pb-1 transition-colors duration-300 hover:border-wc-pure"
+                  className="border-b border-wc-inverse-muted pb-1 transition-colors duration-300 hover:border-wc-inverse-text"
                 >
                   {boutique.support.whatsappLabel}
                   <span className="sr-only"> - nouvel onglet</span>
                 </a>
                 <a
                   href={`mailto:${contact.email}?subject=${encodeURIComponent(product.title)}`}
-                  className="border-b border-wc-muted-on-light pb-1 transition-colors duration-300 hover:border-wc-pure"
+                  className="border-b border-wc-inverse-muted pb-1 transition-colors duration-300 hover:border-wc-inverse-text"
                 >
                   {boutique.support.emailLabel}
                 </a>

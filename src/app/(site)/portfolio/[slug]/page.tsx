@@ -100,7 +100,7 @@ export default async function ProjectRoute({ params }: ProjectRouteProps) {
       <section className="wc-container py-section-xs">
         <Link
           href="/portfolio"
-          className="mb-heading-gap inline-block text-micro tracking-24 uppercase text-wc-muted-2 transition-colors duration-300 hover:text-wc-white"
+          className="mb-heading-gap inline-block text-micro tracking-24 uppercase text-wc-text-muted transition-colors duration-300 hover:text-wc-text"
         >
           ← Retour au portfolio
         </Link>

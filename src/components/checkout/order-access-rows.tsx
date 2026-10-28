@@ -35,7 +35,7 @@ export function OrderAccessRows({
           key={grant.sku}
           data-testid="access-row"
           data-sku={grant.sku}
-          className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4 border-t border-wc-line-light py-5 last:border-b"
+          className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4 border-t border-wc-inverse-line py-5 last:border-b"
         >
           <div className="min-w-0">
             <p
@@ -46,13 +46,13 @@ export function OrderAccessRows({
             </p>
             <p
               data-testid="access-allowance"
-              className="m-0 mt-2 text-body-sm font-light text-wc-ink"
+              className="m-0 mt-2 text-body-sm font-light text-wc-inverse-ink"
             >
               {allowanceLabel(grant)}
             </p>
             <p
               data-testid="access-expiry"
-              className="m-0 mt-1 text-body-sm font-light text-wc-muted-on-light"
+              className="m-0 mt-1 text-body-sm font-light text-wc-inverse-muted"
             >
               {expiryLabel(access)}
             </p>
@@ -64,7 +64,7 @@ export function OrderAccessRows({
               <button
                 type="submit"
                 data-testid="access-download"
-                className={`${ACTION_SIZES.default} bg-wc-pure text-wc-white transition-opacity duration-300 hover:opacity-80`}
+                className={`${ACTION_SIZES.default} bg-wc-ground-deep text-wc-text transition-opacity duration-300 hover:opacity-80`}
               >
                 Télécharger
               </button>

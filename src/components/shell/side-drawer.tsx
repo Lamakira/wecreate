@@ -60,7 +60,7 @@ export function SideDrawer({
         onClick={onClose}
         tabIndex={-1}
         aria-hidden="true"
-        className="absolute inset-0 bg-wc-pure/70 backdrop-blur-[3px]"
+        className="absolute inset-0 bg-wc-ground-deep/70 backdrop-blur-[3px]"
       />
       <div
         ref={panelRef}
@@ -69,10 +69,10 @@ export function SideDrawer({
         aria-label={label}
         aria-busy={isBusy === undefined ? undefined : isBusy}
         data-testid={testId}
-        className="relative flex h-full w-[min(430px,100%)] animate-wc-fade-fast flex-col border-l border-wc-line-dark bg-wc-black"
+        className="relative flex h-full w-[min(430px,100%)] animate-wc-fade-fast flex-col border-l border-wc-line bg-wc-ground"
       >
-        <div className="flex items-center justify-between border-b border-wc-line-dark px-[26px] pt-[26px] pb-5">
-          <div className="text-micro tracking-28 uppercase text-wc-muted-2">
+        <div className="flex items-center justify-between border-b border-wc-line px-[26px] pt-[26px] pb-5">
+          <div className="text-micro tracking-28 uppercase text-wc-text-muted">
             {heading}
           </div>
           <button
@@ -80,7 +80,7 @@ export function SideDrawer({
             type="button"
             onClick={onClose}
             aria-label={closeLabel}
-            className="-mr-1 grid h-8 w-8 place-items-center text-wc-white transition-opacity duration-300 hover:opacity-70"
+            className="-mr-1 grid h-8 w-8 place-items-center text-wc-text transition-opacity duration-300 hover:opacity-70"
           >
             <XMarkIcon className="h-5 w-5" aria-hidden="true" />
           </button>
@@ -97,7 +97,7 @@ export function SideDrawer({
         </div>
 
         {footer ? (
-          <div className="border-t border-wc-line-dark px-[26px] pt-6 pb-[30px]">
+          <div className="border-t border-wc-line px-[26px] pt-6 pb-[30px]">
             {footer}
           </div>
         ) : null}

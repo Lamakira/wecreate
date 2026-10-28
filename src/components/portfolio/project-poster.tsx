@@ -55,7 +55,7 @@ export function ProjectPoster({
     <div
       data-testid="project-poster-frame"
       style={{ aspectRatio: project.media.ratio }}
-      className="relative grid place-items-center overflow-hidden bg-[linear-gradient(140deg,#1A1A1A,#3A3A3A_50%,#0F0F0F)]"
+      className="relative grid place-items-center overflow-hidden bg-(image:--wc-placeholder)"
       onPointerEnter={mayPreview ? () => setIsPreviewing(true) : undefined}
       onPointerLeave={mayPreview ? () => setIsPreviewing(false) : undefined}
     >
@@ -70,7 +70,7 @@ export function ProjectPoster({
       ) : (
         <span
           aria-hidden="true"
-          className="font-mono text-micro tracking-18 text-wc-muted-2"
+          className="font-mono text-micro tracking-18 text-wc-text-muted"
         >
           {project.media.placeholderLabel}
         </span>
@@ -104,7 +104,7 @@ export function ProjectPoster({
       {project.playbackAsset ? (
         <span
           aria-hidden="true"
-          className="absolute right-3.5 bottom-3 text-badge tracking-20 uppercase text-wc-soft"
+          className="absolute right-3.5 bottom-3 text-badge tracking-20 uppercase text-wc-text-soft"
         >
           ▶ aperçu
         </span>

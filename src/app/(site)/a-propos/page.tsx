@@ -45,7 +45,7 @@ export default async function AProposPage() {
       legalDocuments={content.legalDocuments}
     >
       <section className="wc-container pt-[clamp(28px,5vw,64px)] pb-section-sm">
-        <p className="m-0 mb-[22px] text-micro tracking-32 uppercase text-wc-muted-2">
+        <p className="m-0 mb-[22px] text-micro tracking-32 uppercase text-wc-text-muted">
           {about.kicker}
         </p>
         <SplitHeading

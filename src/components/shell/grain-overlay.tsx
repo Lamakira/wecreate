@@ -16,7 +16,7 @@ export function GrainOverlay() {
     <div
       aria-hidden="true"
       data-testid="grain-overlay"
-      className="pointer-events-none fixed inset-0 -z-10 opacity-[0.05] bg-[repeating-linear-gradient(0deg,#fff_0_1px,transparent_1px_3px)]"
+      className="pointer-events-none fixed inset-0 -z-10 opacity-[0.05] bg-[repeating-linear-gradient(0deg,var(--color-wc-text)_0_1px,transparent_1px_3px)]"
     />
   );
 }

@@ -7,6 +7,24 @@ import { FRAGMENT_SHADER, PRESET, VERTEX_SHADER } from "./hero-background-shader
 
 type Uniform = { value: unknown };
 
+/**
+ * The silk's colour ramp, as the current Discipline theme paints it.
+ *
+ * Read from the `--wc-hero-silk-*` custom properties in `globals.css` rather
+ * than fixed here, so the same silk folds in black and warm grey on
+ * Vidéographie, in cream on Branding and in night blue on Site web. A missing
+ * or malformed value falls back to the approved preset's own stop.
+ */
+function themeRamp(element: Element): string[] {
+  const style = getComputedStyle(element);
+  return PRESET.colors.map((fallback, index) => {
+    const value = style
+      .getPropertyValue(`--wc-hero-silk-${"abc"[index]}`)
+      .trim();
+    return /^#[0-9a-f]{6}$/i.test(value) ? value : fallback;
+  });
+}
+
 function hexToRgb(hex: string) {
   const value = Number.parseInt(hex.replace("#", ""), 16);
   return new Float32Array([
@@ -36,10 +54,10 @@ function hexToRgb(hex: string) {
  * The container is transparent rather than opaque black so that fallback is
  * visible in the moment before the first frame, and after a context loss.
  *
- * NOTE ON COLOUR: the preset's ramp is warm (`#837b70`, `#f3eadb`), which is a
- * deliberate departure from the strict black-and-white palette the rest of the
- * identity keeps. Swapping `PRESET.colors` for the brand greys is a one-line
- * change if that is reconsidered.
+ * NOTE ON COLOUR: Vidéographie's ramp is warm (`#837b70`, `#f3eadb`), which is
+ * a deliberate departure from the strict black-and-white palette the rest of
+ * the identity keeps. Each Discipline theme sets its own ramp in `globals.css`;
+ * changing Vidéographie's back to the brand greys is a change there.
  */
 export function HeroBackground({ className = "" }: { className?: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -63,6 +81,7 @@ export function HeroBackground({ className = "" }: { className?: string }) {
       return;
     }
 
+    const ramp = themeRamp(container);
     const gl = renderer.gl;
     const canvas = gl.canvas as HTMLCanvasElement;
     Object.assign(canvas.style, {
@@ -89,9 +108,9 @@ export function HeroBackground({ className = "" }: { className?: string }) {
         uHasSource: { value: 0 },
         uSourceAspect: { value: 1 },
         uGenerator: { value: PRESET.generator },
-        uColorA: { value: hexToRgb(PRESET.colors[0]) },
-        uColorB: { value: hexToRgb(PRESET.colors[1]) },
-        uColorC: { value: hexToRgb(PRESET.colors[2]) },
+        uColorA: { value: hexToRgb(ramp[0]) },
+        uColorB: { value: hexToRgb(ramp[1]) },
+        uColorC: { value: hexToRgb(ramp[2]) },
         uGlow: { value: PRESET.settings.glow / 100 },
         uGrain: { value: PRESET.grain },
         uVignette: { value: PRESET.settings.vignette / 100 },

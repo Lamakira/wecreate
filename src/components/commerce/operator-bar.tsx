@@ -34,7 +34,7 @@ export function OperatorBar({
       <div className="flex flex-wrap items-baseline justify-between gap-4">
         <h1 className="m-0 text-section font-light">{title}</h1>
         <form action={signOutAction} className="flex items-baseline gap-4">
-          <span className="text-body-sm font-light text-wc-muted-2">
+          <span className="text-body-sm font-light text-wc-text-muted">
             {operatorEmail}
           </span>
           <CommerceButton secondary pendingLabel="Déconnexion…">
@@ -59,7 +59,7 @@ export function OperatorBar({
             <span
               key={surface.href}
               aria-current="page"
-              className="text-micro uppercase tracking-24 text-wc-white"
+              className="text-micro uppercase tracking-24 text-wc-text"
             >
               {surface.label}
             </span>
@@ -67,7 +67,7 @@ export function OperatorBar({
             <Link
               key={surface.href}
               href={surface.href}
-              className="text-micro uppercase tracking-24 text-wc-muted-2 underline underline-offset-4"
+              className="text-micro uppercase tracking-24 text-wc-text-muted underline underline-offset-4"
             >
               {surface.label}
             </Link>

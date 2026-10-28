@@ -26,8 +26,8 @@ export function AvailabilityBadge({ availability }: AvailabilityBadgeProps) {
       data-availability={availability}
       className={`inline-block px-2.5 py-1.5 text-badge font-semibold tracking-20 uppercase ${
         availability === "available"
-          ? "bg-wc-pure text-wc-white"
-          : "border border-wc-muted-on-light text-wc-muted-on-light"
+          ? "bg-wc-ground-deep text-wc-text"
+          : "border border-wc-inverse-muted text-wc-inverse-muted"
       }`}
     >
       {AVAILABILITY_LABELS[availability]}

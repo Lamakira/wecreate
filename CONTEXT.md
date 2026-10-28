@@ -4,6 +4,10 @@ The shared language for WeCreate's portfolio, digital commerce, and service-enqu
 
 ## Language
 
+**Discipline**:
+One of WeCreate's three lines of work — Vidéographie, Branding, Site web. Each has its own pages, its own colour theme on those pages, and its own offers. The v2 handoff calls these "univers", which the code already uses for the video offers (Entreprises, Immobilier, Mariage).
+_Avoid_: Univers, universe, offer, vertical
+
 **Digital Product**:
 An ebook, guide, LUT, or preset paid for in full online and delivered automatically after payment confirmation.
 _Avoid_: Download, article, digital service

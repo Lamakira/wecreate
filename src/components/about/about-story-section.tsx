@@ -27,7 +27,7 @@ export function AboutStorySection({ story }: AboutStorySectionProps) {
       <Reveal>
         <MediaFrame
           media={story.portrait}
-          surface="dark-soft"
+          surface="ground-soft"
           sizes="(max-width: 900px) 100vw, 45vw"
         />
       </Reveal>
@@ -36,7 +36,7 @@ export function AboutStorySection({ story }: AboutStorySectionProps) {
         {story.paragraphs.map((paragraph) => (
           <p
             key={paragraph}
-            className="m-0 mb-[22px] text-[16px] font-light leading-[1.85] text-wc-soft"
+            className="m-0 mb-[22px] text-[16px] font-light leading-[1.85] text-wc-text-soft"
           >
             {paragraph}
           </p>

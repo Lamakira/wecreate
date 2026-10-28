@@ -55,7 +55,7 @@ export function CartDrawer() {
       footer={
         <div className="flex flex-col gap-4">
           <div className="flex items-baseline justify-between">
-            <span className="text-micro tracking-26 uppercase text-wc-muted-2">
+            <span className="text-micro tracking-26 uppercase text-wc-text-muted">
               Total
             </span>
             <span data-testid="cart-total" className="font-display text-[26px]">
@@ -71,7 +71,7 @@ export function CartDrawer() {
             role="status"
             id="cart-state"
             data-testid="cart-state"
-            className="m-0 text-body-sm font-light text-wc-muted-2"
+            className="m-0 text-body-sm font-light text-wc-text-muted"
           >
             {cartState(cart)}
           </p>
@@ -93,8 +93,8 @@ export function CartDrawer() {
               // reaches it and is told why it will not move yet.
               className={`${ACTION_SIZES.block} transition-opacity duration-300 ${
                 isBlocked
-                  ? "cursor-not-allowed bg-wc-surface-2 text-wc-muted-2"
-                  : "bg-wc-white text-wc-pure hover:opacity-75"
+                  ? "cursor-not-allowed bg-wc-surface-2 text-wc-text-muted"
+                  : "bg-wc-inverse text-wc-inverse-text hover:opacity-75"
               }`}
             >
               Passer commande
@@ -106,7 +106,7 @@ export function CartDrawer() {
       {cart.hasFailed ? (
         <p
           data-testid="cart-error"
-          className="mt-5 border border-wc-line-darker p-4 text-body-sm font-light text-wc-soft"
+          className="mt-5 border border-wc-line-faint p-4 text-body-sm font-light text-wc-text-soft"
         >
           L&apos;opération n&apos;a pas abouti. Réessayez.
         </p>
@@ -115,7 +115,7 @@ export function CartDrawer() {
       {view.unresolvedCount > 0 ? (
         <p
           data-testid="cart-unresolved"
-          className="mt-5 border border-wc-line-darker p-4 text-body-sm font-light text-wc-soft"
+          className="mt-5 border border-wc-line-faint p-4 text-body-sm font-light text-wc-text-soft"
         >
           {view.unresolvedCount === 1
             ? "Un article de votre panier n'est plus au catalogue : il en a été retiré."
@@ -129,9 +129,9 @@ export function CartDrawer() {
       {view.hasPriceChanges ? (
         <div
           data-testid="cart-price-change-notice"
-          className="mt-5 mb-1 border border-wc-line-darker p-4"
+          className="mt-5 mb-1 border border-wc-line-faint p-4"
         >
-          <p className="m-0 text-body-sm font-light text-wc-soft">
+          <p className="m-0 text-body-sm font-light text-wc-text-soft">
             Le prix de votre panier a changé depuis votre dernière visite.
             Vérifiez les nouveaux montants avant de continuer.
           </p>
@@ -139,7 +139,7 @@ export function CartDrawer() {
             type="button"
             data-testid="cart-acknowledge-prices"
             onClick={cart.acknowledgePrices}
-            className={`mt-4 ${ACTION_SIZES.block} border border-wc-border text-wc-white transition-colors duration-300 hover:border-wc-white hover:bg-wc-surface-2`}
+            className={`mt-4 ${ACTION_SIZES.block} border border-wc-line-strong text-wc-text transition-colors duration-300 hover:border-wc-text hover:bg-wc-surface-2`}
           >
             Accepter les nouveaux prix
           </button>
@@ -151,7 +151,7 @@ export function CartDrawer() {
         // in the footer — and nothing at all until the shop has answered, so an
         // unread cart is never described as an empty one.
         cart.isLoaded ? (
-          <p className="py-8 text-body font-light text-wc-muted-2">
+          <p className="py-8 text-body font-light text-wc-text-muted">
             Ajoutez un produit depuis la boutique.
           </p>
         ) : null
@@ -195,7 +195,7 @@ function CartLine({ line, onFollow, onRemove }: CartLineProps) {
       data-testid="cart-line"
       data-product={line.id}
       data-availability={line.availability}
-      className="flex gap-3.5 border-b border-wc-line-darker py-5"
+      className="flex gap-3.5 border-b border-wc-line-faint py-5"
     >
       <div className="flex flex-1 flex-col items-start">
         <Link
@@ -209,7 +209,7 @@ function CartLine({ line, onFollow, onRemove }: CartLineProps) {
         {line.availability === "available" ? null : (
           <p
             data-testid="cart-line-unavailable"
-            className="m-0 mt-1.5 text-body-sm font-light text-wc-muted-2"
+            className="m-0 mt-1.5 text-body-sm font-light text-wc-text-muted"
           >
             {AVAILABILITY_LABELS[line.availability]} - retirez ce produit pour
             continuer.
@@ -219,7 +219,7 @@ function CartLine({ line, onFollow, onRemove }: CartLineProps) {
         {hasPriceChanged(line) ? (
           <p
             data-testid="cart-line-price-change"
-            className="m-0 mt-1.5 text-body-sm font-light text-wc-muted-2"
+            className="m-0 mt-1.5 text-body-sm font-light text-wc-text-muted"
           >
             Nouveau prix depuis votre dernière visite.
           </p>
@@ -229,7 +229,7 @@ function CartLine({ line, onFollow, onRemove }: CartLineProps) {
           type="button"
           data-testid="cart-line-remove"
           onClick={onRemove}
-          className="mt-2.5 border-b border-wc-line-darker pb-1 text-micro tracking-20 uppercase text-wc-muted-2 transition-colors duration-300 hover:border-wc-white hover:text-wc-white"
+          className="mt-2.5 border-b border-wc-line-faint pb-1 text-micro tracking-20 uppercase text-wc-text-muted transition-colors duration-300 hover:border-wc-text hover:text-wc-text"
         >
           Retirer
           <span className="sr-only"> {line.title} du panier</span>

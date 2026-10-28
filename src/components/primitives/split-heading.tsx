@@ -20,7 +20,7 @@ export function SplitHeading({ as: Tag, headline, className, id }: SplitHeadingP
   return (
     <Tag id={id} className={className}>
       {headline.lead}
-      <em className="italic">{headline.emphasis}</em>
+      <em className="italic text-wc-accent">{headline.emphasis}</em>
       {headline.trail}
     </Tag>
   );

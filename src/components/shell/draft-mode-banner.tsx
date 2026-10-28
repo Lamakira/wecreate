@@ -8,13 +8,13 @@ export function DraftModeBanner() {
   return (
     <div
       data-testid="draft-mode-banner"
-      className="fixed inset-x-0 bottom-0 z-1001 flex flex-wrap items-center justify-center gap-4 border-t border-wc-border bg-wc-pure px-gutter py-3 text-micro tracking-20 uppercase text-wc-white"
+      className="fixed inset-x-0 bottom-0 z-1001 flex flex-wrap items-center justify-center gap-4 border-t border-wc-line-strong bg-wc-ground-deep px-gutter py-3 text-micro tracking-20 uppercase text-wc-text"
     >
       <meta name="robots" content="noindex, nofollow" />
       <span>Aperçu du contenu non publié</span>
       <a
         href="/api/draft/disable"
-        className="border-b border-wc-border pb-0.5 transition-colors duration-300 hover:border-wc-white"
+        className="border-b border-wc-line-strong pb-0.5 transition-colors duration-300 hover:border-wc-text"
       >
         Quitter l&apos;aperçu
       </a>

@@ -20,7 +20,7 @@ export function ServiceAddOnsSection({ section }: ServiceAddOnsSectionProps) {
       className="wc-container py-section-sm"
     >
       <Reveal>
-        <p className="m-0 mb-3.5 text-micro tracking-30 uppercase text-wc-muted-2">
+        <p className="m-0 mb-3.5 text-micro tracking-30 uppercase text-wc-text-muted">
           {section.kicker}
         </p>
         <h2
@@ -36,20 +36,20 @@ export function ServiceAddOnsSection({ section }: ServiceAddOnsSectionProps) {
           <Reveal
             as="li"
             key={addOn.key}
-            className="border-t border-wc-line-dark pt-5"
+            className="border-t border-wc-line pt-5"
           >
             <div className="mb-2 flex items-baseline justify-between gap-3">
               <h3 className="m-0 text-[15px] font-medium">{addOn.title}</h3>
               <p className="m-0 text-right text-body-sm font-semibold whitespace-nowrap">
                 {formatXof(addOn.priceXof)}
                 {addOn.priceUnit ? (
-                  <span className="block text-micro font-normal tracking-16 uppercase text-wc-muted-2">
+                  <span className="block text-micro font-normal tracking-16 uppercase text-wc-text-muted">
                     {addOn.priceUnit}
                   </span>
                 ) : null}
               </p>
             </div>
-            <p className="m-0 text-body-sm font-light text-wc-muted-2">
+            <p className="m-0 text-body-sm font-light text-wc-text-muted">
               {addOn.description}
             </p>
           </Reveal>

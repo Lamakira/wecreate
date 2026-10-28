@@ -1724,9 +1724,9 @@ surfaces, so the palette carries corrected values:
 
 | Token | Handoff | Now | Why |
 | --- | --- | --- | --- |
-| `wc-muted-2` | `#777` | `#8A8A8A` | `#777` measures 4.42:1 on `#0A0A0A` and 4.22:1 on `#111111` |
-| `wc-muted-on-light` | — | `#6A6A6A` | New. `#777` measures 4.48:1 on the white band |
-| `wc-muted` | `#555` | `#555` | Kept, but for rules and underlines only — as text it reaches 2.8:1 |
+| `wc-text-muted` | `#777` | `#8A8A8A` | `#777` measures 4.42:1 on `#0A0A0A` and 4.22:1 on `#111111` |
+| `wc-inverse-muted` | — | `#6A6A6A` | New. `#777` measures 4.48:1 on the white band |
+| `wc-rule` | `#555` | `#555` | Kept, but for rules and underlines only — as text it reaches 2.8:1 |
 
 No single grey can serve both grounds: against `#0A0A0A` and `#FFFFFF` together,
 the best any grey manages is 4.39:1. That is why dark and light surfaces have
@@ -1736,8 +1736,32 @@ its ceiling against pure black is 4.69:1.
 `tests/e2e/contrast.spec.ts` guards all of this. Flat surfaces are checked from
 computed styles; the hero is checked by sampling painted pixels across several
 frames, because its ground is a shader under a gradient and no computed style
-describes it. Reverting `wc-muted-2` to `#777` fails that test with eleven named
+describes it. Reverting `wc-text-muted` to `#777` fails that test with eleven named
 elements, which is how it was verified to be worth having.
+
+## Discipline themes
+
+Every colour is a token named by its role — `wc-ground`, `wc-surface`,
+`wc-text`, `wc-text-muted`, `wc-line`, `wc-accent`, and the `wc-inverse-*`
+family for the inverted band — never by its value. A page declares its
+Discipline through `SitePage`'s `discipline` prop, which puts
+`data-discipline` on `<main>`; `src/app/globals.css` then rewrites every token
+from the document root, so the header, footer, grain and drawers follow too.
+
+| Discipline | Ground | Text | Accent | Logo |
+| --- | --- | --- | --- | --- |
+| Vidéographie (default) | `#0A0A0A` | `#FFFFFF` | `#FFFFFF` | white |
+| Branding | `#EFE8DC` | `#1A1511` | `#B4532A` | black |
+| Site web | `#070D1F` | `#E8EEFF` | `#4D7CFF` | white |
+
+Pages that are not a Discipline's own (Boutique, À propos, Contact, legal,
+transactions) declare nothing and stay Vidéographie. The hero's generated silk
+takes a ramp from each theme, and its scrim is mixed from the ground, so it is
+as legible on cream and night blue as on black. Branding and Site web have no
+address of their own yet: the acceptance suite measures them on
+`/test/discipline/branding` and `/test/discipline/site-web`, which exist only
+when the test hooks are on. `tests/e2e/discipline-themes.spec.ts` checks every
+text and ground pair of each palette at WCAG AA, as well as the pages.
 
 ## Typography
 

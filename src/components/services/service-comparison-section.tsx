@@ -23,12 +23,12 @@ export function ServiceComparisonSection({
   return (
     <section
       aria-labelledby="service-comparison-heading"
-      data-surface="light"
-      className="bg-wc-white py-section-sm text-wc-pure"
+      data-surface="inverse"
+      className="bg-wc-inverse py-section-sm text-wc-inverse-text"
     >
       <div className="wc-container">
         <Reveal>
-          <p className="m-0 mb-3.5 text-micro tracking-30 uppercase text-wc-muted-on-light">
+          <p className="m-0 mb-3.5 text-micro tracking-30 uppercase text-wc-inverse-muted">
             {comparison.kicker}
           </p>
           <h2
@@ -52,7 +52,7 @@ export function ServiceComparisonSection({
               <tr>
                 <th
                   scope="col"
-                  className="border-b border-wc-pure px-3 py-3.5 text-left text-micro font-semibold tracking-20 uppercase"
+                  className="border-b border-wc-inverse-text px-3 py-3.5 text-left text-micro font-semibold tracking-20 uppercase"
                 >
                   <span className="sr-only">Critère</span>
                 </th>
@@ -60,7 +60,7 @@ export function ServiceComparisonSection({
                   <th
                     key={column}
                     scope="col"
-                    className="border-b border-wc-pure px-3 py-3.5 text-left text-micro font-semibold tracking-20 uppercase"
+                    className="border-b border-wc-inverse-text px-3 py-3.5 text-left text-micro font-semibold tracking-20 uppercase"
                   >
                     {column}
                   </th>
@@ -72,14 +72,14 @@ export function ServiceComparisonSection({
                 <tr key={row.key}>
                   <th
                     scope="row"
-                    className="border-b border-wc-line-light px-3 py-3.5 text-left font-normal text-wc-muted-on-light"
+                    className="border-b border-wc-inverse-line px-3 py-3.5 text-left font-normal text-wc-inverse-muted"
                   >
                     {row.label}
                   </th>
                   {row.values.map((value, index) => (
                     <td
                       key={comparison.columns[index] ?? index}
-                      className="border-b border-wc-line-light px-3 py-3.5"
+                      className="border-b border-wc-inverse-line px-3 py-3.5"
                     >
                       {value}
                     </td>

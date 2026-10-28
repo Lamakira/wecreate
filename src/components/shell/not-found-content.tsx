@@ -11,13 +11,13 @@ import { CtaLink } from "@/components/primitives/cta-link";
 export function NotFoundContent() {
   return (
     <section className="wc-container py-section" data-testid="not-found">
-      <p className="m-0 mb-[22px] text-micro tracking-32 uppercase text-wc-muted-2">
+      <p className="m-0 mb-[22px] text-micro tracking-32 uppercase text-wc-text-muted">
         Page introuvable
       </p>
       <h1 className="m-0 max-w-[22ch] font-display text-page-title font-medium">
         Cette page n&apos;existe <em className="italic">pas</em>.
       </h1>
-      <p className="mt-heading-gap max-w-[52ch] border-t border-wc-line-dark pt-6 text-body-lg font-light text-wc-soft">
+      <p className="mt-heading-gap max-w-[52ch] border-t border-wc-line pt-6 text-body-lg font-light text-wc-text-soft">
         Le lien est peut-être ancien, ou le projet n&apos;est pas encore publié.
       </p>
       <div className="mt-heading-gap flex flex-wrap gap-3">

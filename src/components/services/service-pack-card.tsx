@@ -40,13 +40,13 @@ export function ServicePackCard({
   return (
     <article
       data-testid="service-pack"
-      className="flex h-full flex-col gap-4 border border-wc-line-dark bg-wc-surface px-[26px] pt-[30px] pb-[26px] transition-[border-color,transform] duration-500 ease-signature hover:border-wc-muted hover:-translate-y-[5px]"
+      className="flex h-full flex-col gap-4 border border-wc-line bg-wc-surface px-[26px] pt-[30px] pb-[26px] transition-[border-color,transform] duration-500 ease-signature hover:border-wc-rule hover:-translate-y-[5px]"
     >
       <h3 className="m-0 font-display text-product-title font-medium">
         {pack.name}
       </h3>
 
-      <p className="m-0 flex flex-wrap items-baseline gap-2 border-b border-wc-line-dark pb-4">
+      <p className="m-0 flex flex-wrap items-baseline gap-2 border-b border-wc-line pb-4">
         <span
           data-testid="service-pack-price"
           className="text-[clamp(22px,2.4vw,30px)] font-semibold tracking-[-0.01em]"
@@ -54,7 +54,7 @@ export function ServicePackCard({
           {pack.isOnRequest ? onRequestLabel : formatXof(pack.priceXof)}
         </span>
         {!pack.isOnRequest && pack.priceUnit ? (
-          <span className="text-button tracking-16 uppercase text-wc-muted-2">
+          <span className="text-button tracking-16 uppercase text-wc-text-muted">
             {pack.priceUnit}
           </span>
         ) : null}
@@ -64,9 +64,9 @@ export function ServicePackCard({
         {pack.inclusions.map((inclusion) => (
           <li
             key={inclusion}
-            className="flex gap-2.5 text-body-sm font-light text-wc-soft"
+            className="flex gap-2.5 text-body-sm font-light text-wc-text-soft"
           >
-            <span aria-hidden="true" className="text-wc-white">
+            <span aria-hidden="true" className="text-wc-text">
               -
             </span>
             {inclusion}
@@ -77,7 +77,7 @@ export function ServicePackCard({
       {/* Micro-label terms with ordinary-case definitions, the meta treatment
         * used everywhere else on the site. The payment conditions are a
         * sentence, and a sentence set in capitals stops being readable. */}
-      <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 border-t border-wc-line-dark pt-3.5 text-body-sm font-light text-wc-muted-2">
+      <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 border-t border-wc-line pt-3.5 text-body-sm font-light text-wc-text-muted">
         <dt className="m-0 text-[10px] font-medium tracking-16 uppercase">
           Cible
         </dt>

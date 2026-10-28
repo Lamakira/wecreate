@@ -1,16 +1,7 @@
 import type { Metadata } from "next";
-import { draftMode } from "next/headers";
 
-import { BrandQuoteSection } from "@/components/home/brand-quote-section";
-import { FinalCtaSection } from "@/components/home/final-cta-section";
-import { HeroSection } from "@/components/home/hero-section";
-import { PositioningMarquee } from "@/components/home/positioning-marquee";
-import { ProofSection } from "@/components/home/proof-section";
-import { RecentWorkSection } from "@/components/home/recent-work-section";
-import { ShopPreviewSection } from "@/components/home/shop-preview-section";
-import { UniversesSection } from "@/components/home/universes-section";
-import { SitePage } from "@/components/shell/site-page";
-import { gateBoutique, gatePortfolio, readHome } from "@/managed-content";
+import { HomePage } from "@/components/home/home-page";
+import { readHome } from "@/managed-content";
 import { pageMetadata } from "@/seo/page-metadata";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -33,52 +24,7 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-/**
- * The homepage.
- *
- * A fixed sequence of named sections, each rendered only when Managed Content
- * says it is visible. The order is the design's and is not editable: this is a
- * composed page, not a page builder.
- */
-export default async function HomePageRoute() {
-  const content = await readHome();
-  const { homePage } = content;
-  const { isEnabled: isPreview } = await draftMode();
-  // The reel is the portfolio's own list, gated the same way, so the homepage
-  // cannot show work the portfolio would refuse to publish. The Boutique teaser
-  // works the same way: the featured products are the Boutique's own, already
-  // without the ones an editor has archived.
-  const { projects } = gatePortfolio(content.portfolio, isPreview);
-  const { products } = gateBoutique(content.boutique, isPreview);
-
-  return (
-    <SitePage
-      settings={content.settings}
-      legalDocuments={content.legalDocuments}
-    >
-      <HeroSection hero={homePage.hero} />
-      {homePage.positioningMarquee.isVisible ? (
-        <PositioningMarquee marquee={homePage.positioningMarquee} />
-      ) : null}
-      {homePage.universes.isVisible ? (
-        <UniversesSection section={homePage.universes} />
-      ) : null}
-      {homePage.recentWork.isVisible ? (
-        <RecentWorkSection section={homePage.recentWork} projects={projects} />
-      ) : null}
-      {homePage.proof.isVisible ? <ProofSection section={homePage.proof} /> : null}
-      {homePage.shopPreview.isVisible ? (
-        <ShopPreviewSection
-          section={homePage.shopPreview}
-          products={products.filter((product) => product.isFeatured)}
-        />
-      ) : null}
-      {homePage.brandQuote.isVisible ? (
-        <BrandQuoteSection section={homePage.brandQuote} />
-      ) : null}
-      {homePage.finalCta.isVisible ? (
-        <FinalCtaSection section={homePage.finalCta} />
-      ) : null}
-    </SitePage>
-  );
+/** The homepage, which is Vidéographie's. */
+export default function HomePageRoute() {
+  return <HomePage discipline="videographie" />;
 }

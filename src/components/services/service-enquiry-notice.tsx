@@ -23,17 +23,17 @@ export function ServiceEnquiryNotice({
       data-testid="service-enquiry-notice"
       className="wc-container pb-section-sm"
     >
-      <Reveal className="border border-wc-border p-[clamp(20px,3vw,32px)]">
+      <Reveal className="border border-wc-line-strong p-[clamp(20px,3vw,32px)]">
         <h2
           id="service-enquiry-heading"
-          className="m-0 mb-3.5 text-micro tracking-30 uppercase font-medium text-wc-muted-2"
+          className="m-0 mb-3.5 text-micro tracking-30 uppercase font-medium text-wc-text-muted"
         >
           {enquiry.title}
         </h2>
-        <p className="m-0 max-w-[68ch] text-body-lg font-light text-wc-soft">
+        <p className="m-0 max-w-[68ch] text-body-lg font-light text-wc-text-soft">
           {enquiry.notice}
         </p>
-        <p className="m-0 mt-3 max-w-[68ch] text-body-sm font-light text-wc-muted-2">
+        <p className="m-0 mt-3 max-w-[68ch] text-body-sm font-light text-wc-text-muted">
           {enquiry.discoveryCallNote}
         </p>
         <div className="mt-heading-gap flex flex-col gap-3 sm:flex-row sm:flex-wrap">

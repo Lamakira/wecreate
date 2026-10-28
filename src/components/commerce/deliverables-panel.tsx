@@ -54,14 +54,14 @@ export function DeliverablesPanel({
           className="flex flex-col gap-4 sm:max-w-lg"
         >
           <label className="block">
-            <span className="block text-micro uppercase tracking-24 text-wc-muted-2">
+            <span className="block text-micro uppercase tracking-24 text-wc-text-muted">
               Produit
             </span>
             <select
               name="sku"
               required
               defaultValue=""
-              className="mt-2 w-full border border-wc-border bg-wc-surface px-3 py-2 text-body text-wc-white"
+              className="mt-2 w-full border border-wc-line-strong bg-wc-surface px-3 py-2 text-body text-wc-text"
             >
               <option value="" disabled>
                 Choisir un produit
@@ -102,10 +102,10 @@ function Deliverable({ deliverable }: { deliverable: DeliverableView }) {
     <article
       data-testid="deliverable"
       data-sku={deliverable.sku}
-      className="border border-wc-line-dark bg-wc-surface-2 p-5"
+      className="border border-wc-line bg-wc-surface-2 p-5"
     >
       <h3 className="m-0 text-product-title font-light">{deliverable.title}</h3>
-      <p className="mt-1 mb-0 text-micro uppercase tracking-24 text-wc-muted-2">
+      <p className="mt-1 mb-0 text-micro uppercase tracking-24 text-wc-text-muted">
         {deliverable.sku}
       </p>
       <p
@@ -119,7 +119,7 @@ function Deliverable({ deliverable }: { deliverable: DeliverableView }) {
       </p>
 
       {deliverable.versions.length === 0 ? (
-        <p className="mt-4 mb-0 text-body-sm font-light text-wc-muted-2">
+        <p className="mt-4 mb-0 text-body-sm font-light text-wc-text-muted">
           Aucun fichier livré pour ce produit. Tant qu&apos;il n&apos;y en a pas, il reste
           « bientôt disponible » dans la boutique.
         </p>
@@ -131,15 +131,15 @@ function Deliverable({ deliverable }: { deliverable: DeliverableView }) {
               data-testid="version"
               data-version={String(version.version)}
               data-active={String(version.id === deliverable.activeVersionId)}
-              className="flex flex-col gap-3 border border-wc-line-dark p-4 sm:flex-row sm:items-center sm:justify-between"
+              className="flex flex-col gap-3 border border-wc-line p-4 sm:flex-row sm:items-center sm:justify-between"
             >
               {/* The record, separate from the control beside it: what this
                   version *is* never changes, and only what is on sale does. */}
               <div
                 data-testid="version-record"
-                className="text-body-sm font-light text-wc-soft"
+                className="text-body-sm font-light text-wc-text-soft"
               >
-                <p className="m-0 text-body text-wc-white">
+                <p className="m-0 text-body text-wc-text">
                   Version {version.version} · {version.fileName}
                 </p>
                 <p className="m-0">
@@ -148,13 +148,13 @@ function Deliverable({ deliverable }: { deliverable: DeliverableView }) {
                     {shortChecksum(version.checksum)}
                   </span>
                 </p>
-                <p className="m-0 text-wc-muted-2">
+                <p className="m-0 text-wc-text-muted">
                   Déposée le {formatMoment(version.createdAt)} par{" "}
                   {version.createdByEmail}
                 </p>
               </div>
               {version.id === deliverable.activeVersionId ? (
-                <p className="m-0 text-micro uppercase tracking-24 text-wc-white">
+                <p className="m-0 text-micro uppercase tracking-24 text-wc-text">
                   En vente
                 </p>
               ) : (

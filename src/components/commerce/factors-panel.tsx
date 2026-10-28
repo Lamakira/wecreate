@@ -43,7 +43,7 @@ export function FactorsPanel({
         description={`Compte : ${operator.email}. Chaque membre de l'équipe a le sien ; aucun identifiant n'est partagé.`}
       >
         {operator.factors.length === 0 ? (
-          <p className="m-0 text-body-sm font-light text-wc-muted-2">
+          <p className="m-0 text-body-sm font-light text-wc-text-muted">
             Aucune application enregistrée. Ajoutez-en une pour ouvrir
             l&apos;espace commerce.
           </p>
@@ -53,7 +53,7 @@ export function FactorsPanel({
               <li
                 key={factor.id}
                 data-testid="second-factor"
-                className="border border-wc-line-dark px-4 py-3 text-body font-light"
+                className="border border-wc-line px-4 py-3 text-body font-light"
               >
                 {factor.label}
               </li>
@@ -73,12 +73,12 @@ export function FactorsPanel({
             className="flex flex-col gap-4 sm:max-w-md"
           >
             <p className="m-0">
-              <span className="block text-micro uppercase tracking-24 text-wc-muted-2">
+              <span className="block text-micro uppercase tracking-24 text-wc-text-muted">
                 Clé - {pending.label}
               </span>
               <code
                 data-testid="factor-secret"
-                className="mt-2 block border border-wc-border bg-wc-surface px-3 py-2 font-mono text-body tracking-[0.12em] break-all"
+                className="mt-2 block border border-wc-line-strong bg-wc-surface px-3 py-2 font-mono text-body tracking-[0.12em] break-all"
               >
                 {groupKey(pending.secret)}
               </code>
@@ -89,7 +89,7 @@ export function FactorsPanel({
                 which reads as "the site is broken" rather than "the key is
                 wrong". Grouping is half the answer; saying out loud that this
                 alphabet has no 0 and no 1 is the other half. */}
-            <p className="m-0 text-body-sm font-light text-wc-muted-2">
+            <p className="m-0 text-body-sm font-light text-wc-text-muted">
               Recopiez-la par groupes de quatre, sans les espaces. Cet alphabet
               ne contient ni le chiffre 0 ni le chiffre 1 : ce sont toujours les
               lettres O et I.
@@ -140,7 +140,7 @@ export function FactorsPanel({
       ) : null}
 
       {!mayEnrol && !pending ? (
-        <p className="m-0 text-body font-light text-wc-muted-2">
+        <p className="m-0 text-body font-light text-wc-text-muted">
           Saisissez d&apos;abord le code de l&apos;application déjà enregistrée :
           un mot de passe seul ne suffit pas pour en ajouter une autre.
         </p>

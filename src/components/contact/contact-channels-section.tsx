@@ -40,7 +40,7 @@ export function ContactChannelsSection({
         </SectionKicker>
         <p
           data-testid="contact-notice"
-          className="m-0 mb-heading-gap max-w-[52ch] text-body-lg font-light text-wc-soft"
+          className="m-0 mb-heading-gap max-w-[52ch] text-body-lg font-light text-wc-text-soft"
         >
           {channels.notice}
         </p>
@@ -76,7 +76,7 @@ export function ContactChannelsSection({
                 href={account.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-button tracking-20 uppercase text-wc-soft transition-colors duration-300 hover:text-wc-white"
+                className="text-button tracking-20 uppercase text-wc-text-soft transition-colors duration-300 hover:text-wc-text"
               >
                 {account.label}
                 <span className="sr-only"> (nouvel onglet)</span>
@@ -84,7 +84,7 @@ export function ContactChannelsSection({
             </li>
           ))}
         </ul>
-        <p className="m-0 mt-6 text-body-sm font-light text-wc-muted-2">
+        <p className="m-0 mt-6 text-body-sm font-light text-wc-text-muted">
           {channels.locationNote}
         </p>
       </Reveal>

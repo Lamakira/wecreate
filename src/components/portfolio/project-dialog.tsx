@@ -31,7 +31,7 @@ export function ProjectDialog({
   const headingId = `project-${project.id}-title`;
 
   return (
-    <div className="fixed inset-0 z-1001 flex items-center justify-center overflow-y-auto bg-wc-pure/94 p-[clamp(16px,4vw,56px)]">
+    <div className="fixed inset-0 z-1001 flex items-center justify-center overflow-y-auto bg-wc-ground-deep/94 p-[clamp(16px,4vw,56px)]">
       <button
         type="button"
         onClick={onClose}
@@ -52,7 +52,7 @@ export function ProjectDialog({
             ref={closeButtonRef}
             type="button"
             onClick={onClose}
-            className="text-button tracking-20 uppercase text-wc-muted-2 transition-colors duration-300 hover:text-wc-white"
+            className="text-button tracking-20 uppercase text-wc-text-muted transition-colors duration-300 hover:text-wc-text"
           >
             Fermer ×
           </button>

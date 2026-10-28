@@ -44,7 +44,7 @@ export function AddToCartButton({
       data-testid="add-to-cart"
       data-product={productId}
       onClick={() => cart.add(productId)}
-      className={`${ACTION_SIZES[size]} bg-wc-pure text-wc-white transition-opacity duration-300 hover:opacity-80`}
+      className={`${ACTION_SIZES[size]} bg-wc-ground-deep text-wc-text transition-opacity duration-300 hover:opacity-80`}
     >
       {isInCart ? "Voir dans le panier" : "Ajouter au panier"}
       <span className="sr-only"> - {title}</span>

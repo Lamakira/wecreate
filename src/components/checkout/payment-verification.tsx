@@ -175,14 +175,14 @@ export function PaymentVerification() {
   return (
     <p
       data-testid="payment-verification"
-      className="m-0 mt-8 border-t border-wc-line-light pt-6 text-body font-light text-wc-muted-on-light"
+      className="m-0 mt-8 border-t border-wc-inverse-line pt-6 text-body font-light text-wc-inverse-muted"
       // Announced once it settles rather than on every check: a reader using a
       // screen reader should hear the answer, not the asking.
       aria-live="polite"
     >
       {offline ? (
         <span data-testid="payment-offline">
-          <strong className="font-semibold text-wc-pure">
+          <strong className="font-semibold text-wc-inverse-text">
             Vous êtes hors ligne.
           </strong>{" "}
           La vérification reprend dès que la connexion revient. Votre paiement

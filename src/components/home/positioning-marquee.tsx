@@ -21,16 +21,16 @@ export function PositioningMarquee({ marquee }: PositioningMarqueeProps) {
   return (
     <div
       aria-hidden="true"
-      className="overflow-hidden border-y border-wc-line-dark bg-wc-pure py-[18px]"
+      className="overflow-hidden border-y border-wc-line bg-wc-ground-deep py-[18px]"
     >
       <div
         data-testid="positioning-marquee-track"
         className="flex w-max animate-wc-marquee"
       >
-        <span className="pr-11 text-button tracking-42 uppercase text-wc-muted-2">
+        <span className="pr-11 text-button tracking-42 uppercase text-wc-text-muted">
           {line}
         </span>
-        <span className="pr-11 text-button tracking-42 uppercase text-wc-muted-2">
+        <span className="pr-11 text-button tracking-42 uppercase text-wc-text-muted">
           {line}
         </span>
       </div>

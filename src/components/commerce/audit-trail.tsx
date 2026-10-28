@@ -77,7 +77,7 @@ export function AuditTrail({
   return (
     <CommercePanel title={title} description={description}>
       {entries.length === 0 ? (
-        <p className="m-0 text-body-sm font-light text-wc-muted-2">{empty}</p>
+        <p className="m-0 text-body-sm font-light text-wc-text-muted">{empty}</p>
       ) : (
         <ul className="m-0 flex list-none flex-col gap-3 p-0">
           {entries.map((entry) => (
@@ -87,16 +87,16 @@ export function AuditTrail({
               data-action={entry.action}
               data-sku={entry.sku ?? ""}
               data-order={entry.orderReference ?? ""}
-              className="border border-wc-line-dark p-4 text-body-sm font-light text-wc-soft"
+              className="border border-wc-line p-4 text-body-sm font-light text-wc-text-soft"
             >
-              <p className="m-0 text-body text-wc-white">
+              <p className="m-0 text-body text-wc-text">
                 {ACTION_LABELS[entry.action]} -{" "}
                 {entry.sku ?? entry.orderReference}
               </p>
               <p className="m-0">
                 {formatMoment(entry.occurredAt)} · {entry.actorEmail}
               </p>
-              <p className="m-0 text-wc-muted-2">
+              <p className="m-0 text-wc-text-muted">
                 {entry.before ? `Avant : ${describe(entry.before)}. ` : ""}
                 {entry.after ? `Après : ${describe(entry.after)}.` : ""}
               </p>
