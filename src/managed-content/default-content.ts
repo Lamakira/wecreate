@@ -716,9 +716,9 @@ const ABOUT_CONTENT: AboutContent = {
  * Contact: the three channels WeCreate answers on, and how a project starts.
  *
  * The design prototype put a five-field form here and confirmed submissions with
- * "Demande enregistrée". Issue #1 removed it: version one takes no generic
- * service enquiry and stores no lead, so this page carries three ordinary links
- * and nothing that submits.
+ * "Demande enregistrée". Issue #1 removed it, and ADR-0012 (amending ADR-0006)
+ * brought a form back that emails WeCreate and stores no lead: the form's copy
+ * lives in code, and this content describes the three ordinary links around it.
  *
  * The addresses themselves live on `settings.contact` — the same values the
  * header, the footer and every service pack use — so the only thing written
@@ -763,7 +763,7 @@ const CONTACT_CONTENT: ContactContent = {
         key: "contact",
         title: "Contact",
         description:
-          "WhatsApp ou appel découverte. Vous décrivez le projet en trois lignes.",
+          "WhatsApp, appel découverte ou formulaire. Vous décrivez le projet en trois lignes.",
       },
       {
         key: "devis",

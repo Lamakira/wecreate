@@ -53,10 +53,13 @@ export interface TransactionalEmail {
   html: string;
   idempotencyKey: string;
   /**
-   * Where a reply goes, when it should not go to the sender.
+   * Where a reply goes when that is not the sender.
    *
-   * A message written *to* WeCreate on somebody's behalf — a brand
-   * questionnaire — is answered by replying to that somebody.
+   * Absent for a receipt, whose reply address is the sender's own. A message
+   * written *to* WeCreate on somebody's behalf — the contact form, a brand
+   * questionnaire — sets it to that somebody, so WeCreate answers them by
+   * pressing Reply in its own inbox rather than by copying an address out of
+   * the body.
    */
   replyTo?: string;
   /**

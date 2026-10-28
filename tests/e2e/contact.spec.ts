@@ -4,12 +4,13 @@ import { ManagedContent, enterPreview, leavePreview } from "./support/managed-co
 import { thirdPartyRequests } from "./support/third-party";
 
 /**
- * Contact: three approved channels, and nothing that submits.
+ * Contact: three approved channels, and a form that emails WeCreate and stores
+ * nothing.
  *
- * The design prototype put a five-field form here and answered it with "Demande
- * enregistrée". Issue #1 removed it, so the most important assertions on this
- * page are about absence: no form, no stored lead, no scheduling widget, and no
- * dependence on script for any of the three ways to reach WeCreate.
+ * The form itself is covered by `contact-form.spec.ts`. What this file holds the
+ * page to is what stays true around it: one form and no more, no stored lead,
+ * no scheduling widget, and no dependence on script for any of the three ways to
+ * reach WeCreate.
  */
 
 let content: ManagedContent;
@@ -135,24 +136,18 @@ test.describe("Contact", () => {
     ).toBeVisible();
   });
 
-  test("carries no contact form and records nothing a visitor types", async ({
+  test("carries one contact form that emails WeCreate and records nothing", async ({
     page,
   }) => {
     await page.goto("/contact");
 
-    // The prototype's form was five fields and a submit button. None of it
-    // exists — not scoped to `main`, but anywhere on the page, because version
-    // one has no field on any surface that could capture a service lead.
-    await expect(page.locator("form")).toHaveCount(0);
-    await expect(page.locator("input, textarea, select")).toHaveCount(0);
-    await expect(page.getByRole("textbox")).toHaveCount(0);
-    await expect(page.getByRole("combobox")).toHaveCount(0);
-    await expect(
-      page.getByRole("button", { name: /envoyer|soumettre|demande/i }),
-    ).toHaveCount(0);
+    // The contact form, and nothing else that submits: no second form anywhere
+    // on the page, and nothing that reads as a stored request.
+    await expect(page.locator("form")).toHaveCount(1);
+    await expect(page.getByTestId("contact-form")).toBeVisible();
     await expect(page.getByText("Demande enregistrée")).toHaveCount(0);
 
-    // And the page says so, where a visitor is about to press.
+    // The page still says so, where a visitor is about to press.
     await expect(page.getByTestId("contact-notice")).toContainText(
       "ce site n'enregistre aucune demande, ne bloque aucune date et n'encaisse aucun paiement pour les prestations",
     );
@@ -218,17 +213,18 @@ test.describe("Contact", () => {
   }) => {
     await page.goto("/contact");
 
-    // How to write comes before what happens next, in the source — which is the
-    // order a phone stacks the two columns into, and the order a screen reader
-    // announces them in at any width.
+    // The form comes first, then the other ways to write, then what happens
+    // next, in the source — which is the order a phone stacks the columns into,
+    // and the order a screen reader announces them in at any width.
     const regions = await page
       .getByRole("region")
-      .filter({ hasText: /Coordonnées|Comment démarrer/ })
+      .filter({ hasText: /Formulaire de contact|Coordonnées|Comment démarrer/ })
       .all();
     const names = await Promise.all(
       regions.map((region) => region.getAttribute("aria-labelledby")),
     );
     expect(names).toEqual([
+      "contact-form-heading",
       "contact-channels-heading",
       "contact-getting-started-heading",
     ]);

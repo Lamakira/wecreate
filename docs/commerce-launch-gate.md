@@ -197,10 +197,12 @@ structure; it does not promote the prototype HTML.
 
 ### Deliberately deferred (issue #1 out of scope)
 
-On-site Service Enquiry forms, customer accounts, coupons, automated refunds,
-fiscal invoices, marketing automation, WhatsApp Business API, a page builder,
-English locale switching, public 4K, the Three.js projection room, native
-apps, and promoting the prototype HTML. None of these is a gate item.
+Customer accounts, coupons, automated refunds, fiscal invoices, marketing
+automation, WhatsApp Business API, a page builder, English locale switching,
+public 4K, the Three.js projection room, native apps, and promoting the
+prototype HTML. None of these is a gate item. (On-site Service Enquiry forms
+were on this list; version two brings back the contact form, which emails
+WeCreate and stores nothing — ADR-0012. It is not a gate item either.)
 
 ## Sign-off
 

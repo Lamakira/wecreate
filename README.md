@@ -789,10 +789,14 @@ deployment, as every transaction surface here is.
 4. Prove it end to end: run one sandbox payment through `/commande`, watch
    `/commande/retour` reach *Livraison envoyée*, open the address in the
    message, and take one download.
+5. Send one message through the form on `/contact` and check it reaches the
+   administrative address the page shows, and that pressing Reply in that
+   mailbox answers the visitor rather than the sender.
 
 Without a key there is no email provider, and that is a deliberate state rather
 than a broken one: the grants are still made, and the Fulfillment State reads
-*Livraison à reprendre* so a buyer who received nothing is visible as one.
+*Livraison à reprendre* so a buyer who received nothing is visible as one. The
+contact form says its message did not leave, keeps it, and points to WhatsApp.
 
 ## The commerce data plane
 
@@ -1054,16 +1058,39 @@ frame at 4:5 rather than anything that could pass for a photograph — and it
 reserves the same space either way, so the real one drops in without moving the
 page.
 
-**`/contact`** offers three channels and nothing else: WhatsApp first, the
-hosted Discovery Call second so a slow calendar never leaves a visitor stranded,
-and the administrative email third. Then *Comment démarrer* — contact, quote,
-signature, shoot — which describes how WeCreate works rather than a flow the
-website runs.
+**`/contact`** offers a contact form beside three channels: WhatsApp, the
+hosted Discovery Call so a slow calendar never leaves a visitor stranded, and the
+administrative email. Then *Comment démarrer* — contact, quote, signature,
+shoot — which describes how WeCreate works rather than a flow the website runs.
 
-There is no form. The prototype had five fields and answered them with "Demande
-enregistrée"; issue #1 removed the generic service enquiry, so this page renders
-links, holds no state and stores no lead. Nothing on it submits, and the notice
-above the channels says so in French where a visitor is about to press.
+**The form emails WeCreate and stores nothing** (ADR-0012, which amends
+ADR-0006). Version one removed the prototype's form; version two brings it back
+with a *Branding — système de marque* subject beside the video and Site web
+ones. A submission is one email to `settings.contact.email` — the same
+administrative address the page shows — with the visitor's address as the
+reply-to, so WeCreate answers by pressing Reply. It goes through the email
+boundary like a receipt does (`src/service-enquiry/actions.ts` composes it,
+`src/email/` sends it), and nothing is written to the commerce data plane, a
+file or a cookie. Without an email provider the form still renders and every
+submission says the message did not leave, keeps what the visitor typed and
+points them to WhatsApp: see *Setting up Resend*.
+
+- **Fields:** name, email, an optional telephone, a subject and the message. The
+  browser checks nothing (`noValidate`); every refusal is the server's, in
+  French, announced and printed beside its field, and a refusal or a failed send
+  keeps everything the visitor typed.
+- **A double submission is one email.** The message's idempotency key is derived
+  from what it says, so a double press, a resubmitted page or a retry after a
+  refusal reaches WeCreate once (Resend honours a key for 24 hours).
+- **Abuse protection costs a real visitor nothing:** a field hidden from people
+  that only a script fills in — answered as a success, sends nothing — and five
+  messages an hour per network address and per sender address, in the same
+  in-process limiter as the other public surfaces. No CAPTCHA, no third-party
+  script.
+- **A Discipline opens it with its subject chosen.** `contactFormPath("branding")`
+  in `src/service-enquiry/contact-form.ts` is `/contact?sujet=branding#formulaire`;
+  the subject is read in the browser, so the page itself stays cached, and a
+  visitor without JavaScript gets the same form with no subject chosen.
 
 The addresses themselves are not page content — they are `settings.contact`, the
 same values the header, the footer and every service pack read, so an editor

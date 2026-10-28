@@ -9,8 +9,8 @@ An ebook, guide, LUT, or preset paid for in full online and delivered automatica
 _Avoid_: Download, article, digital service
 
 **Service Enquiry**:
-A visitor's transition from a service offer into a WhatsApp conversation or scheduled call with WeCreate. It creates no website order, payment, reservation, or availability hold.
-_Avoid_: Reservation request, booking, service order
+A visitor's transition from a service offer into a conversation with WeCreate: a WhatsApp conversation, a scheduled call, or a message sent through the contact form. A contact form message is emailed to WeCreate with the visitor as reply-to and kept nowhere else. A Service Enquiry creates no website order, payment, reservation, availability hold, or stored lead.
+_Avoid_: Reservation request, booking, service order, lead record
 
 **Discovery Call**:
 A 30-minute Calendly conversation used to understand a prospective service project. Booking one is a Service Enquiry, not a reservation or commitment.
