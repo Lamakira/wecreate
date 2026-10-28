@@ -22,10 +22,10 @@ interface ContactChannelsSectionProps {
  * never leaves a visitor without a route; the administrative email third, for
  * the questions that are not a project.
  *
- * There is no form. The design prototype had one, and issue #1 removed it: this
- * page takes no generic service enquiry and writes nothing down, which is what
- * the notice above the channels tells the visitor before they press anything
- * (ADR-0006).
+ * The contact form is a section of its own beside this one. Nothing here is a
+ * form: these are the routes that leave the site, and the notice above them
+ * tells the visitor that this site records nothing a visitor sends — the form
+ * emails WeCreate and keeps no copy (ADR-0012, which amends ADR-0006).
  */
 export function ContactChannelsSection({
   channels,

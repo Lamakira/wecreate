@@ -342,8 +342,9 @@ export interface AboutContent {
 export interface ContactChannelsContent {
   kicker: string;
   /**
-   * What writing to WeCreate starts. Version one has no contact form and stores
-   * no lead, and a visitor is told so where they press (ADR-0006).
+   * What writing to WeCreate starts. The contact form emails WeCreate and
+   * stores no lead anywhere, and a visitor is told so where they press
+   * (ADR-0006, amended by ADR-0012).
    */
   notice: string;
   whatsappNote: string;
@@ -364,9 +365,10 @@ export interface ContactGettingStartedContent {
  * The Contact page: three approved channels, what each is for, and how a
  * project actually starts.
  *
- * There is no form and no stored lead. The design prototype had both; issue #1
- * removed them, so every action here leaves the site as an ordinary link and
- * nothing on this page is written down anywhere.
+ * The contact form's copy lives in code, not here, and there is no stored lead:
+ * the form emails WeCreate and nothing on this page is written down anywhere
+ * (ADR-0012, which amends ADR-0006). Every other action here leaves the site as
+ * an ordinary link.
  */
 export interface ContactContent {
   seo: PageSeo;

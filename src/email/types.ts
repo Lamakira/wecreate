@@ -52,6 +52,14 @@ export interface TransactionalEmail {
   body: string;
   html: string;
   idempotencyKey: string;
+  /**
+   * Where a reply goes when that is not the sender.
+   *
+   * Absent for a receipt, whose reply address is the sender's own. The contact
+   * form sets it to the visitor, so WeCreate answers them by pressing Reply in
+   * its own inbox rather than by copying an address out of the body.
+   */
+  replyTo?: string;
 }
 
 /**

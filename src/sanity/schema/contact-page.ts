@@ -9,9 +9,9 @@ import { defineField, defineType } from "sanity";
  * so the header, the footer, every service pack and this page can never disagree
  * about an address.
  *
- * There is deliberately no form to configure. Version one takes no generic
- * service enquiry and stores no lead (ADR-0006), so this page is three links and
- * an explanation — there is nothing here that could submit anything.
+ * The contact form's own wording is not editable here: it emails WeCreate and
+ * stores no lead (ADR-0012, which amends ADR-0006), so what an editor controls
+ * is the three links and the explanation around them.
  */
 export const contactPage = defineType({
   name: "contactPage",

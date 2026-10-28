@@ -61,6 +61,7 @@ export const resendEmailProvider: EmailProvider = {
         subject: message.subject,
         html: message.html,
         text: message.body,
+        ...(message.replyTo ? { reply_to: [message.replyTo] } : {}),
       }),
       signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
     }).catch((error: unknown) => {

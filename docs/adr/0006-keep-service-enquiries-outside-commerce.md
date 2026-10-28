@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: accepted, amended by ADR-0012
 ---
 
 # Keep service enquiries outside website commerce
