@@ -80,9 +80,11 @@ it belongs to.
 9. **Personal-data retention** — how many days a buyer's contact is kept, once
    the privacy policy in force has approved a period. Unset means nothing is
    forgotten.
-10. **Preview and revalidation secrets** — who may open a preview session and who
-   may drop the content cache.
-11. **Acceptance-test hooks** — set by `playwright.config.ts`, never by hand.
+10. **Brand questionnaire secret** — the key personal questionnaire links are
+    encrypted with. Unset means the questionnaire is closed.
+11. **Preview and revalidation secrets** — who may open a preview session and who
+    may drop the content cache.
+12. **Acceptance-test hooks** — set by `playwright.config.ts`, never by hand.
 
 Secrets are server-only. On a deployment they live in two places, and which one
 decides which: `NEXT_PUBLIC_*` is compiled into the bundle by `next build`, so
@@ -787,10 +789,14 @@ deployment, as every transaction surface here is.
 4. Prove it end to end: run one sandbox payment through `/commande`, watch
    `/commande/retour` reach *Livraison envoyée*, open the address in the
    message, and take one download.
+5. Send one message through the form on `/contact` and check it reaches the
+   administrative address the page shows, and that pressing Reply in that
+   mailbox answers the visitor rather than the sender.
 
 Without a key there is no email provider, and that is a deliberate state rather
 than a broken one: the grants are still made, and the Fulfillment State reads
-*Livraison à reprendre* so a buyer who received nothing is visible as one.
+*Livraison à reprendre* so a buyer who received nothing is visible as one. The
+contact form says its message did not leave, keeps it, and points to WhatsApp.
 
 ## The commerce data plane
 
@@ -1052,22 +1058,79 @@ frame at 4:5 rather than anything that could pass for a photograph — and it
 reserves the same space either way, so the real one drops in without moving the
 page.
 
-**`/contact`** offers three channels and nothing else: WhatsApp first, the
-hosted Discovery Call second so a slow calendar never leaves a visitor stranded,
-and the administrative email third. Then *Comment démarrer* — contact, quote,
-signature, shoot — which describes how WeCreate works rather than a flow the
-website runs.
+**`/contact`** offers a contact form beside three channels: WhatsApp, the
+hosted Discovery Call so a slow calendar never leaves a visitor stranded, and the
+administrative email. Then *Comment démarrer* — contact, quote, signature,
+shoot — which describes how WeCreate works rather than a flow the website runs.
 
-There is no form. The prototype had five fields and answered them with "Demande
-enregistrée"; issue #1 removed the generic service enquiry, so this page renders
-links, holds no state and stores no lead. Nothing on it submits, and the notice
-above the channels says so in French where a visitor is about to press.
+**The form emails WeCreate and stores nothing** (ADR-0012, which amends
+ADR-0006). Version one removed the prototype's form; version two brings it back
+with a *Branding — système de marque* subject beside the video and Site web
+ones. A submission is one email to `settings.contact.email` — the same
+administrative address the page shows — with the visitor's address as the
+reply-to, so WeCreate answers by pressing Reply. It goes through the email
+boundary like a receipt does (`src/service-enquiry/actions.ts` composes it,
+`src/email/` sends it), and nothing is written to the commerce data plane, a
+file or a cookie. Without an email provider the form still renders and every
+submission says the message did not leave, keeps what the visitor typed and
+points them to WhatsApp: see *Setting up Resend*.
+
+- **Fields:** name, email, an optional telephone, a subject and the message. The
+  browser checks nothing (`noValidate`); every refusal is the server's, in
+  French, announced and printed beside its field, and a refusal or a failed send
+  keeps everything the visitor typed.
+- **A double submission is one email.** The message's idempotency key is derived
+  from what it says, so a double press, a resubmitted page or a retry after a
+  refusal reaches WeCreate once (Resend honours a key for 24 hours).
+- **Abuse protection costs a real visitor nothing:** a field hidden from people
+  that only a script fills in — answered as a success, sends nothing — and five
+  messages an hour per network address and per sender address, in the same
+  in-process limiter as the other public surfaces. No CAPTCHA, no third-party
+  script.
+- **A Discipline opens it with its subject chosen.** `contactFormPath("branding")`
+  in `src/service-enquiry/contact-form.ts` is `/contact?sujet=branding#formulaire`;
+  the subject is read in the browser, so the page itself stays cached, and a
+  visitor without JavaScript gets the same form with no subject chosen.
 
 The addresses themselves are not page content — they are `settings.contact`, the
 same values the header, the footer and every service pack read, so an editor
 changes a number once and the whole site follows. Each link's `href` is the real
 destination: no redirect, no tracker, and one that opens a new tab says so in its
 accessible name.
+
+## The brand questionnaire
+
+A Branding client who has agreed a pack fills a five-step questionnaire (issue
+#57): the business, the target, the personality, the visual tastes and the
+supports. It is reached only through a **personal link**.
+
+`/questionnaire/<token>` is a route handler that moves the token into an
+http-only cookie (`wc_questionnaire`, scoped to `/questionnaire`) and redirects
+to `/questionnaire`, so the page the client reads, reloads or shows somebody
+carries no credential. The page opens the token again on every request; a
+missing, altered or expired one shows a calm explanation and never a question.
+
+The token is the invitation, encrypted: AES-256-GCM over the client, brand, pack
+and reference, with an expiry inside the authenticated payload. The format is
+spelled out at the top of
+[`src/brand-questionnaire/invitation.ts`](./src/brand-questionnaire/invitation.ts),
+and a link stays valid for 30 days. It needs `WECREATE_QUESTIONNAIRE_SECRET`
+(see *Environment*); rotating the secret invalidates every link already sent.
+Issue #63 builds the staff tool that makes links, on `sealInvitation` and
+`invitationUrl` and on nothing else.
+
+**What is emailed, and to whom.** One message to WeCreate's contact address
+(`settings.contact.email`, from Managed Content) with the client's address as
+its reply-to, and one copy to the client. Both carry every answer and every
+attachment. Attachments are capped at 5 files and 10 MB in all, images and PDF
+only; the browser checks that before anything is uploaded and the server checks
+it again.
+
+**Nothing is stored.** No database, no storage, no file and no log of an answer.
+The draft lives only in the client's own browser (IndexedDB) until it is sent,
+and is deleted then. A failed send keeps every answer and file on screen, and a
+double submit sends once: the emails' idempotency keys are derived from the
+content.
 
 ## Legal documents
 
@@ -1490,6 +1553,11 @@ tests/e2e/
 ├── public-journeys.spec.ts           the public views, on Firefox and WebKit
 │                                     as well as Chromium
 ├── site-shell.spec.ts                header, navigation, cart, footer, fonts
+├── brand-questionnaire.spec.ts       personal links, tampered and expired ones,
+│                                     the five steps by keyboard, logo cards,
+│                                     attachment caps, one email each way,
+│                                     double submit, a failed send, and nothing
+│                                     stored
 ├── managed-content-publishing.spec.ts draft, preview, publish, revalidate
 ├── resilience.spec.ts                reduced motion, no JS, nothing published
 └── support/
@@ -1505,6 +1573,8 @@ tests/e2e/
     │                                 link must be, presses made at once, and
     │                                 what the data plane durably holds
     ├── observation.ts                captured failures, over HTTP
+    ├── brand-questionnaire.ts        minting personal links by hand, and
+    │                                 reading the outbox
     └── sample-content.ts             stand-in projects and products
 ```
 

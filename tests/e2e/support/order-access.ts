@@ -53,6 +53,7 @@ export interface SentEmail {
   subject: string;
   body: string;
   idempotencyKey: string;
+  replyTo?: string;
 }
 
 /** The buyer's mailbox, as far as this suite is concerned. */

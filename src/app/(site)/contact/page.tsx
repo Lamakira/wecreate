@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { ContactFormSection } from "@/components/contact/contact-form-section";
 import { ContactChannelsSection } from "@/components/contact/contact-channels-section";
 import { GettingStartedSection } from "@/components/contact/getting-started-section";
 import { SplitHeading } from "@/components/primitives/split-heading";
@@ -24,14 +25,13 @@ export async function generateMetadata(): Promise<Metadata> {
 /**
  * The Contact page.
  *
- * Three ways to reach WeCreate — WhatsApp, the hosted Discovery Call, the
- * administrative email — then how a project actually starts. The channels come
- * first in the source, so the order a visitor reads on a phone is the order they
- * would want: how to write, then what happens next.
+ * The form first, as in the design: describe the project and it arrives by email
+ * at WeCreate. Beside it, the three other ways to reach WeCreate — WhatsApp, the
+ * hosted Discovery Call, the administrative email — then how a project actually
+ * starts. The order in the source is the order a visitor reads on a phone.
  *
- * The design prototype's five-field form is not here and cannot come back: issue
- * #1 removed the generic service enquiry, so this page renders links and holds
- * no state, no endpoint and no stored lead (ADR-0006).
+ * The form is back (ADR-0012 amends ADR-0006): it emails WeCreate and stores
+ * nothing — no endpoint to read from, no stored lead, no cookie.
  */
 export default async function ContactPage() {
   const content = await readContactPage();
@@ -57,12 +57,15 @@ export default async function ContactPage() {
       </section>
 
       <div className="wc-container grid grid-cols-[repeat(auto-fit,minmax(min(300px,100%),1fr))] items-start gap-[clamp(28px,4vw,72px)] pb-section-sm">
-        <ContactChannelsSection
-          channels={contact.channels}
-          contact={settings.contact}
-          socialAccounts={settings.socialAccounts}
-        />
-        <GettingStartedSection gettingStarted={contact.gettingStarted} />
+        <ContactFormSection whatsappUrl={settings.contact.whatsappUrl} />
+        <div className="flex flex-col gap-[clamp(48px,6vw,80px)]">
+          <ContactChannelsSection
+            channels={contact.channels}
+            contact={settings.contact}
+            socialAccounts={settings.socialAccounts}
+          />
+          <GettingStartedSection gettingStarted={contact.gettingStarted} />
+        </div>
       </div>
     </SitePage>
   );
