@@ -226,11 +226,6 @@ export function ContactForm({ preselected, whatsappUrl }: ContactFormProps) {
       >
         {isPending ? "Envoi en cours…" : "Envoyer le message"}
       </button>
-
-      <p className="m-0 text-body-sm font-light text-wc-muted-2">
-        Votre message part directement dans la boîte mail de WeCreate. Ce site
-        n&apos;en garde aucune copie.
-      </p>
     </form>
   );
 }
