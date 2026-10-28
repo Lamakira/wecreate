@@ -27,7 +27,8 @@ export type RateLimitSurface =
   | "order-access-token"
   | "checkout-retry"
   | "webhook-unsigned"
-  | "client-observation";
+  | "client-observation"
+  | "questionnaire-send";
 
 interface Budget {
   /** How many attempts the window will take. */
@@ -53,6 +54,9 @@ export const RATE_LIMITS: Record<RateLimitSurface, Budget> = {
   "checkout-retry": { max: 6, windowMs: 60 * 60_000 },
   "webhook-unsigned": { max: 12, windowMs: 15 * 60_000 },
   "client-observation": { max: 20, windowMs: 15 * 60_000 },
+  // Each send is two emails and up to 10 MB of attachments; ten an hour is far
+  // more than a client correcting their answers needs.
+  "questionnaire-send": { max: 10, windowMs: 60 * 60_000 },
 };
 
 interface Attempt {
