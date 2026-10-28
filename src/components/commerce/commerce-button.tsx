@@ -47,8 +47,8 @@ export function CommerceButton({
       aria-busy={pending}
       className={
         secondary
-          ? "border border-wc-border px-5 py-2 text-button uppercase tracking-24 text-wc-white disabled:text-wc-muted-2"
-          : "border border-wc-white bg-wc-white px-5 py-2 text-button uppercase tracking-24 text-wc-pure disabled:border-wc-soft disabled:bg-wc-soft"
+          ? "border border-wc-line-strong px-5 py-2 text-button uppercase tracking-24 text-wc-text disabled:text-wc-text-muted"
+          : "border border-wc-text bg-wc-inverse px-5 py-2 text-button uppercase tracking-24 text-wc-inverse-text disabled:border-wc-text-soft disabled:bg-wc-text-soft"
       }
     >
       {pending ? pendingLabel : children}

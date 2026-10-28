@@ -29,14 +29,14 @@ export function GettingStartedSection({
           <Reveal
             as="li"
             key={step.key}
-            className="flex gap-[18px] border-t border-wc-line-dark pt-4"
+            className="flex gap-[18px] border-t border-wc-line pt-4"
           >
-            <span className="pt-[3px] text-micro tracking-20 text-wc-muted-2">
+            <span className="pt-[3px] text-micro tracking-20 text-wc-text-muted">
               {formatStepNumber(index)}
             </span>
             <div>
               <h3 className="m-0 mb-1.5 text-[15px] font-medium">{step.title}</h3>
-              <p className="m-0 text-body-sm font-light leading-[1.65] text-wc-muted-2">
+              <p className="m-0 text-body-sm font-light leading-[1.65] text-wc-text-muted">
                 {step.description}
               </p>
             </div>

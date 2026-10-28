@@ -21,7 +21,7 @@ export function AboutCoverage({ coverage }: AboutCoverageProps) {
         <SectionKicker as="h2" id="about-coverage-heading">
           {coverage.kicker}
         </SectionKicker>
-        <p className="m-0 mb-5 text-[15px] font-light leading-[1.8] text-wc-soft">
+        <p className="m-0 mb-5 text-[15px] font-light leading-[1.8] text-wc-text-soft">
           {coverage.text}
         </p>
         <CtaLink cta={coverage.link} variant="underline" />

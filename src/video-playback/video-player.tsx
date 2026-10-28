@@ -42,13 +42,13 @@ export function PlaybackPoster({
   return (
     <div
       data-testid="project-poster"
-      className="relative grid aspect-video place-items-center overflow-hidden border border-wc-line-dark bg-[linear-gradient(140deg,#1A1A1A,#3A3A3A_50%,#0F0F0F)] bg-cover bg-center"
+      className="relative grid aspect-video place-items-center overflow-hidden border border-wc-line bg-(image:--wc-placeholder) bg-cover bg-center"
       style={posterUrl ? { backgroundImage: `url(${posterUrl})` } : undefined}
       role={posterUrl ? "img" : undefined}
       aria-label={posterUrl ? alternativeText : undefined}
     >
       {notice ? (
-        <p className="m-0 max-w-[36ch] bg-wc-pure/70 px-5 py-3 text-center text-body-sm font-light text-wc-soft backdrop-blur-[2px]">
+        <p className="m-0 max-w-[36ch] bg-wc-ground-deep/70 px-5 py-3 text-center text-body-sm font-light text-wc-text-soft backdrop-blur-[2px]">
           {notice}
         </p>
       ) : null}
@@ -132,7 +132,7 @@ export function VideoPlayer({
       onError={() => setHasFailed(true)}
       data-testid="project-player"
       aria-label={description || title}
-      className="aspect-video w-full border border-wc-line-dark bg-wc-pure"
+      className="aspect-video w-full border border-wc-line bg-wc-ground-deep"
     >
       {asset.sources.map((source) => (
         <source key={source.src} src={source.src} type={source.type} />

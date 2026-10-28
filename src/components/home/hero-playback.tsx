@@ -82,7 +82,7 @@ export function HeroPlayback({ playback }: HeroPlaybackProps) {
           type="button"
           onClick={() => setIsRequested(true)}
           data-testid="hero-playback-start"
-          className="absolute top-1/2 left-1/2 z-10 -translate-x-1/2 -translate-y-1/2 border border-wc-border bg-wc-pure/60 px-6 py-4 text-button font-semibold tracking-18 uppercase text-wc-white backdrop-blur-[2px] transition-colors duration-300 hover:border-wc-white"
+          className="absolute top-1/2 left-1/2 z-10 -translate-x-1/2 -translate-y-1/2 border border-wc-line-strong bg-wc-ground-deep/60 px-6 py-4 text-button font-semibold tracking-18 uppercase text-wc-text backdrop-blur-[2px] transition-colors duration-300 hover:border-wc-text"
         >
           Lire la vidéo
         </button>

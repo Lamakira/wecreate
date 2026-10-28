@@ -53,19 +53,19 @@ export function OrdersPanel({
         className="flex flex-wrap items-end gap-4"
       >
         <label className="block grow sm:max-w-md">
-          <span className="block text-micro uppercase tracking-24 text-wc-muted-2">
+          <span className="block text-micro uppercase tracking-24 text-wc-text-muted">
             Référence ou e-mail
           </span>
           <input
             type="search"
             name="q"
             defaultValue={search}
-            className="mt-2 w-full border border-wc-border bg-wc-surface px-3 py-2 text-body text-wc-white"
+            className="mt-2 w-full border border-wc-line-strong bg-wc-surface px-3 py-2 text-body text-wc-text"
           />
         </label>
         <button
           type="submit"
-          className="cursor-pointer border border-wc-border px-5 py-2 text-micro uppercase tracking-24 text-wc-white"
+          className="cursor-pointer border border-wc-line-strong px-5 py-2 text-micro uppercase tracking-24 text-wc-text"
         >
           Chercher
         </button>
@@ -74,7 +74,7 @@ export function OrdersPanel({
       {orders.length === 0 ? (
         <p
           data-testid="orders-empty"
-          className="mt-6 mb-0 text-body-sm font-light text-wc-muted-2"
+          className="mt-6 mb-0 text-body-sm font-light text-wc-text-muted"
         >
           {search.trim().length > 0
             ? "Aucune commande ne correspond à cette recherche."
@@ -90,9 +90,9 @@ export function OrdersPanel({
               data-payment={order.paymentState}
               data-fulfillment={order.fulfillmentState}
               data-outstanding={String(order.outstanding.length)}
-              className="border border-wc-line-dark p-4"
+              className="border border-wc-line p-4"
             >
-              <p className="m-0 text-body text-wc-white">
+              <p className="m-0 text-body text-wc-text">
                 <Link
                   href={`/commerce/commande?reference=${encodeURIComponent(order.reference)}`}
                   className="underline underline-offset-4"
@@ -100,11 +100,11 @@ export function OrdersPanel({
                   {order.reference}
                 </Link>
               </p>
-              <p className="m-0 mt-1 text-body-sm font-light text-wc-soft">
+              <p className="m-0 mt-1 text-body-sm font-light text-wc-text-soft">
                 {formatMoment(order.createdAt)} · {formatXof(order.totalXof)} ·{" "}
                 {order.buyerEmailHint}
               </p>
-              <p className="m-0 mt-2 text-body-sm font-light text-wc-soft">
+              <p className="m-0 mt-2 text-body-sm font-light text-wc-text-soft">
                 {/* The mark is decoration: it is hidden from assistive
                     technology and the word is beside it, because issue #1 rules
                     out telling two transaction states apart by an accent. */}
@@ -122,7 +122,7 @@ export function OrdersPanel({
               {order.outstanding.length > 0 ? (
                 <p
                   data-testid="order-outstanding"
-                  className="m-0 mt-2 text-body-sm font-light text-wc-white"
+                  className="m-0 mt-2 text-body-sm font-light text-wc-text"
                 >
                   À traiter :{" "}
                   {order.outstanding

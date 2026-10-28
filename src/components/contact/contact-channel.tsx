@@ -45,7 +45,7 @@ export function ContactChannel({
         href={href}
         {...(newTab ? { target: "_blank", rel: "noopener noreferrer" } : undefined)}
         {...(enquiry ? { "data-enquiry": enquiry } : undefined)}
-        className="inline-block border-b border-wc-border pb-3 font-display text-[clamp(22px,2.4vw,30px)] transition-colors duration-300 hover:text-wc-soft"
+        className="inline-block border-b border-wc-line-strong pb-3 font-display text-[clamp(22px,2.4vw,30px)] transition-colors duration-300 hover:text-wc-text-soft"
       >
         {announcedKind ? (
           <span className="sr-only">{announcedKind} : </span>
@@ -55,7 +55,7 @@ export function ContactChannel({
             screen-reader user with a context they did not ask for. */}
         {newTab ? <span className="sr-only"> (nouvel onglet)</span> : null}
       </a>
-      <p className="m-0 mt-3 max-w-[46ch] text-body-sm font-light text-wc-muted-2">
+      <p className="m-0 mt-3 max-w-[46ch] text-body-sm font-light text-wc-text-muted">
         {note}
       </p>
     </li>

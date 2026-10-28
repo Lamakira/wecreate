@@ -26,7 +26,7 @@ export function PublicationNotice({ project }: PublicationNoticeProps) {
   return (
     <p
       data-testid="project-requirements"
-      className="m-0 border border-wc-border p-4 text-body-sm font-light text-wc-soft"
+      className="m-0 border border-wc-line-strong p-4 text-body-sm font-light text-wc-text-soft"
     >
       Non publiable pour le moment. Il manque&nbsp;:{" "}
       {missing

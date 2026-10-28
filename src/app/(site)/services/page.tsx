@@ -56,7 +56,7 @@ export default async function ServicesPage() {
       legalDocuments={content.legalDocuments}
     >
       <section className="wc-container pt-[clamp(28px,5vw,64px)] pb-section-sm">
-        <p className="m-0 mb-[22px] text-micro tracking-32 uppercase text-wc-muted-2">
+        <p className="m-0 mb-[22px] text-micro tracking-32 uppercase text-wc-text-muted">
           {services.kicker}
         </p>
         <SplitHeading
@@ -64,11 +64,11 @@ export default async function ServicesPage() {
           headline={services.headline}
           className="m-0 max-w-[24ch] font-display text-page-title font-medium"
         />
-        <div className="mt-heading-gap-lg grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-[clamp(20px,3vw,44px)] border-t border-wc-line-dark pt-[34px]">
+        <div className="mt-heading-gap-lg grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-[clamp(20px,3vw,44px)] border-t border-wc-line pt-[34px]">
           {services.methodColumns.map((column) => (
             <p
               key={column}
-              className="m-0 text-[15px] font-light leading-[1.75] text-wc-soft"
+              className="m-0 text-[15px] font-light leading-[1.75] text-wc-text-soft"
             >
               {column}
             </p>

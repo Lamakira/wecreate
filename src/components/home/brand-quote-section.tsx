@@ -7,13 +7,13 @@ interface BrandQuoteSectionProps {
 
 export function BrandQuoteSection({ section }: BrandQuoteSectionProps) {
   return (
-    <section className="border-y border-wc-line-dark px-gutter py-section-lg text-center">
+    <section className="border-y border-wc-line px-gutter py-section-lg text-center">
       <Reveal>
         <figure className="m-0">
           <blockquote className="m-0 mx-auto max-w-[20ch] font-display text-quote font-normal italic">
             {section.quote}
           </blockquote>
-          <figcaption className="mt-[clamp(24px,4vw,40px)] text-micro tracking-26 uppercase text-wc-muted-2">
+          <figcaption className="mt-[clamp(24px,4vw,40px)] text-micro tracking-26 uppercase text-wc-text-muted">
             {section.attribution}
           </figcaption>
         </figure>

@@ -95,7 +95,7 @@ export default async function OrderAccessRoute({
             <p
               data-testid="access-problem"
               role="status"
-              className="m-0 border border-wc-line-light px-5 py-4 text-body font-light text-wc-ink"
+              className="m-0 border border-wc-inverse-line px-5 py-4 text-body font-light text-wc-inverse-ink"
             >
               {DOWNLOAD_REFUSAL_MESSAGES[refusal]}
             </p>
@@ -103,7 +103,7 @@ export default async function OrderAccessRoute({
 
           <OrderAccessRows access={access} downloadable />
 
-          <p className="m-0 mt-6 text-body-sm font-light text-wc-muted-on-light">
+          <p className="m-0 mt-6 text-body-sm font-light text-wc-inverse-muted">
             {ACCESS_COPY.note}
           </p>
         </CheckoutStage>

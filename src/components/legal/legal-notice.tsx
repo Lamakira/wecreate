@@ -20,9 +20,9 @@ export function LegalNotice({ testId, label, children }: LegalNoticeProps) {
   return (
     <p
       data-testid={testId}
-      className="m-0 border border-wc-border p-5 text-body-sm font-light text-wc-soft"
+      className="m-0 border border-wc-line-strong p-5 text-body-sm font-light text-wc-text-soft"
     >
-      <strong className="font-semibold text-wc-white">{label}</strong>{" "}
+      <strong className="font-semibold text-wc-text">{label}</strong>{" "}
       {children}
     </p>
   );

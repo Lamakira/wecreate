@@ -78,11 +78,11 @@ export function OrderDossierView({
       >
         <p
           data-testid="order-standing"
-          className="m-0 text-body font-light text-wc-white"
+          className="m-0 text-body font-light text-wc-text"
         >
           {orderStanding(order)}
         </p>
-        <p className="m-0 mt-4 text-body-sm font-light text-wc-soft">
+        <p className="m-0 mt-4 text-body-sm font-light text-wc-text-soft">
           <span aria-hidden="true">
             {PAYMENT_STATE_MARKS[order.paymentState]}{" "}
           </span>
@@ -99,7 +99,7 @@ export function OrderDossierView({
         </p>
         <p
           data-testid="dossier-prospect"
-          className="m-0 mt-2 text-body-sm font-light text-wc-muted-2"
+          className="m-0 mt-2 text-body-sm font-light text-wc-text-muted"
         >
           {PAYMENT_PROSPECT_LABELS[paymentProspect(order)]}
         </p>
@@ -133,9 +133,9 @@ export function OrderDossierView({
               key={line.sku}
               data-testid="dossier-line"
               data-sku={line.sku}
-              className="border border-wc-line-dark p-4 text-body-sm font-light text-wc-soft"
+              className="border border-wc-line p-4 text-body-sm font-light text-wc-text-soft"
             >
-              <p className="m-0 text-body text-wc-white">{line.title}</p>
+              <p className="m-0 text-body text-wc-text">{line.title}</p>
               <p className="m-0 mt-1">
                 {line.sku} · {formatXof(line.unitPriceXof)} ·{" "}
                 <span data-testid="line-version">
@@ -145,16 +145,16 @@ export function OrderDossierView({
             </li>
           ))}
         </ul>
-        <p className="m-0 mt-4 text-body font-light text-wc-white">
+        <p className="m-0 mt-4 text-body font-light text-wc-text">
           Total : <span data-testid="dossier-total">{formatXof(order.totalXof)}</span>
         </p>
-        <p className="m-0 mt-1 text-body-sm font-light text-wc-muted-2">
+        <p className="m-0 mt-1 text-body-sm font-light text-wc-text-muted">
           Commande passée le {formatMoment(order.createdAt)}.
         </p>
         {order.acceptedLegal.length > 0 ? (
           <p
             data-testid="dossier-legal"
-            className="m-0 mt-2 text-body-sm font-light text-wc-muted-2"
+            className="m-0 mt-2 text-body-sm font-light text-wc-text-muted"
           >
             Conditions acceptées :{" "}
             {order.acceptedLegal
@@ -189,9 +189,9 @@ export function OrderDossierView({
               key={attempt.id}
               data-testid="dossier-attempt"
               data-state={attempt.state}
-              className="border border-wc-line-dark p-4 text-body-sm font-light text-wc-soft"
+              className="border border-wc-line p-4 text-body-sm font-light text-wc-text-soft"
             >
-              <p className="m-0 text-body text-wc-white">
+              <p className="m-0 text-body text-wc-text">
                 {PAYMENT_ATTEMPT_LABELS[attempt.state]}
               </p>
               <p className="m-0 mt-1">
@@ -200,7 +200,7 @@ export function OrderDossierView({
                   ? ` · transaction ${attempt.providerTransactionId}`
                   : ""}
               </p>
-              <p className="m-0 mt-1 text-wc-muted-2">
+              <p className="m-0 mt-1 text-wc-text-muted">
                 {attempt.outcome
                   ? `Verdict : ${PAYMENT_STATE_LABELS[attempt.outcome]}.`
                   : "Aucun verdict enregistré pour cette transaction."}
@@ -220,9 +220,9 @@ export function OrderDossierView({
               data-testid="dossier-event"
               data-effect={event.effect}
               data-outcome={event.outcome}
-              className="border border-wc-line-dark p-4 text-body-sm font-light text-wc-soft"
+              className="border border-wc-line p-4 text-body-sm font-light text-wc-text-soft"
             >
-              <p className="m-0 text-body text-wc-white">
+              <p className="m-0 text-body text-wc-text">
                 {event.providerEventType} · {PAYMENT_STATE_LABELS[event.outcome]}
               </p>
               <p className="m-0 mt-1">
@@ -230,14 +230,14 @@ export function OrderDossierView({
                 transaction {event.providerTransactionId} · événement{" "}
                 {event.providerEventId}
               </p>
-              <p className="m-0 mt-1 text-wc-muted-2">
+              <p className="m-0 mt-1 text-wc-text-muted">
                 {PAYMENT_EVENT_EFFECT_LABELS[event.effect]}.
               </p>
             </li>
           ))}
         </ul>
         {events.length === 0 ? (
-          <p className="m-0 mt-5 text-body-sm font-light text-wc-muted-2">
+          <p className="m-0 mt-5 text-body-sm font-light text-wc-text-muted">
             Aucun événement vérifié pour cette commande.
           </p>
         ) : null}
@@ -292,32 +292,32 @@ function BuyerPanel({
       {forgotten ? (
         <p
           data-testid="buyer-forgotten"
-          className="m-0 text-body font-light text-wc-white"
+          className="m-0 text-body font-light text-wc-text"
         >
-          Ces coordonnées ont été oubliées à l'issue de la période de
+          Ces coordonnées ont été oubliées à l&apos;issue de la période de
           conservation.
         </p>
       ) : (
         <>
           <dl
             data-testid="dossier-buyer"
-            className="m-0 grid grid-cols-1 gap-2 text-body-sm font-light text-wc-soft sm:grid-cols-[10rem_1fr]"
+            className="m-0 grid grid-cols-1 gap-2 text-body-sm font-light text-wc-text-soft sm:grid-cols-[10rem_1fr]"
           >
-            <dt className="text-wc-muted-2">Nom</dt>
+            <dt className="text-wc-text-muted">Nom</dt>
             <dd className="m-0" data-testid="buyer-name">
               {buyer.fullName}
             </dd>
-            <dt className="text-wc-muted-2">E-mail saisi</dt>
+            <dt className="text-wc-text-muted">E-mail saisi</dt>
             <dd className="m-0" data-testid="buyer-email">
               {buyer.email}
             </dd>
-            <dt className="text-wc-muted-2">Téléphone saisi</dt>
+            <dt className="text-wc-text-muted">Téléphone saisi</dt>
             <dd className="m-0" data-testid="buyer-telephone">
               {buyer.telephone}
             </dd>
             {buyer.company ? (
               <>
-                <dt className="text-wc-muted-2">Entreprise</dt>
+                <dt className="text-wc-text-muted">Entreprise</dt>
                 <dd className="m-0">{buyer.company}</dd>
               </>
             ) : null}
@@ -325,7 +325,7 @@ function BuyerPanel({
 
           <p
             data-testid="deliver-to"
-            className="m-0 mt-4 text-body font-light text-wc-white"
+            className="m-0 mt-4 text-body font-light text-wc-text"
           >
             Les envois partent vers {deliverTo}.
           </p>
@@ -333,7 +333,7 @@ function BuyerPanel({
       )}
       <p
         data-testid="email-intent"
-        className="m-0 mt-2 text-body-sm font-light text-wc-soft"
+        className="m-0 mt-2 text-body-sm font-light text-wc-text-soft"
       >
         {sent}
       </p>
@@ -341,7 +341,7 @@ function BuyerPanel({
       {correction ? (
         <p
           data-testid="contact-correction"
-          className="m-0 mt-2 text-body-sm font-light text-wc-soft"
+          className="m-0 mt-2 text-body-sm font-light text-wc-text-soft"
         >
           Corrigé le {formatMoment(correction.correctedAt)} par{" "}
           {correction.correctedByEmail}
@@ -412,7 +412,7 @@ function AccessPanel({
         <>
           <p
             data-testid="access-issued"
-            className="m-0 text-body-sm font-light text-wc-soft"
+            className="m-0 text-body-sm font-light text-wc-text-soft"
           >
             Accès émis le {formatMoment(access.issuedAt)} · expire le{" "}
             <span data-testid="access-expiry">
@@ -459,7 +459,7 @@ function AccessPanel({
       ) : (
         <p
           data-testid="access-absent"
-          className="m-0 text-body-sm font-light text-wc-muted-2"
+          className="m-0 text-body-sm font-light text-wc-text-muted"
         >
           Aucun accès n&apos;a encore été accordé pour cette commande.
         </p>
@@ -489,9 +489,9 @@ function GrantRow({
       data-testid="dossier-grant"
       data-sku={grant.sku}
       data-delivered-version={String(grant.deliveredVersion)}
-      className="border border-wc-line-dark p-4 text-body-sm font-light text-wc-soft"
+      className="border border-wc-line p-4 text-body-sm font-light text-wc-text-soft"
     >
-      <p className="m-0 text-body text-wc-white">{grant.title}</p>
+      <p className="m-0 text-body text-wc-text">{grant.title}</p>
       <p className="m-0 mt-1">
         {grant.sku} ·{" "}
         <span data-testid="grant-versions">
@@ -501,7 +501,7 @@ function GrantRow({
             : `, version ${grant.deliveredVersion} accordée`}
         </span>
       </p>
-      <p className="m-0 mt-1 text-wc-muted-2" data-testid="grant-allowance">
+      <p className="m-0 mt-1 text-wc-text-muted" data-testid="grant-allowance">
         {grant.downloadsRemaining} téléchargement
         {grant.downloadsRemaining > 1 ? "s" : ""} sur {grant.downloadsAllowed}{" "}
         restant{grant.downloadsRemaining > 1 ? "s" : ""}
@@ -519,14 +519,14 @@ function GrantRow({
           <input type="hidden" name="reference" value={reference} />
           <input type="hidden" name="sku" value={grant.sku} />
           <label className="block">
-            <span className="block text-micro uppercase tracking-24 text-wc-muted-2">
+            <span className="block text-micro uppercase tracking-24 text-wc-text-muted">
               Version à accorder
             </span>
             <select
               name="versionId"
               required
               defaultValue=""
-              className="mt-2 w-full border border-wc-border bg-wc-surface px-3 py-2 text-body text-wc-white"
+              className="mt-2 w-full border border-wc-line-strong bg-wc-surface px-3 py-2 text-body text-wc-text"
             >
               <option value="" disabled>
                 Choisir une version
@@ -580,7 +580,7 @@ function AnomaliesPanel({
       {anomalies.length === 0 ? (
         <p
           data-testid="anomalies-empty"
-          className="m-0 text-body-sm font-light text-wc-muted-2"
+          className="m-0 text-body-sm font-light text-wc-text-muted"
         >
           Aucune anomalie sur cette commande.
         </p>
@@ -592,9 +592,9 @@ function AnomaliesPanel({
               data-testid="dossier-anomaly"
               data-kind={anomaly.kind}
               data-settled={String(anomaly.resolvedAt !== null)}
-              className="border border-wc-line-dark p-4 text-body-sm font-light text-wc-soft"
+              className="border border-wc-line p-4 text-body-sm font-light text-wc-text-soft"
             >
-              <p className="m-0 text-body text-wc-white">
+              <p className="m-0 text-body text-wc-text">
                 {ORDER_ANOMALY_LABELS[anomaly.kind]}
               </p>
               <p className="m-0 mt-1">
@@ -606,13 +606,13 @@ function AnomaliesPanel({
                   ? ` · événement ${anomaly.providerEventId}`
                   : ""}
               </p>
-              <p className="m-0 mt-2 text-wc-muted-2">
+              <p className="m-0 mt-2 text-wc-text-muted">
                 {ORDER_ANOMALY_DESCRIPTIONS[anomaly.kind]}
               </p>
               {anomaly.resolvedAt ? (
                 <p
                   data-testid="anomaly-resolution"
-                  className="m-0 mt-2 text-wc-white"
+                  className="m-0 mt-2 text-wc-text"
                 >
                   Traitée le {formatMoment(anomaly.resolvedAt)} par{" "}
                   {anomaly.resolvedByEmail} : « {anomaly.resolution} »
@@ -634,13 +634,13 @@ function AnomaliesPanel({
         <input type="hidden" name="reference" value={reference} />
         {outstanding.length > 0 ? (
           <label className="block">
-            <span className="block text-micro uppercase tracking-24 text-wc-muted-2">
+            <span className="block text-micro uppercase tracking-24 text-wc-text-muted">
               Anomalie traitée
             </span>
             <select
               name="anomalyId"
               defaultValue=""
-              className="mt-2 w-full border border-wc-border bg-wc-surface px-3 py-2 text-body text-wc-white"
+              className="mt-2 w-full border border-wc-line-strong bg-wc-surface px-3 py-2 text-body text-wc-text"
             >
               <option value="">Aucune : note seule</option>
               {outstanding.map((anomaly) => (
@@ -692,20 +692,20 @@ function SupportField({
   return (
     <div>
       <label className="block">
-        <span className="block text-micro uppercase tracking-24 text-wc-muted-2">
+        <span className="block text-micro uppercase tracking-24 text-wc-text-muted">
           {label}
         </span>
         <input
           type={type}
           name={name}
           aria-describedby={hint ? hintId : undefined}
-          className="mt-2 w-full border border-wc-border bg-wc-surface px-3 py-2 text-body text-wc-white"
+          className="mt-2 w-full border border-wc-line-strong bg-wc-surface px-3 py-2 text-body text-wc-text"
         />
       </label>
       {hint ? (
         <p
           id={hintId}
-          className="mt-2 mb-0 text-body-sm font-light text-wc-muted-2"
+          className="mt-2 mb-0 text-body-sm font-light text-wc-text-muted"
         >
           {hint}
         </p>

@@ -146,7 +146,7 @@ export default async function PaymentReturnRoute() {
             <span
               data-testid="payment-state-mark"
               aria-hidden="true"
-              className="mr-2 text-wc-muted-on-light"
+              className="mr-2 text-wc-inverse-muted"
             >
               {PAYMENT_STATE_MARKS[order.paymentState]}
             </span>
@@ -173,7 +173,7 @@ export default async function PaymentReturnRoute() {
               costs the buyer nothing, and the message they are promised is one
               a system really sends.
             */}
-            <p className="m-0 mt-8 text-body-lg font-light text-wc-ink">
+            <p className="m-0 mt-8 text-body-lg font-light text-wc-inverse-ink">
               <strong className="font-semibold">
                 Vous pouvez fermer cette page.
               </strong>{" "}
@@ -192,7 +192,7 @@ export default async function PaymentReturnRoute() {
             */}
             <p
               data-testid="payment-next-step"
-              className="m-0 mt-8 text-body-lg font-light text-wc-ink"
+              className="m-0 mt-8 text-body-lg font-light text-wc-inverse-ink"
             >
               {retryable ? PAYMENT_RETRY_COPY.nextStep : copy.nextStep}
             </p>
@@ -209,7 +209,7 @@ export default async function PaymentReturnRoute() {
                 <Link
                   href="/commande"
                   data-testid="payment-retry"
-                  className="border-b border-wc-pure pb-1 text-body-lg font-semibold"
+                  className="border-b border-wc-inverse-text pb-1 text-body-lg font-semibold"
                 >
                   {PAYMENT_RETRY_COPY.action}
                 </Link>
@@ -228,7 +228,7 @@ export default async function PaymentReturnRoute() {
             ) : null}
 
             {access && order.fulfillmentState === "delivered" ? (
-              <p className="m-0 mt-6 text-body-sm font-light text-wc-muted-on-light">
+              <p className="m-0 mt-6 text-body-sm font-light text-wc-inverse-muted">
                 Vos fichiers s&apos;ouvrent depuis le lien personnel envoyé à{" "}
                 {order.buyerEmailHint}.
               </p>
@@ -238,7 +238,7 @@ export default async function PaymentReturnRoute() {
               <p
                 data-testid="fulfillment-recovery"
                 role="status"
-                className="m-0 mt-8 border border-wc-line-light px-5 py-4 text-body font-light text-wc-ink"
+                className="m-0 mt-8 border border-wc-inverse-line px-5 py-4 text-body font-light text-wc-inverse-ink"
               >
                 {fulfillmentRecovery(order.reference, supportEmail)}
               </p>
@@ -261,8 +261,8 @@ function Fact({
   children: ReactNode;
 }) {
   return (
-    <div className="border-t border-wc-line-light pt-4">
-      <dt className="m-0 text-micro tracking-26 uppercase text-wc-muted-on-light">
+    <div className="border-t border-wc-inverse-line pt-4">
+      <dt className="m-0 text-micro tracking-26 uppercase text-wc-inverse-muted">
         {label}
       </dt>
       <dd className="m-0 mt-2 text-body font-semibold">{children}</dd>

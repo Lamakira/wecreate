@@ -139,11 +139,11 @@ function ResumingNotice({
   return (
     <p
       data-testid="checkout-resuming"
-      className="m-0 mb-7 border border-wc-muted-on-light p-5 text-body font-light text-wc-ink"
+      className="m-0 mb-7 border border-wc-inverse-muted p-5 text-body font-light text-wc-inverse-ink"
     >
       {retried ? (
         <>
-          <strong className="font-semibold text-wc-pure">
+          <strong className="font-semibold text-wc-inverse-text">
             Le paiement de cette commande n&apos;a pas abouti
           </strong>{" "}
           et rien n&apos;a été débité. Reprendre le paiement utilise la commande{" "}
@@ -153,7 +153,7 @@ function ResumingNotice({
         </>
       ) : (
         <>
-          <strong className="font-semibold text-wc-pure">
+          <strong className="font-semibold text-wc-inverse-text">
             Votre commande est déjà enregistrée
           </strong>{" "}
           sous la référence {order.reference}, et rien n&apos;a été débité.
@@ -178,11 +178,11 @@ function AbandonOrder() {
       <button
         type="submit"
         data-testid="order-abandon"
-        className="border-b border-wc-muted-on-light pb-1 text-micro tracking-20 uppercase text-wc-muted-on-light transition-colors duration-300 hover:border-wc-pure hover:text-wc-pure"
+        className="border-b border-wc-inverse-muted pb-1 text-micro tracking-20 uppercase text-wc-inverse-muted transition-colors duration-300 hover:border-wc-inverse-text hover:text-wc-inverse-text"
       >
         Commander autre chose
       </button>
-      <p className="m-0 mt-3 text-body-sm font-light text-wc-muted-on-light">
+      <p className="m-0 mt-3 text-body-sm font-light text-wc-inverse-muted">
         Cette commande reste enregistrée sous sa référence. Nous
         n&apos;encaisserons rien pour elle sans confirmation de FedaPay.
       </p>
@@ -246,7 +246,7 @@ function ClosedCheckout({ reason }: { reason: CheckoutClosure }) {
         heading="La commande n'est pas encore ouverte."
         lede={CHECKOUT_CLOSURE_LABELS[reason]}
       >
-        <p className="m-0 text-body font-light text-wc-ink">
+        <p className="m-0 text-body font-light text-wc-inverse-ink">
           Vous pouvez continuer à parcourir les produits : rien n&apos;est
           débité et aucune commande n&apos;est enregistrée.
         </p>
@@ -290,7 +290,7 @@ function AwaitingPayment({ order }: { order: OrderSnapshot }) {
           <Link
             href="/commande/retour"
             data-testid="follow-payment"
-            className="border-b border-wc-pure pb-1 text-body-lg font-semibold"
+            className="border-b border-wc-inverse-text pb-1 text-body-lg font-semibold"
           >
             Suivre mon paiement
           </Link>

@@ -29,7 +29,7 @@ export function PurchaseNotice({ product, purchase }: PurchaseNoticeProps) {
   return (
     <p
       data-testid="product-requirements"
-      className="m-0 border border-wc-muted-on-light p-4 text-body-sm font-light text-wc-ink"
+      className="m-0 border border-wc-inverse-muted p-4 text-body-sm font-light text-wc-inverse-ink"
     >
       Pas encore en vente. Il manque&nbsp;:{" "}
       {missing

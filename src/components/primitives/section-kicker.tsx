@@ -24,7 +24,7 @@ export function SectionKicker({ as: Tag, id, children }: SectionKickerProps) {
   return (
     <Tag
       id={id}
-      className="m-0 mb-5 text-micro tracking-30 font-normal uppercase text-wc-muted-2"
+      className="m-0 mb-5 text-micro tracking-30 font-normal uppercase text-wc-text-muted"
     >
       {children}
     </Tag>

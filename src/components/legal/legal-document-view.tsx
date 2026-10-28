@@ -46,33 +46,33 @@ export function LegalDocumentView({
 
   return (
     <article className="wc-container pt-[clamp(28px,5vw,64px)] pb-section-sm">
-      <p className="m-0 mb-[22px] text-micro tracking-32 uppercase text-wc-muted-2">
+      <p className="m-0 mb-[22px] text-micro tracking-32 uppercase text-wc-text-muted">
         Informations légales
       </p>
       <h1 className="m-0 max-w-[22ch] font-display text-page-title font-medium">
         {document.title}
       </h1>
-      <p className="mt-heading-gap max-w-[62ch] text-body-lg font-light text-wc-soft">
+      <p className="mt-heading-gap max-w-[62ch] text-body-lg font-light text-wc-text-soft">
         {document.summary}
       </p>
 
       <dl
         data-testid="legal-revision-meta"
-        className="mt-heading-gap flex flex-wrap gap-x-10 gap-y-3 border-t border-wc-line-dark pt-6"
+        className="mt-heading-gap flex flex-wrap gap-x-10 gap-y-3 border-t border-wc-line pt-6"
       >
         <div>
-          <dt className="m-0 text-micro tracking-20 uppercase text-wc-muted-2">
+          <dt className="m-0 text-micro tracking-20 uppercase text-wc-text-muted">
             En vigueur depuis
           </dt>
-          <dd className="m-0 mt-1 text-body-sm font-light text-wc-white">
+          <dd className="m-0 mt-1 text-body-sm font-light text-wc-text">
             {formatEffectiveDate(revision.effectiveFrom)}
           </dd>
         </div>
         <div>
-          <dt className="m-0 text-micro tracking-20 uppercase text-wc-muted-2">
+          <dt className="m-0 text-micro tracking-20 uppercase text-wc-text-muted">
             Révision
           </dt>
-          <dd className="m-0 mt-1 text-body-sm font-light text-wc-white">
+          <dd className="m-0 mt-1 text-body-sm font-light text-wc-text">
             {revision.id}
           </dd>
         </div>
@@ -102,7 +102,7 @@ export function LegalDocumentView({
             {section.paragraphs.map((paragraph, index) => (
               <p
                 key={index}
-                className="m-0 mb-4 text-body font-light text-wc-soft last:mb-0"
+                className="m-0 mb-4 text-body font-light text-wc-text-soft last:mb-0"
               >
                 {paragraph}
               </p>

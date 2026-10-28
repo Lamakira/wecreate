@@ -70,11 +70,11 @@ export function OrderTicket({
     <aside
       data-testid="checkout-ticket"
       aria-label="Ticket de commande"
-      className="flex flex-col justify-between gap-8 bg-wc-pure px-gutter py-10 text-wc-white lg:py-[clamp(40px,5vw,72px)]"
+      className="flex flex-col justify-between gap-8 bg-wc-ground-deep px-gutter py-10 text-wc-text lg:py-[clamp(40px,5vw,72px)]"
     >
       <div>
         <div className="flex items-baseline justify-between gap-4">
-          <p className="m-0 text-micro tracking-26 uppercase text-wc-soft">
+          <p className="m-0 text-micro tracking-26 uppercase text-wc-text-soft">
             {reference ? (
               <>
                 Ticket <span data-testid="ticket-reference">{reference}</span>
@@ -83,7 +83,7 @@ export function OrderTicket({
               "Panier numérique"
             )}
           </p>
-          <span className="text-micro tracking-26 uppercase text-wc-muted-2">
+          <span className="text-micro tracking-26 uppercase text-wc-text-muted">
             XOF
           </span>
         </div>
@@ -96,7 +96,7 @@ export function OrderTicket({
             <li
               key={line.id}
               data-testid="ticket-line"
-              className="flex items-baseline justify-between gap-5 border-b border-wc-line-dark py-3.5 first:pt-0"
+              className="flex items-baseline justify-between gap-5 border-b border-wc-line py-3.5 first:pt-0"
             >
               <span className="text-body font-light">{line.title}</span>
               <span
@@ -112,13 +112,13 @@ export function OrderTicket({
         {/* What the list says on a phone, where the list is not shown. */}
         <p
           data-testid="ticket-count"
-          className="m-0 mt-6 text-body font-light text-wc-soft lg:hidden"
+          className="m-0 mt-6 text-body font-light text-wc-text-soft lg:hidden"
         >
           {lines.length === 1 ? "1 produit numérique" : `${lines.length} produits numériques`}
         </p>
 
         <div className="mt-6 flex items-baseline justify-between gap-5">
-          <span className="text-micro tracking-26 uppercase text-wc-muted-2">
+          <span className="text-micro tracking-26 uppercase text-wc-text-muted">
             Total
           </span>
           <span
@@ -130,7 +130,7 @@ export function OrderTicket({
         </div>
       </div>
 
-      <p className="m-0 text-body-sm font-light text-wc-soft">{note}</p>
+      <p className="m-0 text-body-sm font-light text-wc-text-soft">{note}</p>
     </aside>
   );
 }

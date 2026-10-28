@@ -16,7 +16,7 @@ interface ProjectDetailsProps {
 
 function Label({ children }: { children: string }) {
   return (
-    <p className="m-0 mb-3 text-micro tracking-24 uppercase text-wc-muted-2">
+    <p className="m-0 mb-3 text-micro tracking-24 uppercase text-wc-text-muted">
       {children}
     </p>
   );
@@ -49,10 +49,10 @@ export function ProjectDetails({
         >
           {project.title}
         </Heading>
-        <p className="m-0 mb-4 text-micro tracking-20 uppercase text-wc-muted-2">
+        <p className="m-0 mb-4 text-micro tracking-20 uppercase text-wc-text-muted">
           {project.client} · {project.projectType}
         </p>
-        <p className="m-0 text-body font-light text-wc-soft">
+        <p className="m-0 text-body font-light text-wc-text-soft">
           {project.description}
         </p>
 
@@ -65,12 +65,12 @@ export function ProjectDetails({
 
       <div>
         <Label>Rôle de WeCreate</Label>
-        <p className="m-0 mb-6 text-body font-light text-wc-soft">
+        <p className="m-0 mb-6 text-body font-light text-wc-text-soft">
           {project.role}
         </p>
 
         <Label>Livrables</Label>
-        <ul className="m-0 list-none p-0 text-body font-light text-wc-soft">
+        <ul className="m-0 list-none p-0 text-body font-light text-wc-text-soft">
           {project.deliverables.map((deliverable) => (
             <li key={deliverable} className="mb-1 last:mb-0">
               - {deliverable}
@@ -79,11 +79,11 @@ export function ProjectDetails({
         </ul>
 
         {project.transcript ? (
-          <details className="mt-6 border-t border-wc-line-dark pt-5">
-            <summary className="cursor-pointer text-micro tracking-24 uppercase text-wc-muted-2">
+          <details className="mt-6 border-t border-wc-line pt-5">
+            <summary className="cursor-pointer text-micro tracking-24 uppercase text-wc-text-muted">
               Transcription
             </summary>
-            <p className="m-0 mt-4 text-body-sm font-light whitespace-pre-line text-wc-soft">
+            <p className="m-0 mt-4 text-body-sm font-light whitespace-pre-line text-wc-text-soft">
               {project.transcript}
             </p>
           </details>

@@ -29,7 +29,7 @@ export function FinalCtaSection({ section }: FinalCtaSectionProps) {
         />
       </Reveal>
       <Reveal>
-        <p className="mt-6 mb-[34px] text-[15px] font-light text-wc-soft">
+        <p className="mt-6 mb-[34px] text-[15px] font-light text-wc-text-soft">
           {section.subtitle}
         </p>
       </Reveal>

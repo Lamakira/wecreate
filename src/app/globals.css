@@ -89,39 +89,65 @@
  * in a component.
  * ------------------------------------------------------------------------- */
 
-@theme {
-  /* Palette — strict black and white. The only colour on the site comes from
-   * photography and video thumbnails. */
-  --color-wc-black: #0a0a0a;
-  --color-wc-pure: #000000;
+@theme static {
+  /* Palette — named by role, never by colour, so a Discipline theme can
+   * rewrite every value (see "Discipline themes" below). The values here are
+   * Vidéographie's: strict black and white, where the only colour on the site
+   * comes from photography and video thumbnails.
+   *
+   * Two families. The *ground* family is the page's own ground and everything
+   * that sits on it. The *inverse* family is the inverted band — white in
+   * Vidéographie — that the proof, method and comparison sections, the
+   * Boutique and checkout run on. A component on an inverted band uses only
+   * the inverse family, except for a ground-coloured island inside it (a badge,
+   * a primary button, the order ticket), which is the ground family again.
+   *
+   * `static` because a theme overrides tokens no utility may use yet, and an
+   * unemitted variable cannot be overridden. */
+  --color-wc-ground: #0a0a0a;
+  /* The deepest ground: the footer, the marquee, dialogs and badges. */
+  --color-wc-ground-deep: #000000;
   --color-wc-surface: #0f0f0f;
   --color-wc-surface-2: #111111;
-  --color-wc-line-dark: #1a1a1a;
-  --color-wc-line-darker: #141414;
-  --color-wc-border: #333333;
+  --color-wc-line: #1a1a1a;
+  --color-wc-line-faint: #141414;
+  --color-wc-line-strong: #333333;
   /* A line colour, not a text colour. Rules and underlines only: as text it
    * reaches 2.8:1 at best on this palette's darkest ground. */
-  --color-wc-muted: #555555;
-  /* Tertiary text on dark surfaces — micro-labels, meta lines, empty states.
+  --color-wc-rule: #555555;
+  --color-wc-text: #ffffff;
+  --color-wc-text-soft: #bbbbbb;
+  /* Tertiary text on the ground — micro-labels, meta lines, empty states.
    * The handoff specifies #777, which clears 4.5:1 on nothing this palette
    * offers: 4.42:1 on #0A0A0A, 4.22:1 on #111111, 4.48:1 on white. Raised until
    * it passes on the lightest dark surface it is used on. */
-  --color-wc-muted-2: #8a8a8a;
-  /* The same role on the light band. No single grey can pass 4.5:1 against both
-   * #0A0A0A and #FFFFFF — the best any grey manages against both is 4.39:1 — so
-   * light surfaces need their own value. */
-  --color-wc-muted-on-light: #6a6a6a;
-  --color-wc-soft: #bbbbbb;
-  --color-wc-line-light: #eeeeee;
-  --color-wc-ink: #333333;
-  --color-wc-white: #ffffff;
+  --color-wc-text-muted: #8a8a8a;
   /* Error states, and nothing else. The palette is otherwise strict black and
    * white, but a refusal a buyer cannot spot at a glance is a refusal they
-   * cannot act on. Two values, for the same reason there are two muted greys:
-   * no single red reads on both grounds — #C81E1E passes 4.5:1 on white,
-   * #FF6B6B passes it on the darkest surfaces. */
-  --color-wc-error: #c81e1e;
-  --color-wc-error-on-dark: #ff6b6b;
+   * cannot act on. One per family, for the same reason there are two muted
+   * greys: no single red reads on both grounds — #FF6B6B passes 4.5:1 on the
+   * darkest surfaces, #C81E1E passes it on white. */
+  --color-wc-error: #ff6b6b;
+  /* The Discipline's own colour: the italic word of a heading on the ground,
+   * and the active control of the Discipline switch. Large text only in every
+   * theme — Branding's terracotta reaches 4.1:1 on its cream, not 4.5:1. In
+   * Vidéographie it stays white, so the strict black-and-white rule holds. */
+  --color-wc-accent: #ffffff;
+  --color-wc-on-accent: #000000;
+
+  --color-wc-inverse: #ffffff;
+  --color-wc-inverse-text: #000000;
+  /* Body copy on the inverted band, a step softer than its headings. */
+  --color-wc-inverse-ink: #333333;
+  /* Tertiary text on the inverted band. No single grey can pass 4.5:1 against
+   * both #0A0A0A and #FFFFFF — the best any grey manages against both is
+   * 4.39:1 — so the inverted band needs its own value. */
+  --color-wc-inverse-muted: #6a6a6a;
+  --color-wc-inverse-line: #eeeeee;
+  --color-wc-inverse-error: #c81e1e;
+}
+
+@theme {
 
   /* Typefaces */
   --font-display: "Playfair Display", "Iowan Old Style", "Palatino Linotype",
@@ -246,6 +272,162 @@
 }
 
 /* ---------------------------------------------------------------------------
+ * Painted grounds that are more than one colour.
+ *
+ * Gradients rather than tokens, so they live beside the palette instead of in
+ * `@theme`. Each is rewritten by a Discipline theme along with the palette.
+ * ------------------------------------------------------------------------- */
+
+:root {
+  /* The labelled grey slot that stands in for a missing image or poster. */
+  --wc-placeholder: linear-gradient(140deg, #1a1a1a, #3a3a3a 50%, #0f0f0f);
+  --wc-placeholder-soft: linear-gradient(150deg, #1a1a1a, #333 55%, #111);
+  --wc-placeholder-inverse: linear-gradient(135deg, #eee, #bbb 55%, #ddd);
+
+  /* The hero's baseline gradient and halo, painted under everything else. */
+  --wc-hero-ground: linear-gradient(115deg, #141414 0%, #000 45%, #1a1a1a 100%);
+  --wc-hero-halo: radial-gradient(
+    120% 80% at 70% 20%,
+    rgba(255, 255, 255, 0.1),
+    transparent 60%
+  );
+
+  /* The generated silk's three-stop ramp, read by `HeroBackground` when it
+   * starts. Six-digit hex only: the shader is handed them as RGB triples. */
+  --wc-hero-silk-a: #121210;
+  --wc-hero-silk-b: #837b70;
+  --wc-hero-silk-c: #f3eadb;
+
+  /* The scrim over the silk. It restores the page's own ground exactly where
+   * the copy sits — heaviest at the bottom left, releasing towards the top
+   * right — so it is mixed from the ground token and follows every theme.
+   * `color-mix` with `transparent` reproduces Vidéographie's original
+   * `rgba(10, 10, 10, a)` stops exactly. */
+  --wc-hero-scrim:
+    linear-gradient(
+      to top,
+      color-mix(in srgb, var(--color-wc-ground) 97%, transparent) 0%,
+      color-mix(in srgb, var(--color-wc-ground) 95%, transparent) 52%,
+      color-mix(in srgb, var(--color-wc-ground) 90%, transparent) 74%,
+      color-mix(in srgb, var(--color-wc-ground) 45%, transparent) 90%,
+      color-mix(in srgb, var(--color-wc-ground) 10%, transparent) 100%
+    ),
+    linear-gradient(
+      to right,
+      color-mix(in srgb, var(--color-wc-ground) 72%, transparent) 0%,
+      color-mix(in srgb, var(--color-wc-ground) 30%, transparent) 46%,
+      color-mix(in srgb, var(--color-wc-ground) 0%, transparent) 78%
+    );
+}
+
+/* The italic word of a heading keeps the band's own text colour on an
+ * inverted band: Vidéographie's white accent would vanish on white. */
+[data-surface="inverse"] {
+  --color-wc-accent: currentColor;
+}
+
+/* ---------------------------------------------------------------------------
+ * Discipline themes.
+ *
+ * A page declares its Discipline with `data-discipline` (`SitePage` puts it on
+ * `<main>`), and the theme applies to the whole document from the root — so
+ * the body, the header, the footer, the grain and the drawers all follow it,
+ * not only what sits inside `<main>`. Vidéographie is the default above and
+ * needs no block of its own.
+ *
+ * The values start from the v2 handoff
+ * (`docs/design_handoff_wecreate_v2/README.md`). Where a handoff grey failed
+ * WCAG AA it was moved, the same way `#777` was in Vidéographie: Branding's
+ * tertiary text is #665A4A rather than #6E6252 (4.17:1 on its surface), and
+ * Site web's on-accent is its night blue rather than white (3.72:1 on the
+ * bright blue).
+ *
+ * The hero's generated silk is adapted rather than replaced by a still. The
+ * silk is the hero's subject in every Discipline, and what made it legible on
+ * black was never the colour of the silk but the scrim over it — which is
+ * mixed from the ground, so it restores cream or night blue exactly where the
+ * copy sits, as it restores black in Vidéographie. Each theme gives the silk a
+ * ramp drawn from its own palette. Reduced motion and Save-Data still get the
+ * still baseline gradient underneath, rewritten here too.
+ * ------------------------------------------------------------------------- */
+
+:root:has([data-discipline="branding"]) {
+  --color-wc-ground: #efe8dc;
+  --color-wc-ground-deep: #e9e1d3;
+  --color-wc-surface: #e5dccc;
+  --color-wc-surface-2: #e1d7c6;
+  --color-wc-line: #d6cbb8;
+  --color-wc-line-faint: #ddd3c2;
+  --color-wc-line-strong: #b9ac95;
+  --color-wc-rule: #8c7f6a;
+  --color-wc-text: #1a1511;
+  --color-wc-text-soft: #4a4036;
+  --color-wc-text-muted: #665a4a;
+  --color-wc-error: #a3241a;
+  --color-wc-accent: #b4532a;
+  --color-wc-on-accent: #fff7ee;
+
+  --color-wc-inverse: #1a1511;
+  --color-wc-inverse-text: #efe8dc;
+  --color-wc-inverse-ink: #d6cbb8;
+  --color-wc-inverse-muted: #a89a84;
+  --color-wc-inverse-line: #332a22;
+  --color-wc-inverse-error: #ff8a75;
+
+  --wc-placeholder: linear-gradient(140deg, #d6cbb8, #c2b49c 50%, #e5dccc);
+  --wc-placeholder-soft: linear-gradient(150deg, #d6cbb8, #b9ac95 55%, #e1d7c6);
+  --wc-placeholder-inverse: linear-gradient(135deg, #332a22, #4a4036 55%, #241e18);
+
+  --wc-hero-ground: linear-gradient(115deg, #e5dccc 0%, #efe8dc 45%, #e9e0d0 100%);
+  --wc-hero-halo: radial-gradient(
+    120% 80% at 70% 20%,
+    rgba(255, 255, 255, 0.45),
+    transparent 60%
+  );
+  --wc-hero-silk-a: #b9aa90;
+  --wc-hero-silk-b: #e4d9c6;
+  --wc-hero-silk-c: #fffaf2;
+}
+
+:root:has([data-discipline="site-web"]) {
+  --color-wc-ground: #070d1f;
+  --color-wc-ground-deep: #050a18;
+  --color-wc-surface: #0e1630;
+  --color-wc-surface-2: #111a36;
+  --color-wc-line: #1b2649;
+  --color-wc-line-faint: #141d3a;
+  --color-wc-line-strong: #2b3a68;
+  --color-wc-rule: #4f5e8c;
+  --color-wc-text: #e8eeff;
+  --color-wc-text-soft: #b4bfe0;
+  --color-wc-text-muted: #7a87b0;
+  --color-wc-error: #ff7a7a;
+  --color-wc-accent: #4d7cff;
+  --color-wc-on-accent: #070d1f;
+
+  --color-wc-inverse: #e8eeff;
+  --color-wc-inverse-text: #070d1f;
+  --color-wc-inverse-ink: #2b3a68;
+  --color-wc-inverse-muted: #4f5e8c;
+  --color-wc-inverse-line: #cdd7f3;
+  --color-wc-inverse-error: #b3261e;
+
+  --wc-placeholder: linear-gradient(140deg, #1b2649, #33447a 50%, #0e1630);
+  --wc-placeholder-soft: linear-gradient(150deg, #1b2649, #2b3a68 55%, #111a36);
+  --wc-placeholder-inverse: linear-gradient(135deg, #cdd7f3, #a9b6dd 55%, #dce4fa);
+
+  --wc-hero-ground: linear-gradient(115deg, #0e1630 0%, #070d1f 45%, #1b2649 100%);
+  --wc-hero-halo: radial-gradient(
+    120% 80% at 70% 20%,
+    rgba(77, 124, 255, 0.14),
+    transparent 60%
+  );
+  --wc-hero-silk-a: #060b1a;
+  --wc-hero-silk-b: #2b3a68;
+  --wc-hero-silk-c: #9db3ff;
+}
+
+/* ---------------------------------------------------------------------------
  * Base layer
  * ------------------------------------------------------------------------- */
 
@@ -256,8 +438,8 @@
 
   body {
     margin: 0;
-    background: var(--color-wc-black);
-    color: var(--color-wc-white);
+    background: var(--color-wc-ground);
+    color: var(--color-wc-text);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     overflow-x: hidden;
@@ -294,18 +476,18 @@
   }
 
   :focus-visible {
-    outline: 2px solid var(--color-wc-white);
+    outline: 2px solid var(--color-wc-text);
     outline-offset: 3px;
   }
 
-  /* Light sections invert the focus ring so it stays visible against white. */
-  [data-surface="light"] :focus-visible {
-    outline-color: var(--color-wc-pure);
+  /* Inverted sections invert the focus ring so it stays visible on their ground. */
+  [data-surface="inverse"] :focus-visible {
+    outline-color: var(--color-wc-inverse-text);
   }
 
   ::selection {
-    background: var(--color-wc-white);
-    color: var(--color-wc-pure);
+    background: var(--color-wc-text);
+    color: var(--color-wc-ground-deep);
   }
 }
 
@@ -366,8 +548,8 @@
   top: 0.75rem;
   z-index: 10000;
   padding: 0.75rem 1.25rem;
-  background: var(--color-wc-white);
-  color: var(--color-wc-pure);
+  background: var(--color-wc-inverse);
+  color: var(--color-wc-inverse-text);
   font-size: var(--text-button);
   font-weight: 600;
   letter-spacing: 0.16em;
@@ -377,6 +559,6 @@
 
 .skip-to-content:focus {
   transform: none;
-  outline: 2px solid var(--color-wc-pure);
+  outline: 2px solid var(--color-wc-inverse-text);
   outline-offset: 3px;
 }

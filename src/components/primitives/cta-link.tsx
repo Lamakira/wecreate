@@ -43,13 +43,13 @@ export function enquiryDestination(
 const VARIANTS = {
   /** Solid white on dark: the primary action. */
   solid:
-    "bg-wc-white text-wc-pure transition-opacity duration-300 hover:opacity-75",
+    "bg-wc-inverse text-wc-inverse-text transition-opacity duration-300 hover:opacity-75",
   /** Outlined: the secondary action on a dark surface. */
   ghost:
-    "border border-wc-border text-wc-white transition-colors duration-300 hover:border-wc-white hover:bg-wc-surface-2",
+    "border border-wc-line-strong text-wc-text transition-colors duration-300 hover:border-wc-text hover:bg-wc-surface-2",
   /** Underlined text: a quiet in-section link, with metrics of its own. */
   underline:
-    "inline-block border-b border-wc-muted pb-[5px] text-micro tracking-24 uppercase transition-colors duration-300 hover:border-wc-white",
+    "inline-block border-b border-wc-rule pb-[5px] text-micro tracking-24 uppercase transition-colors duration-300 hover:border-wc-text",
 } as const;
 
 interface CtaLinkProps {

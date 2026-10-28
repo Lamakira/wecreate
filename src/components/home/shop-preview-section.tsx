@@ -65,29 +65,29 @@ export function ShopPreviewSection({
             <Reveal
               as="li"
               key={product.id}
-              className="flex h-full flex-col border border-wc-line-dark bg-wc-surface transition-colors duration-[400ms] hover:border-wc-muted"
+              className="flex h-full flex-col border border-wc-line bg-wc-surface transition-colors duration-[400ms] hover:border-wc-rule"
             >
               <MediaFrame
                 media={product.cover}
                 sizes="(max-width: 640px) 100vw, 33vw"
               />
               <div className="flex flex-1 flex-col gap-3 p-[22px]">
-                <span className="self-start bg-wc-white px-2 py-1 text-badge tracking-22 uppercase text-wc-pure">
+                <span className="self-start bg-wc-inverse px-2 py-1 text-badge tracking-22 uppercase text-wc-inverse-text">
                   {product.format}
                 </span>
                 <h3 className="m-0 font-display text-product-title font-medium">
                   {product.title}
                 </h3>
-                <p className="m-0 flex-1 text-body-sm font-light text-wc-soft">
+                <p className="m-0 flex-1 text-body-sm font-light text-wc-text-soft">
                   {product.summary}
                 </p>
-                <div className="flex items-center justify-between gap-3 border-t border-wc-line-dark pt-3.5">
+                <div className="flex items-center justify-between gap-3 border-t border-wc-line pt-3.5">
                   <span className="text-body font-semibold">
                     {formatXof(product.priceXof)}
                   </span>
                   <Link
                     href={productPath(product.slug)}
-                    className="border-b border-wc-muted pb-1 text-micro tracking-20 uppercase transition-colors duration-300 hover:border-wc-white"
+                    className="border-b border-wc-rule pb-1 text-micro tracking-20 uppercase transition-colors duration-300 hover:border-wc-text"
                   >
                     <span className="sr-only">{product.title} - </span>
                     {section.linkLabel}

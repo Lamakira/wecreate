@@ -63,13 +63,13 @@ export default async function CommerceSignInPage({
           >
             {operator.factors.length > 1 ? (
               <label className="block">
-                <span className="block text-micro uppercase tracking-24 text-wc-muted-2">
+                <span className="block text-micro uppercase tracking-24 text-wc-text-muted">
                   Application
                 </span>
                 <select
                   name="factorId"
                   defaultValue={operator.factors[0].id}
-                  className="mt-2 w-full border border-wc-border bg-wc-surface px-3 py-2 text-body text-wc-white"
+                  className="mt-2 w-full border border-wc-line-strong bg-wc-surface px-3 py-2 text-body text-wc-text"
                 >
                   {operator.factors.map((factor) => (
                     <option key={factor.id} value={factor.id}>

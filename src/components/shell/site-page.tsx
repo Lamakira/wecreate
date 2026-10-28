@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import { SiteFooter } from "@/components/shell/site-footer";
 import { SiteShell } from "@/components/shell/site-shell";
+import { DEFAULT_DISCIPLINE, type Discipline } from "@/discipline";
 import { readChrome, readLegalDay } from "@/managed-content";
 import { effectiveLegalTerms } from "@/managed-content/legal";
 import type { LegalDocument, SiteSettings } from "@/managed-content/types";
@@ -12,11 +13,19 @@ import { siteUrl } from "@/site-config";
 interface SitePageProps {
   settings: SiteSettings;
   legalDocuments: LegalDocument[];
+  /**
+   * The Discipline this page belongs to, which decides its colour theme and
+   * its brand mark. Vidéographie unless the page says otherwise.
+   */
+  discipline?: Discipline;
   children: ReactNode;
 }
 
 /**
  * Header, footer and the skip-target main landmark, from one cached read.
+ *
+ * The page's Discipline is declared once, on `<main>`, and `globals.css`
+ * themes the whole document from it — header, footer and drawers included.
  *
  * They live here rather than in the shared `(site)` layout so a public page
  * is a single `"use cache"` fill: layout and page are separate work units
@@ -26,6 +35,7 @@ interface SitePageProps {
 export async function SitePage({
   settings,
   legalDocuments,
+  discipline = DEFAULT_DISCIPLINE,
   children,
 }: SitePageProps) {
   const legalTerms = effectiveLegalTerms(
@@ -36,11 +46,19 @@ export async function SitePage({
   return (
     <>
       <JsonLdScript data={localBusinessJsonLd(settings, siteUrl())} />
-      <SiteShell settings={settings}>
-        <main id="contenu" className="pt-header-offset">
+      <SiteShell settings={settings} discipline={discipline}>
+        <main
+          id="contenu"
+          data-discipline={discipline}
+          className="pt-header-offset"
+        >
           {children}
         </main>
-        <SiteFooter settings={settings} legalLinks={legalTerms.inForce} />
+        <SiteFooter
+          settings={settings}
+          legalLinks={legalTerms.inForce}
+          discipline={discipline}
+        />
       </SiteShell>
     </>
   );

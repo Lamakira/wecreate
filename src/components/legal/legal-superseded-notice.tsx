@@ -29,7 +29,7 @@ export function LegalSupersededNotice({
       consultable parce que des commandes y renvoient.{" "}
       <Link
         href={legalPath(slug)}
-        className="border-b border-wc-muted pb-px transition-colors duration-300 hover:border-wc-white hover:text-wc-white"
+        className="border-b border-wc-rule pb-px transition-colors duration-300 hover:border-wc-text hover:text-wc-text"
       >
         Lire la version en vigueur
       </Link>

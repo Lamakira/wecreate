@@ -22,7 +22,7 @@ export function UniversesSection({ section }: UniversesSectionProps) {
         >
           {section.title}
         </h2>
-        <p className="m-0 text-micro tracking-28 uppercase text-wc-muted-2">
+        <p className="m-0 text-micro tracking-28 uppercase text-wc-text-muted">
           {section.kicker}
         </p>
       </Reveal>
@@ -32,24 +32,24 @@ export function UniversesSection({ section }: UniversesSectionProps) {
           <Reveal as="li" key={universe.key}>
             <Link
               href={universe.href}
-              className="group block h-full border border-wc-line-dark bg-wc-surface transition-[border-color,transform] duration-500 ease-signature hover:border-wc-muted hover:-translate-y-1.5"
+              className="group block h-full border border-wc-line bg-wc-surface transition-[border-color,transform] duration-500 ease-signature hover:border-wc-rule hover:-translate-y-1.5"
             >
               <MediaFrame
                 media={universe.media}
-                surface="dark-soft"
+                surface="ground-soft"
                 sizes="(max-width: 900px) 100vw, 33vw"
               />
               <div className="px-6 pt-[26px] pb-[30px]">
-                <p className="m-0 mb-3 text-micro tracking-26 uppercase text-wc-muted-2">
+                <p className="m-0 mb-3 text-micro tracking-26 uppercase text-wc-text-muted">
                   {universe.kicker}
                 </p>
                 <h3 className="m-0 mb-3 font-display text-card-title font-medium">
                   {universe.title}
                 </h3>
-                <p className="m-0 mb-[18px] text-body font-light text-wc-soft">
+                <p className="m-0 mb-[18px] text-body font-light text-wc-text-soft">
                   {universe.description}
                 </p>
-                <span className="border-b border-wc-muted pb-1 text-micro tracking-20 uppercase transition-colors duration-300 group-hover:border-wc-white">
+                <span className="border-b border-wc-rule pb-1 text-micro tracking-20 uppercase transition-colors duration-300 group-hover:border-wc-text">
                   {universe.linkLabel}
                 </span>
               </div>

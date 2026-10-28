@@ -28,9 +28,9 @@ export function CapabilityColumn({ column, id }: CapabilityColumnProps) {
         </SectionKicker>
         <ul className="flex list-none flex-col gap-[18px] p-0">
           {column.items.map((item) => (
-            <li key={item.key} className="border-t border-wc-line-dark pt-4">
+            <li key={item.key} className="border-t border-wc-line pt-4">
               <h3 className="m-0 mb-1.5 text-[15px] font-medium">{item.title}</h3>
-              <p className="m-0 text-body-sm font-light text-wc-muted-2">
+              <p className="m-0 text-body-sm font-light text-wc-text-muted">
                 {item.description}
               </p>
             </li>

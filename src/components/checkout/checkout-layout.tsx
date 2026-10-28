@@ -42,7 +42,7 @@ export function CheckoutSplit({
  */
 export function CheckoutSurface({ children }: { children: ReactNode }) {
   return (
-    <div data-surface="light" className="bg-wc-white text-wc-pure">
+    <div data-surface="inverse" className="bg-wc-inverse text-wc-inverse-text">
       {children}
     </div>
   );
@@ -78,7 +78,7 @@ export function CheckoutStage({
       className="px-gutter py-[clamp(36px,5vw,72px)]"
     >
       <div className="max-w-prose">
-        <p className="m-0 text-micro tracking-28 uppercase text-wc-muted-on-light">
+        <p className="m-0 text-micro tracking-28 uppercase text-wc-inverse-muted">
           {kicker}
         </p>
         <h1
@@ -87,8 +87,8 @@ export function CheckoutStage({
         >
           {heading}
         </h1>
-        <p className="m-0 mt-5 text-body-lg font-light text-wc-ink">{lede}</p>
-        <hr className="my-8 border-0 border-t border-wc-line-light" />
+        <p className="m-0 mt-5 text-body-lg font-light text-wc-inverse-ink">{lede}</p>
+        <hr className="my-8 border-0 border-t border-wc-inverse-line" />
         {children}
       </div>
     </section>
@@ -101,7 +101,7 @@ export function BoutiqueLink() {
     <p className="m-0 mt-7">
       <Link
         href="/boutique"
-        className={`${ACTION_SIZES.default} bg-wc-pure text-wc-white transition-opacity duration-300 hover:opacity-80`}
+        className={`${ACTION_SIZES.default} bg-wc-ground-deep text-wc-text transition-opacity duration-300 hover:opacity-80`}
       >
         Aller à la boutique
       </Link>
@@ -118,7 +118,7 @@ export function BoutiqueLink() {
  */
 export function HostedPaymentNote() {
   return (
-    <p className="m-0 mt-4 text-body-sm font-light text-wc-muted-on-light">
+    <p className="m-0 mt-4 text-body-sm font-light text-wc-inverse-muted">
       Le moyen de paiement est saisi sur la page sécurisée de FedaPay. WeCreate
       ne voit ni ne conserve vos informations de paiement.
     </p>

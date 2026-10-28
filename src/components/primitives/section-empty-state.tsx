@@ -15,7 +15,7 @@ export function SectionEmptyState({ text, testId }: SectionEmptyStateProps) {
   return (
     <p
       data-testid={testId}
-      className="m-0 border-t border-wc-line-dark pt-6 text-body font-light text-wc-muted-2"
+      className="m-0 border-t border-wc-line pt-6 text-body font-light text-wc-text-muted"
     >
       {text}
     </p>

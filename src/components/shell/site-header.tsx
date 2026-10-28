@@ -8,11 +8,13 @@ import { useEffect, useState } from "react";
 
 import { CtaLink } from "@/components/primitives/cta-link";
 import { CartIndicator } from "@/components/shell/cart-indicator";
+import { brandMark, type Discipline } from "@/discipline";
 import { isCurrentPath } from "@/lib/current-path";
 import type { SiteSettings } from "@/managed-content/types";
 
 interface SiteHeaderProps {
   settings: SiteSettings;
+  discipline: Discipline;
   isMenuOpen: boolean;
   onOpenCart: () => void;
   onOpenMenu: () => void;
@@ -31,11 +33,13 @@ interface SiteHeaderProps {
  */
 export function SiteHeader({
   settings,
+  discipline,
   isMenuOpen,
   onOpenCart,
   onOpenMenu,
 }: SiteHeaderProps) {
   const pathname = usePathname();
+  const mark = brandMark(discipline);
   const [isCondensed, setIsCondensed] = useState(false);
 
   useEffect(() => {
@@ -46,7 +50,7 @@ export function SiteHeader({
   }, []);
 
   return (
-    <header className="fixed inset-x-0 top-0 z-900 border-b border-wc-line-dark bg-wc-black/[0.82] backdrop-blur-[14px]">
+    <header className="fixed inset-x-0 top-0 z-900 border-b border-wc-line bg-wc-ground/[0.82] backdrop-blur-[14px]">
       <div
         className={`wc-container flex flex-nowrap items-center gap-[clamp(10px,2vw,36px)] transition-[padding] duration-[350ms] ease-signature ${
           isCondensed ? "py-3" : "py-5"
@@ -58,7 +62,7 @@ export function SiteHeader({
           className="flex flex-none items-center"
         >
           <Image
-            src="/brand/logo-blanc.svg"
+            src={mark.wordmark}
             alt={settings.brandName}
             width={166}
             height={22}
@@ -66,7 +70,7 @@ export function SiteHeader({
             className="hidden h-[22px] w-auto min-[900px]:block"
           />
           <Image
-            src="/brand/icone-blanc.svg"
+            src={mark.icon}
             alt={settings.brandName}
             width={34}
             height={24}
@@ -86,17 +90,17 @@ export function SiteHeader({
                 key={link.href}
                 href={link.href}
                 aria-current={isCurrent ? "page" : undefined}
-                // Inactive links are `text-wc-soft`, not the `text-wc-muted-2`
+                // Inactive links are `text-wc-text-soft`, not the `text-wc-text-muted`
                 // the design specifies. The header is translucent and the hero
                 // now runs behind it, so these sit over the generated
                 // background's pale folds, where #777 measures 3.56:1 — and
                 // #777 cannot reach 4.5:1 on any ground. The current page stays
                 // distinguishable by its underline as well as its colour, so
                 // the distinction never rests on colour alone.
-                className={`whitespace-nowrap border-b py-1.5 text-button font-medium tracking-16 uppercase transition-colors duration-300 hover:text-wc-white ${
+                className={`whitespace-nowrap border-b py-1.5 text-button font-medium tracking-16 uppercase transition-colors duration-300 hover:text-wc-text ${
                   isCurrent
-                    ? "border-wc-white text-wc-white"
-                    : "border-transparent text-wc-soft"
+                    ? "border-wc-text text-wc-text"
+                    : "border-transparent text-wc-text-soft"
                 }`}
               >
                 {link.label}
@@ -114,7 +118,7 @@ export function SiteHeader({
             aria-label="Ouvrir le menu"
             aria-expanded={isMenuOpen}
             data-testid="navigation-menu-button"
-            className="grid h-10 w-10 place-items-center border border-wc-border text-wc-white transition-colors duration-300 hover:border-wc-white hover:bg-wc-surface-2 min-[900px]:hidden"
+            className="grid h-10 w-10 place-items-center border border-wc-line-strong text-wc-text transition-colors duration-300 hover:border-wc-text hover:bg-wc-surface-2 min-[900px]:hidden"
           >
             <Bars3Icon className="h-5 w-5" aria-hidden="true" />
           </button>

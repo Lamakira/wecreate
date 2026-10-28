@@ -73,9 +73,9 @@ export function BoutiqueCatalogue({
   );
 
   return (
-    <div data-surface="light" className="bg-wc-white text-wc-pure">
+    <div data-surface="inverse" className="bg-wc-inverse text-wc-inverse-text">
       <section className="wc-container pt-[clamp(28px,5vw,64px)]">
-        <p className="m-0 mb-[22px] text-micro tracking-32 uppercase text-wc-muted-on-light">
+        <p className="m-0 mb-[22px] text-micro tracking-32 uppercase text-wc-inverse-muted">
           {kicker}
         </p>
         <SplitHeading
@@ -83,7 +83,7 @@ export function BoutiqueCatalogue({
           headline={boutique.headline}
           className="m-0 max-w-[22ch] font-display text-page-title font-medium"
         />
-        <p className="mt-[26px] max-w-[52ch] text-body-lg font-light text-wc-ink">
+        <p className="mt-[26px] max-w-[52ch] text-body-lg font-light text-wc-inverse-ink">
           {boutique.intro}
         </p>
 
@@ -91,7 +91,7 @@ export function BoutiqueCatalogue({
           <div
             role="group"
             aria-label="Filtrer par famille de produits"
-            className="mt-[clamp(30px,4vw,48px)] flex flex-wrap gap-2.5 border-t border-wc-line-light pt-[26px]"
+            className="mt-[clamp(30px,4vw,48px)] flex flex-wrap gap-2.5 border-t border-wc-inverse-line pt-[26px]"
           >
             <FilterPill
               label={allFamiliesLabel}
@@ -174,16 +174,16 @@ function ProductCard({
     <div
       data-testid="product-card"
       data-family={product.family ?? ""}
-      className="flex h-full flex-col border border-wc-line-light bg-wc-white transition-colors duration-[400ms] hover:border-wc-pure"
+      className="flex h-full flex-col border border-wc-inverse-line bg-wc-inverse transition-colors duration-[400ms] hover:border-wc-inverse-text"
     >
       <Link href={productPath(product.slug)} className="group flex flex-1 flex-col">
         <div className="relative">
           <MediaFrame
             media={product.cover}
-            surface="light"
+            surface="inverse"
             sizes="(max-width: 640px) 100vw, 33vw"
           />
-          <span className="absolute top-3 left-3 bg-wc-pure px-2.5 py-1.5 text-badge tracking-20 uppercase text-wc-white">
+          <span className="absolute top-3 left-3 bg-wc-ground-deep px-2.5 py-1.5 text-badge tracking-20 uppercase text-wc-text">
             {product.format}
           </span>
         </div>
@@ -191,16 +191,16 @@ function ProductCard({
           <h2 className="m-0 font-display text-[23px] leading-[1.2] font-medium">
             {product.title}
           </h2>
-          <p className="m-0 flex-1 text-body-sm font-light text-wc-ink">
+          <p className="m-0 flex-1 text-body-sm font-light text-wc-inverse-ink">
             {product.summary}
           </p>
-          <span className="self-start border-b border-wc-muted-on-light pb-1 text-micro tracking-20 uppercase text-wc-muted-on-light transition-colors duration-300 group-hover:text-wc-pure">
+          <span className="self-start border-b border-wc-inverse-muted pb-1 text-micro tracking-20 uppercase text-wc-inverse-muted transition-colors duration-300 group-hover:text-wc-inverse-text">
             {boutique.detailLinkLabel}
           </span>
         </div>
       </Link>
 
-      <div className="mx-[22px] flex flex-wrap items-center justify-between gap-3 border-t border-wc-line-light py-4">
+      <div className="mx-[22px] flex flex-wrap items-center justify-between gap-3 border-t border-wc-inverse-line py-4">
         <span className="text-body font-semibold">
           {formatXof(product.priceXof)}
         </span>
@@ -237,8 +237,8 @@ function FilterPill({ label, isActive, onSelect }: FilterPillProps) {
       aria-pressed={isActive}
       className={`border px-[22px] py-[13px] text-micro font-semibold tracking-20 uppercase transition-colors duration-300 ${
         isActive
-          ? "border-wc-pure bg-wc-pure text-wc-white"
-          : "border-wc-muted-on-light bg-transparent text-wc-ink hover:border-wc-pure"
+          ? "border-wc-ground-deep bg-wc-ground-deep text-wc-text"
+          : "border-wc-inverse-muted bg-transparent text-wc-inverse-ink hover:border-wc-inverse-text"
       }`}
     >
       {label}

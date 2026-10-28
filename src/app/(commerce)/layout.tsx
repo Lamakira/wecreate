@@ -38,15 +38,15 @@ export const instant = false;
  */
 export default function CommerceLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-wc-black text-wc-white">
-      <header className="border-b border-wc-line-dark">
+    <div className="min-h-screen bg-wc-ground text-wc-text">
+      <header className="border-b border-wc-line">
         <div className="wc-container flex flex-wrap items-baseline justify-between gap-2 py-5">
-          <p className="m-0 text-micro uppercase tracking-24 text-wc-muted-2">
+          <p className="m-0 text-micro uppercase tracking-24 text-wc-text-muted">
             WeCreate · Espace commerce
           </p>
           <Link
             href="/"
-            className="text-micro uppercase tracking-24 text-wc-soft underline underline-offset-4"
+            className="text-micro uppercase tracking-24 text-wc-text-soft underline underline-offset-4"
           >
             Retour au site
           </Link>

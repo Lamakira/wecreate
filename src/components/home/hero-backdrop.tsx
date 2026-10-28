@@ -36,14 +36,15 @@ export function HeroBackdrop() {
         a #777 kicker and a #333 button border all but vanish against them.
         Contrast cannot be left to chance on a surface that changes every frame.
 
-        This scrim restores a dark, stable ground exactly where the copy is —
+        This scrim restores the page's own stable ground — black, cream or night
+        blue, whichever the Discipline paints — exactly where the copy is,
         heaviest at the bottom left, releasing towards the top right so the silk
         still reads as the hero's subject. It is weighted rather than uniform so
         legibility costs the effect as little as possible.
       */}
       <div
         aria-hidden="true"
-        className="absolute inset-0 bg-[linear-gradient(to_top,rgba(10,10,10,0.97)_0%,rgba(10,10,10,0.95)_52%,rgba(10,10,10,0.9)_74%,rgba(10,10,10,0.45)_90%,rgba(10,10,10,0.1)_100%),linear-gradient(to_right,rgba(10,10,10,0.72)_0%,rgba(10,10,10,0.3)_46%,rgba(10,10,10,0)_78%)]"
+        className="absolute inset-0 bg-(image:--wc-hero-scrim)"
       />
     </>
   );

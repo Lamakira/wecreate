@@ -24,19 +24,19 @@ export function ServiceUniverseSection({
   return (
     <section
       aria-labelledby={headingId}
-      className="border-t border-wc-line-dark py-section-sm"
+      className="border-t border-wc-line py-section-sm"
     >
       <div className="wc-container">
         <Reveal className="mb-heading-gap flex flex-wrap items-baseline justify-between gap-6">
           <div>
-            <p className="m-0 mb-3 text-micro tracking-28 uppercase text-wc-muted-2">
+            <p className="m-0 mb-3 text-micro tracking-28 uppercase text-wc-text-muted">
               {universe.kicker}
             </p>
             <h2 id={headingId} className="m-0 font-display text-section font-medium">
               {universe.title}
             </h2>
           </div>
-          <p className="m-0 max-w-[44ch] text-body font-light text-wc-soft">
+          <p className="m-0 max-w-[44ch] text-body font-light text-wc-text-soft">
             {universe.intro}
           </p>
         </Reveal>

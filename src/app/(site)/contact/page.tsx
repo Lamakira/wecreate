@@ -43,7 +43,7 @@ export default async function ContactPage() {
       legalDocuments={content.legalDocuments}
     >
       <section className="wc-container pt-[clamp(28px,5vw,64px)] pb-section-sm">
-        <p className="m-0 mb-[22px] text-micro tracking-32 uppercase text-wc-muted-2">
+        <p className="m-0 mb-[22px] text-micro tracking-32 uppercase text-wc-text-muted">
           {contact.kicker}
         </p>
         <SplitHeading
@@ -51,7 +51,7 @@ export default async function ContactPage() {
           headline={contact.headline}
           className="m-0 max-w-[22ch] font-display text-page-title font-medium"
         />
-        <p className="mt-heading-gap max-w-[52ch] text-body-lg font-light text-wc-soft">
+        <p className="mt-heading-gap max-w-[52ch] text-body-lg font-light text-wc-text-soft">
           {contact.responseExpectation}
         </p>
       </section>

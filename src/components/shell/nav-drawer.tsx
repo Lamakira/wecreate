@@ -46,13 +46,13 @@ export function NavDrawer({ isOpen, onClose, settings }: NavDrawerProps) {
           {settings.navigation.map((link) => {
             const isCurrent = isCurrentPath(pathname, link.href);
             return (
-              <li key={link.href} className="border-b border-wc-line-darker">
+              <li key={link.href} className="border-b border-wc-line-faint">
                 <Link
                   href={link.href}
                   onClick={onClose}
                   aria-current={isCurrent ? "page" : undefined}
-                  className={`block py-5 font-display text-[26px] transition-colors duration-300 hover:text-wc-white ${
-                    isCurrent ? "text-wc-white" : "text-wc-soft"
+                  className={`block py-5 font-display text-[26px] transition-colors duration-300 hover:text-wc-text ${
+                    isCurrent ? "text-wc-text" : "text-wc-text-soft"
                   }`}
                 >
                   {link.label}

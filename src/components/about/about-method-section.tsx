@@ -10,19 +10,19 @@ interface AboutMethodSectionProps {
  * How WeCreate works, on the light band.
  *
  * An ordered list, because the four steps happen in that order and a visitor
- * who cannot see the numbers still needs to know it. `data-surface="light"`
- * flips the focus ring to black so keyboard focus stays visible here.
+ * who cannot see the numbers still needs to know it. `data-surface="inverse"`
+ * flips the focus ring so keyboard focus stays visible here.
  */
 export function AboutMethodSection({ method }: AboutMethodSectionProps) {
   return (
     <section
       aria-labelledby="about-method-heading"
-      data-surface="light"
-      className="bg-wc-white py-section-sm text-wc-pure"
+      data-surface="inverse"
+      className="bg-wc-inverse py-section-sm text-wc-inverse-text"
     >
       <div className="wc-container">
         <Reveal>
-          <p className="m-0 mb-3.5 text-micro tracking-30 uppercase text-wc-muted-on-light">
+          <p className="m-0 mb-3.5 text-micro tracking-30 uppercase text-wc-inverse-muted">
             {method.kicker}
           </p>
           <h2
@@ -38,15 +38,15 @@ export function AboutMethodSection({ method }: AboutMethodSectionProps) {
             <Reveal
               as="li"
               key={step.key}
-              className="border-t border-wc-pure pt-5"
+              className="border-t border-wc-inverse-text pt-5"
             >
-              <p className="m-0 mb-3 text-micro tracking-24 text-wc-muted-on-light">
+              <p className="m-0 mb-3 text-micro tracking-24 text-wc-inverse-muted">
                 {formatStepNumber(index)}
               </p>
               <h3 className="m-0 mb-2.5 font-display text-[24px] font-medium">
                 {step.title}
               </h3>
-              <p className="m-0 text-body-sm font-light text-wc-ink">
+              <p className="m-0 text-body-sm font-light text-wc-inverse-ink">
                 {step.description}
               </p>
             </Reveal>

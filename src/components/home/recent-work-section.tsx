@@ -78,12 +78,12 @@ export function RecentWorkSection({ section, projects }: RecentWorkSectionProps)
                   mobile connection stays. The card leads to the same project. */}
               <Link
                 href={`/portfolio/${project.slug}`}
-                className="group block h-full overflow-hidden border border-wc-line-dark bg-wc-surface-2"
+                className="group block h-full overflow-hidden border border-wc-line bg-wc-surface-2"
               >
                 <ProjectPoster project={project} isInteractive={false} />
                 <div className="px-4 pt-3.5 pb-[18px]">
                   <p className="m-0 mb-[5px] text-meta font-medium">{project.title}</p>
-                  <p className="m-0 text-micro tracking-18 uppercase text-wc-muted-2">
+                  <p className="m-0 text-micro tracking-18 uppercase text-wc-text-muted">
                     {project.client} · {project.projectType}
                   </p>
                 </div>

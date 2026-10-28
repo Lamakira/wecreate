@@ -31,18 +31,18 @@ export function CommerceField({ label, name, hint, ...input }: FieldProps) {
       {/* The hint sits outside the label deliberately: inside it, it would be
           read out as part of the field's name every time focus lands there. */}
       <label className="block">
-        <span className="block text-micro uppercase tracking-24 text-wc-muted-2">
+        <span className="block text-micro uppercase tracking-24 text-wc-text-muted">
           {label}
         </span>
         <input
           {...input}
           name={name}
           aria-describedby={hint ? hintId : undefined}
-          className="mt-2 w-full border border-wc-border bg-wc-surface px-3 py-2 text-body text-wc-white file:mr-3 file:border-0 file:bg-transparent file:text-body-sm file:text-wc-soft"
+          className="mt-2 w-full border border-wc-line-strong bg-wc-surface px-3 py-2 text-body text-wc-text file:mr-3 file:border-0 file:bg-transparent file:text-body-sm file:text-wc-text-soft"
         />
       </label>
       {hint ? (
-        <p id={hintId} className="mt-2 mb-0 text-body-sm font-light text-wc-muted-2">
+        <p id={hintId} className="mt-2 mb-0 text-body-sm font-light text-wc-text-muted">
           {hint}
         </p>
       ) : null}
@@ -66,11 +66,11 @@ export function CommercePanel({
   return (
     <section
       data-testid={testId}
-      className="border border-wc-line-dark bg-wc-surface-2 p-5"
+      className="border border-wc-line bg-wc-surface-2 p-5"
     >
       <h2 className="m-0 text-product-title font-light">{title}</h2>
       {description ? (
-        <p className="mt-2 mb-0 max-w-prose text-body-sm font-light text-wc-muted-2">
+        <p className="mt-2 mb-0 max-w-prose text-body-sm font-light text-wc-text-muted">
           {description}
         </p>
       ) : null}
@@ -97,8 +97,8 @@ export function CommerceNotice({ message }: { message: string | undefined }) {
       data-tone={resolved.tone}
       className={
         resolved.tone === "error"
-          ? "m-0 mb-8 border border-wc-error-on-dark px-4 py-3 text-body font-light text-wc-error-on-dark"
-          : "m-0 mb-8 border border-wc-border px-4 py-3 text-body font-light text-wc-soft"
+          ? "m-0 mb-8 border border-wc-error px-4 py-3 text-body font-light text-wc-error"
+          : "m-0 mb-8 border border-wc-line-strong px-4 py-3 text-body font-light text-wc-text-soft"
       }
     >
       {resolved.text}

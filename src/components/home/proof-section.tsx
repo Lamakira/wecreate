@@ -6,21 +6,21 @@ interface ProofSectionProps {
 }
 
 /**
- * The white band. `data-surface="light"` flips the focus ring to black so
- * keyboard focus stays visible against the inverted background.
+ * The inverted band — white in Vidéographie. `data-surface="inverse"` flips the
+ * focus ring to the band's own text colour so keyboard focus stays visible on it.
  */
 export function ProofSection({ section }: ProofSectionProps) {
   return (
     <section
       aria-labelledby="proof-heading"
-      data-surface="light"
-      className="bg-wc-white py-proof text-wc-pure"
+      data-surface="inverse"
+      className="bg-wc-inverse py-proof text-wc-inverse-text"
     >
       <div className="wc-container">
         <Reveal>
           <h2
             id="proof-heading"
-            className="m-0 mb-[clamp(32px,5vw,56px)] text-micro tracking-30 uppercase font-normal text-wc-muted-on-light"
+            className="m-0 mb-[clamp(32px,5vw,56px)] text-micro tracking-30 uppercase font-normal text-wc-inverse-muted"
           >
             {section.kicker}
           </h2>
@@ -30,12 +30,12 @@ export function ProofSection({ section }: ProofSectionProps) {
             <Reveal
               as="li"
               key={point.key}
-              className="border-t border-wc-line-light pt-[22px]"
+              className="border-t border-wc-inverse-line pt-[22px]"
             >
               <p className="m-0 mb-2.5 font-display text-proof font-medium">
                 {point.figure}
               </p>
-              <p className="m-0 text-body-sm font-light text-wc-ink">
+              <p className="m-0 text-body-sm font-light text-wc-inverse-ink">
                 {point.description}
               </p>
             </Reveal>

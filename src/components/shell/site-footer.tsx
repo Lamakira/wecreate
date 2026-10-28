@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { enquiryDestination } from "@/components/primitives/cta-link";
+import { brandMark, type Discipline } from "@/discipline";
 import type { EffectiveLegalRevision } from "@/managed-content/legal";
 import type { SiteSettings } from "@/managed-content/types";
 
@@ -15,30 +16,35 @@ interface SiteFooterProps {
    * page, and so has no link here either.
    */
   legalLinks: EffectiveLegalRevision[];
+  discipline: Discipline;
 }
 
-export function SiteFooter({ settings, legalLinks }: SiteFooterProps) {
+export function SiteFooter({
+  settings,
+  legalLinks,
+  discipline,
+}: SiteFooterProps) {
   const { contact, footer, socialAccounts, navigation, brandName } = settings;
   const whatsappEnquiry = enquiryDestination(contact.whatsappUrl);
 
   return (
-    <footer className="border-t border-wc-line-dark bg-wc-pure pt-section-xs pb-[34px]">
+    <footer className="border-t border-wc-line bg-wc-ground-deep pt-section-xs pb-[34px]">
       <div className="wc-container grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-[clamp(28px,4vw,56px)]">
         <div>
           <Image
-            src="/brand/logo-blanc.svg"
+            src={brandMark(discipline).wordmark}
             alt={brandName}
             width={196}
             height={26}
             className="mb-[18px] h-[26px] w-auto"
           />
-          <p className="m-0 max-w-[26ch] font-display text-baseline italic text-wc-soft">
+          <p className="m-0 max-w-[26ch] font-display text-baseline italic text-wc-text-soft">
             {footer.baseline}
           </p>
         </div>
 
         <nav aria-label="Navigation du pied de page">
-          <p className="m-0 mb-4 text-micro tracking-26 uppercase text-wc-muted-2">
+          <p className="m-0 mb-4 text-micro tracking-26 uppercase text-wc-text-muted">
             {footer.navigationHeading}
           </p>
           <ul className="flex list-none flex-col items-start gap-2.5 p-0">
@@ -46,7 +52,7 @@ export function SiteFooter({ settings, legalLinks }: SiteFooterProps) {
               <li key={link.href}>
                 <Link
                   href={link.href}
-                  className="text-meta font-light text-wc-soft transition-colors duration-300 hover:text-wc-white"
+                  className="text-meta font-light text-wc-text-soft transition-colors duration-300 hover:text-wc-text"
                 >
                   {link.label}
                 </Link>
@@ -56,17 +62,17 @@ export function SiteFooter({ settings, legalLinks }: SiteFooterProps) {
         </nav>
 
         <div>
-          <p className="m-0 mb-4 text-micro tracking-26 uppercase text-wc-muted-2">
+          <p className="m-0 mb-4 text-micro tracking-26 uppercase text-wc-text-muted">
             {footer.contactHeading}
           </p>
-          <ul className="flex list-none flex-col items-start gap-2.5 p-0 text-meta font-light text-wc-soft">
+          <ul className="flex list-none flex-col items-start gap-2.5 p-0 text-meta font-light text-wc-text-soft">
             <li>
               <a
                 href={contact.whatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 {...(whatsappEnquiry ? { "data-enquiry": whatsappEnquiry } : undefined)}
-                className="transition-colors duration-300 hover:text-wc-white"
+                className="transition-colors duration-300 hover:text-wc-text"
               >
                 {contact.whatsappLabel}
                 <span className="sr-only"> (nouvel onglet)</span>
@@ -75,7 +81,7 @@ export function SiteFooter({ settings, legalLinks }: SiteFooterProps) {
             <li>
               <a
                 href={`mailto:${contact.email}`}
-                className="transition-colors duration-300 hover:text-wc-white"
+                className="transition-colors duration-300 hover:text-wc-text"
               >
                 {contact.email}
               </a>
@@ -85,17 +91,17 @@ export function SiteFooter({ settings, legalLinks }: SiteFooterProps) {
         </div>
 
         <div>
-          <p className="m-0 mb-4 text-micro tracking-26 uppercase text-wc-muted-2">
+          <p className="m-0 mb-4 text-micro tracking-26 uppercase text-wc-text-muted">
             {footer.socialHeading}
           </p>
-          <ul className="flex list-none flex-col items-start gap-2.5 p-0 text-meta font-light text-wc-soft">
+          <ul className="flex list-none flex-col items-start gap-2.5 p-0 text-meta font-light text-wc-text-soft">
             {socialAccounts.map((account) => (
               <li key={account.url}>
                 <a
                   href={account.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="transition-colors duration-300 hover:text-wc-white"
+                  className="transition-colors duration-300 hover:text-wc-text"
                 >
                   {account.label}
                   <span className="sr-only"> (nouvel onglet)</span>
@@ -106,7 +112,7 @@ export function SiteFooter({ settings, legalLinks }: SiteFooterProps) {
         </div>
       </div>
 
-      <div className="wc-container mt-[clamp(36px,5vw,64px)] border-t border-wc-line-dark pt-[22px]">
+      <div className="wc-container mt-[clamp(36px,5vw,64px)] border-t border-wc-line pt-[22px]">
         {legalLinks.length > 0 ? (
           <nav aria-label="Informations légales" className="mb-[18px]">
             <ul className="flex list-none flex-wrap gap-x-6 gap-y-2.5 p-0">
@@ -114,7 +120,7 @@ export function SiteFooter({ settings, legalLinks }: SiteFooterProps) {
                 <li key={legal.kind}>
                   <Link
                     href={legal.path}
-                    className="border-b border-wc-muted pb-px text-micro tracking-20 uppercase text-wc-muted-2 transition-colors duration-300 hover:border-wc-white hover:text-wc-white"
+                    className="border-b border-wc-rule pb-px text-micro tracking-20 uppercase text-wc-text-muted transition-colors duration-300 hover:border-wc-text hover:text-wc-text"
                   >
                     {legal.title}
                   </Link>
@@ -125,10 +131,10 @@ export function SiteFooter({ settings, legalLinks }: SiteFooterProps) {
         ) : null}
 
         <div className="flex flex-wrap justify-between gap-4">
-          <p className="m-0 text-micro tracking-20 uppercase text-wc-muted-2">
+          <p className="m-0 text-micro tracking-20 uppercase text-wc-text-muted">
             {footer.legalLine}
           </p>
-          <p className="m-0 text-micro tracking-20 uppercase text-wc-muted-2">
+          <p className="m-0 text-micro tracking-20 uppercase text-wc-text-muted">
             {settings.positioningLine}
           </p>
         </div>
