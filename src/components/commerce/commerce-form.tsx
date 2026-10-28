@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ChangeEvent, ReactNode } from "react";
 
 import { commerceMessage } from "@/commerce/messages";
 
@@ -15,16 +15,35 @@ import { commerceMessage } from "@/commerce/messages";
 interface FieldProps {
   label: string;
   name: string;
-  type?: "text" | "email" | "password" | "file";
+  type?: "text" | "email" | "password" | "file" | "tel";
   required?: boolean;
   autoComplete?: string;
   inputMode?: "numeric";
   accept?: string;
   hint?: string;
+  /** What a form echoes back after a refusal, so nobody retypes it. */
+  defaultValue?: string;
+  maxLength?: number;
+  /** The id of a `<datalist>` of suggestions. */
+  list?: string;
+  /** Held in React state by a field that is not part of any form. */
+  onChange?: (event: ChangeEvent<HTMLInputElement>) => void;
+  /** Why the server refused this field; marks it invalid and is read out. */
+  error?: string;
 }
 
-export function CommerceField({ label, name, hint, ...input }: FieldProps) {
+export function CommerceField({
+  label,
+  name,
+  hint,
+  error,
+  ...input
+}: FieldProps) {
   const hintId = `${name}-hint`;
+  const errorId = `${name}-error`;
+  const describedBy = [error ? errorId : null, hint ? hintId : null]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <div>
@@ -37,10 +56,16 @@ export function CommerceField({ label, name, hint, ...input }: FieldProps) {
         <input
           {...input}
           name={name}
-          aria-describedby={hint ? hintId : undefined}
+          aria-describedby={describedBy || undefined}
+          aria-invalid={error ? true : undefined}
           className="mt-2 w-full border border-wc-line-strong bg-wc-surface px-3 py-2 text-body text-wc-text file:mr-3 file:border-0 file:bg-transparent file:text-body-sm file:text-wc-text-soft"
         />
       </label>
+      {error ? (
+        <p id={errorId} className="mt-2 mb-0 text-body-sm text-wc-error">
+          {error}
+        </p>
+      ) : null}
       {hint ? (
         <p id={hintId} className="mt-2 mb-0 text-body-sm font-light text-wc-text-muted">
           {hint}

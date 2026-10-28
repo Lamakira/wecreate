@@ -833,8 +833,11 @@ src/commerce/
 
 `/commerce` is where a Commerce Operator works. It is not part of the website:
 no header, no footer, no cart, and `noindex` on every deployment including
-production. It holds Digital Product commerce and nothing else — Service
-Enquiries and Calendly bookings are not there and never will be (ADR-0006).
+production. It holds Digital Product commerce — Service Enquiries and Calendly
+bookings are not there and never will be (ADR-0006) — and one tool that is not
+commerce and stores nothing: `/commerce/questionnaire`, where the team makes a
+Branding client's questionnaire link (ADR-0013, and *The brand questionnaire*
+below).
 
 **Two proofs, every time.** Each staff member has their own Supabase Auth
 account and their own authenticator. That nobody shares an account is WeCreate's
@@ -1116,8 +1119,24 @@ spelled out at the top of
 [`src/brand-questionnaire/invitation.ts`](./src/brand-questionnaire/invitation.ts),
 and a link stays valid for 30 days. It needs `WECREATE_QUESTIONNAIRE_SECRET`
 (see *Environment*); rotating the secret invalidates every link already sent.
-Issue #63 builds the staff tool that makes links, on `sealInvitation` and
-`invitationUrl` and on nothing else.
+**Making a link.** `/commerce/questionnaire` is where WeCreate's team makes one
+(issue #63): the client's name, the brand (optional), the Branding pack and
+WeCreate's reference go in, and the personal link comes out, with a prefilled
+WhatsApp message, a prefilled email and a copy button. It is built on
+`sealInvitation` and `invitationUrl` and on nothing else, so the tool and the
+questionnaire cannot disagree about the format.
+
+It sits behind the staff sign-in rather than a shared password (ADR-0013): any
+staff member with their own account and authenticator may use it, Commerce
+Operator or not, because making a link is Branding work and not commerce
+administration. A Content Editor refused by the commerce pages is pointed to it.
+
+The tool stores nothing. The four fields go to the server once, are sealed into
+the link and forgotten — no database row, no audit entry, no log, no cookie, no
+browser storage. The client's WhatsApp number and email address, which only
+shape the two prefilled messages, never leave the staff member's browser. The
+message is sent from the staff member's own WhatsApp or mail client, not by the
+site.
 
 **What is emailed, and to whom.** One message to WeCreate's contact address
 (`settings.contact.email`, from Managed Content) with the client's address as
