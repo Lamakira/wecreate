@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 
+import { DISCIPLINES, disciplinePath } from "@/discipline";
 import {
   readBoutique,
   readEffectiveLegalTerms,
@@ -11,9 +12,10 @@ import { isIndexablePath, siteUrl } from "@/site-config";
 
 /**
  * The crawlable public routes, taken from the navigation an editor maintains
- * so the sitemap cannot drift from the site's own menu, plus one entry per
- * published Portfolio Project, per Digital Product on offer and per legal
- * document in force.
+ * so the sitemap cannot drift from the site's own menu, plus each Discipline's
+ * homepage when the menu does not already list it (so `/` is not duplicated),
+ * one entry per published Portfolio Project, per Digital Product on offer and
+ * per legal document in force.
  *
  * The projects come through the same publication gate as the pages themselves,
  * so an unfinished or unauthorised one is never advertised to a crawler. The
@@ -40,8 +42,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: link.href === "/" ? 1 : 0.7,
     }));
 
+  // Branding and Site web have homepages of their own that the menu need not
+  // link to; `/` is Vidéographie's and is usually in the menu already.
+  const listed = new Set(pages.map((page) => page.url));
+  const disciplineHomepages = DISCIPLINES.map((discipline) =>
+    new URL(disciplinePath(discipline), origin).toString(),
+  )
+    .filter((url) => !listed.has(url))
+    .map((url) => ({
+      url,
+      changeFrequency: "monthly" as const,
+      priority: 0.9,
+    }));
+
   return [
     ...pages,
+    ...disciplineHomepages,
     ...projects.map((project) => ({
       url: new URL(`/portfolio/${project.slug}`, origin).toString(),
       changeFrequency: "yearly" as const,

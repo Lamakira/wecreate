@@ -813,7 +813,12 @@ export interface LegalDocument {
 /** Everything the public site needs from Managed Content in one place. */
 export interface SiteContent {
   settings: SiteSettings;
+  /** Vidéographie's homepage, which is also the site's `/`. */
   homePage: HomePage;
+  /** Branding's own homepage, at `/branding`. */
+  brandingHomePage: HomePage;
+  /** Site web's own homepage, at `/site-web`. */
+  siteWebHomePage: HomePage;
   portfolio: PortfolioContent;
   boutique: BoutiqueContent;
   services: ServicesContent;

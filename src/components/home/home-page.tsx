@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { draftMode } from "next/headers";
 
 import { BrandQuoteSection } from "@/components/home/brand-quote-section";
@@ -9,8 +10,11 @@ import { RecentWorkSection } from "@/components/home/recent-work-section";
 import { ShopPreviewSection } from "@/components/home/shop-preview-section";
 import { UniversesSection } from "@/components/home/universes-section";
 import { SitePage } from "@/components/shell/site-page";
-import type { Discipline } from "@/discipline";
+import { DEFAULT_DISCIPLINE, disciplinePath, type Discipline } from "@/discipline";
 import { gateBoutique, gatePortfolio, readHome } from "@/managed-content";
+import { homePageOf } from "@/managed-content/home";
+import { projectsInDiscipline } from "@/managed-content/portfolio";
+import { pageMetadata } from "@/seo/page-metadata";
 
 /**
  * The homepage.
@@ -19,12 +23,13 @@ import { gateBoutique, gatePortfolio, readHome } from "@/managed-content";
  * says it is visible. The order is the design's and is not editable: this is a
  * composed page, not a page builder.
  *
- * Rendered in the Discipline it is given. Today every Discipline shows the same
- * blocks; giving each its own is issue #59.
+ * Rendered in the Discipline it is given, and each Discipline has its own
+ * blocks: Vidéographie's, Branding's and Site web's are three documents in the
+ * Studio with the same fixed sections (issue #59).
  */
 export async function HomePage({ discipline }: { discipline: Discipline }) {
-  const content = await readHome();
-  const { homePage } = content;
+  const content = await readHome(discipline);
+  const homePage = homePageOf(content, discipline);
   const { isEnabled: isPreview } = await draftMode();
   // The reel is the portfolio's own list, gated the same way, so the homepage
   // cannot show work the portfolio would refuse to publish. The Boutique teaser
@@ -39,7 +44,7 @@ export async function HomePage({ discipline }: { discipline: Discipline }) {
       legalDocuments={content.legalDocuments}
       discipline={discipline}
     >
-      <HeroSection hero={homePage.hero} />
+      <HeroSection hero={homePage.hero} discipline={discipline} />
       {homePage.positioningMarquee.isVisible ? (
         <PositioningMarquee marquee={homePage.positioningMarquee} />
       ) : null}
@@ -47,7 +52,10 @@ export async function HomePage({ discipline }: { discipline: Discipline }) {
         <UniversesSection section={homePage.universes} />
       ) : null}
       {homePage.recentWork.isVisible ? (
-        <RecentWorkSection section={homePage.recentWork} projects={projects} />
+        <RecentWorkSection
+          section={homePage.recentWork}
+          projects={projectsInDiscipline(projects, discipline)}
+        />
       ) : null}
       {homePage.proof.isVisible ? <ProofSection section={homePage.proof} /> : null}
       {homePage.shopPreview.isVisible ? (
@@ -64,4 +72,31 @@ export async function HomePage({ discipline }: { discipline: Discipline }) {
       ) : null}
     </SitePage>
   );
+}
+
+/**
+ * The metadata of a Discipline's homepage.
+ *
+ * Vidéographie's title stays the brand's own, untemplated, exactly as `/` has
+ * always had it — Next.js would not apply a same-segment template to it either.
+ * Branding and Site web carry the CMS title template like any other page.
+ */
+export async function homePageMetadata(
+  discipline: Discipline,
+): Promise<Metadata> {
+  const content = await readHome(discipline);
+  const { seo } = homePageOf(content, discipline);
+
+  return {
+    ...pageMetadata(
+      content.settings.seo,
+      {
+        title: seo.title,
+        description: seo.description,
+        imageUrl: seo.openGraphImageUrl,
+      },
+      { template: discipline !== DEFAULT_DISCIPLINE },
+    ),
+    alternates: { canonical: disciplinePath(discipline) },
+  };
 }

@@ -2,11 +2,14 @@ import "server-only";
 
 import { cacheLife, cacheTag } from "next/cache";
 
+import type { Discipline } from "@/discipline";
+
 import { getManagedContentProvider } from "./provider";
 import {
   ABOUT_TAG,
   ALL_MANAGED_CONTENT_TAGS,
   BOUTIQUE_PAGE_TAG,
+  BRANDING_HOME_TAG,
   CONTACT_TAG,
   DIGITAL_PRODUCTS_TAG,
   HOME_TAG,
@@ -15,6 +18,7 @@ import {
   PORTFOLIO_PROJECTS_TAG,
   SERVICES_TAG,
   SETTINGS_TAG,
+  SITE_WEB_HOME_TAG,
 } from "./tag";
 import type { SiteContent } from "./types";
 
@@ -59,14 +63,23 @@ async function readPublished(tags: readonly string[]): Promise<SiteContent> {
 /** Header and footer come from settings and legal on every entry. */
 const CHROME_TAGS = [SETTINGS_TAG, LEGAL_TAG] as const;
 
+/** The tag of each Discipline's own homepage document. */
+const HOME_TAGS: Record<Discipline, string> = {
+  videographie: HOME_TAG,
+  branding: BRANDING_HOME_TAG,
+  "site-web": SITE_WEB_HOME_TAG,
+};
+
 /**
- * The homepage. Its recent-work reel is the portfolio's own project list and
- * its shop teaser is the catalogue's own products, so both of those expire it;
- * the portfolio and boutique page copy does not appear on it.
+ * A Discipline's homepage. Each has a document of its own, so publishing one
+ * leaves the other two cached. Every one of them carries the projects tag —
+ * its reel is the portfolio's own list for that Discipline — and the products
+ * tag, because each shows the Boutique teaser; the portfolio and boutique page
+ * copy does not appear on any of them.
  */
-export function readPublishedHome(): Promise<SiteContent> {
+export function readPublishedHome(discipline: Discipline): Promise<SiteContent> {
   return readPublished([
-    HOME_TAG,
+    HOME_TAGS[discipline],
     PORTFOLIO_PROJECTS_TAG,
     DIGITAL_PRODUCTS_TAG,
     ...CHROME_TAGS,

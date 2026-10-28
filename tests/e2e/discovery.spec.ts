@@ -15,6 +15,8 @@ import { graphOfType, jsonLdGraphs, robotsMeta } from "./support/seo";
 
 const PUBLIC_VIEWS = [
   "/",
+  "/branding",
+  "/site-web",
   "/portfolio",
   "/services",
   "/boutique",
@@ -155,7 +157,7 @@ test.describe("Metadata and structured data", () => {
 });
 
 test.describe("Reflow", () => {
-  test("keeps the six public views readable at 320 CSS pixels", async ({
+  test("keeps every public view readable at 320 CSS pixels", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 320, height: 640 });

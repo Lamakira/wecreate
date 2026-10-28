@@ -51,9 +51,25 @@ export const structure: StructureResolver = (S) =>
     .title("Contenu WeCreate")
     .items([
       S.listItem()
-        .title("Page d'accueil")
+        .title("Accueil · Vidéographie")
         .id("homePage")
         .child(S.document().schemaType("homePage").documentId("homePage")),
+      S.listItem()
+        .title("Accueil · Branding")
+        .id("brandingHomePage")
+        .child(
+          S.document()
+            .schemaType("brandingHomePage")
+            .documentId("brandingHomePage"),
+        ),
+      S.listItem()
+        .title("Accueil · Site web")
+        .id("siteWebHomePage")
+        .child(
+          S.document()
+            .schemaType("siteWebHomePage")
+            .documentId("siteWebHomePage"),
+        ),
       S.listItem()
         .title("Projets")
         .id("portfolioProjects")

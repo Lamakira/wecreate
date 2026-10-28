@@ -186,6 +186,14 @@ test.describe("Scoped cache invalidation", () => {
     old: "Nous fabriquons des œuvres qui font vendre.",
     new: "Nous fabriquons des films qui font vendre.",
   };
+  const BRANDING_HEADLINE = {
+    old: "Une marque pensée pour bouger.",
+    new: "Une marque pensée pour durer.",
+  };
+  const SITE_WEB_HEADLINE = {
+    old: "Un site qui se regarde comme un film.",
+    new: "Un site qui se lit comme un film.",
+  };
   // Neither title contains the other, so a substring match cannot confuse them.
   const PROJECT_TITLE = { old: "Résidence Aurora", new: "Aurora Révisée" };
   const PRODUCT_TITLE = {
@@ -201,6 +209,8 @@ test.describe("Scoped cache invalidation", () => {
     "/contact",
     "/portfolio",
     "/boutique",
+    "/branding",
+    "/site-web",
   ];
 
   type PageName =
@@ -209,7 +219,9 @@ test.describe("Scoped cache invalidation", () => {
     | "services"
     | "contact"
     | "portfolio"
-    | "boutique";
+    | "boutique"
+    | "branding"
+    | "siteWeb";
 
   const EVERY_PAGE: readonly PageName[] = [
     "home",
@@ -218,6 +230,8 @@ test.describe("Scoped cache invalidation", () => {
     "contact",
     "portfolio",
     "boutique",
+    "branding",
+    "siteWeb",
   ];
 
   async function expectText(
@@ -295,6 +309,22 @@ test.describe("Scoped cache invalidation", () => {
         await expectText(page, PRODUCT_TITLE.old, !isNew);
       },
     },
+    branding: {
+      path: "/branding",
+      async check(page, isNew) {
+        await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+          isNew ? BRANDING_HEADLINE.new : BRANDING_HEADLINE.old,
+        );
+      },
+    },
+    siteWeb: {
+      path: "/site-web",
+      async check(page, isNew) {
+        await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+          isNew ? SITE_WEB_HEADLINE.new : SITE_WEB_HEADLINE.old,
+        );
+      },
+    },
   };
 
   /**
@@ -328,6 +358,8 @@ test.describe("Scoped cache invalidation", () => {
       services: { kicker: SERVICES_KICKER.new },
       contact: { kicker: CONTACT_KICKER.new },
       homePage: { hero: { headline: { emphasis: "films" } } },
+      brandingHomePage: { hero: { headline: { emphasis: "durer" } } },
+      siteWebHomePage: { hero: { headline: { emphasis: "lit" } } },
       portfolio: {
         kicker: "Portfolio révisé",
         projects: SAMPLE_PORTFOLIO_PROJECTS.map((project, index) =>
@@ -356,6 +388,8 @@ test.describe("Scoped cache invalidation", () => {
   test.describe("a cold render costs exactly one provider round trip", () => {
     const routes: [string, string][] = [
       ["the homepage", "/"],
+      ["the Branding homepage", "/branding"],
+      ["the Site web homepage", "/site-web"],
       ["About", "/a-propos"],
       ["Services", "/services"],
       ["Contact", "/contact"],
@@ -394,16 +428,21 @@ test.describe("Scoped cache invalidation", () => {
   test.describe("a publish expires only what its document type feeds", () => {
     // Each type, with the pages whose entry it must expire. The homepage
     // shows the projects and the products, so those two expire it as well;
-    // the portfolio and Boutique page copy does not appear there.
+    // the portfolio and Boutique page copy does not appear there. The Branding
+    // and Site web homepages carry the same reel and Boutique teaser, so they
+    // expire with those two too, but each is otherwise expired only by its own
+    // document type.
     const scoped: [string, readonly PageName[]][] = [
       ["aboutPage", ["about"]],
       ["servicesPage", ["services"]],
       ["contactPage", ["contact"]],
       ["homePage", ["home"]],
       ["portfolioPage", ["portfolio"]],
-      ["portfolioProject", ["portfolio", "home"]],
+      ["brandingHomePage", ["branding"]],
+      ["siteWebHomePage", ["siteWeb"]],
+      ["portfolioProject", ["portfolio", "home", "branding", "siteWeb"]],
       ["boutiquePage", ["boutique"]],
-      ["digitalProduct", ["boutique", "home"]],
+      ["digitalProduct", ["boutique", "home", "branding", "siteWeb"]],
     ];
 
     for (const [documentType, refreshed] of scoped) {

@@ -3,7 +3,7 @@ import type { SchemaTypeDefinition } from "sanity";
 import { aboutPage } from "./about-page";
 import { boutiquePage, digitalProduct } from "./boutique";
 import { contactPage } from "./contact-page";
-import { homePage } from "./home-page";
+import { brandingHomePage, homePage, siteWebHomePage } from "./home-page";
 import { legalDocument, legalRevision, legalSection } from "./legal";
 import { objectTypes } from "./objects";
 import { portfolioPage, portfolioProject } from "./portfolio";
@@ -26,6 +26,8 @@ import { siteSettings } from "./site-settings";
 export const SINGLETON_TYPES = [
   "siteSettings",
   "homePage",
+  "brandingHomePage",
+  "siteWebHomePage",
   "portfolioPage",
   "boutiquePage",
   "servicesPage",
@@ -37,6 +39,8 @@ export const SINGLETON_TYPES = [
 export const schemaTypes: SchemaTypeDefinition[] = [
   siteSettings,
   homePage,
+  brandingHomePage,
+  siteWebHomePage,
   portfolioPage,
   portfolioProject,
   boutiquePage,

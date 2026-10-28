@@ -332,7 +332,12 @@
  * A page declares its Discipline with `data-discipline` (`SitePage` puts it on
  * `<main>`), and the theme applies to the whole document from the root — so
  * the body, the header, the footer, the grain and the drawers all follow it,
- * not only what sits inside `<main>`. Vidéographie is the default above and
+ * not only what sits inside `<main>`. Once hydrated, the page on screen also
+ * claims the root itself (`DisciplineRoot`), and that claim wins: a page the
+ * visitor has left stays in the document, hidden, and its `data-discipline`
+ * must not theme the page they moved to. The `:has` form covers the first
+ * paint and a visit without JavaScript, when the document holds one page
+ * only. Vidéographie is the default above and
  * needs no block of its own.
  *
  * The values start from the v2 handoff
@@ -351,7 +356,8 @@
  * still baseline gradient underneath, rewritten here too.
  * ------------------------------------------------------------------------- */
 
-:root:has([data-discipline="branding"]) {
+:root[data-discipline="branding"],
+:root:not([data-discipline]):has([data-discipline="branding"]) {
   --color-wc-ground: #efe8dc;
   --color-wc-ground-deep: #e9e1d3;
   --color-wc-surface: #e5dccc;
@@ -389,7 +395,8 @@
   --wc-hero-silk-c: #fffaf2;
 }
 
-:root:has([data-discipline="site-web"]) {
+:root[data-discipline="site-web"],
+:root:not([data-discipline]):has([data-discipline="site-web"]) {
   --color-wc-ground: #070d1f;
   --color-wc-ground-deep: #050a18;
   --color-wc-surface: #0e1630;

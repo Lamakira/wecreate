@@ -4,6 +4,8 @@ import { cacheLife, cacheTag } from "next/cache";
 import { draftMode } from "next/headers";
 import { cache } from "react";
 
+import { DEFAULT_DISCIPLINE, type Discipline } from "@/discipline";
+
 import { findAtSlug, findSlugRedirect, slugRedirects } from "./addresses";
 import { isDiscoverable } from "./digital-products";
 import {
@@ -72,8 +74,13 @@ export async function readChrome(): Promise<SiteContent> {
  * About cannot drop Services. Header, footer, metadata and the page body share
  * that one cached fetch — a cold render is one provider round trip.
  */
-export async function readHome(): Promise<SiteContent> {
-  return publishedOrDraft(readPublishedHome, (content) => content);
+export async function readHome(
+  discipline: Discipline = DEFAULT_DISCIPLINE,
+): Promise<SiteContent> {
+  return publishedOrDraft(
+    () => readPublishedHome(discipline),
+    (content) => content,
+  );
 }
 
 export async function readAboutPage(): Promise<SiteContent> {

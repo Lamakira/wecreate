@@ -36,6 +36,51 @@ const PLAYBACK_ASSOCIATION = `{
 }`;
 
 /**
+ * A homepage document's projection. The three Disciplines' homepages are
+ * documents of different types with identical fields, so they share it.
+ */
+const HOME_PAGE = `{
+  seo{title, description, "openGraphImageUrl": openGraphImage.asset->url},
+  hero{
+    kicker,
+    headline${SPLIT_HEADLINE},
+    subtitle,
+    primaryCta${CALL_TO_ACTION},
+    secondaryCta${CALL_TO_ACTION}
+  },
+  positioningMarquee{isVisible, text},
+  universes{
+    isVisible,
+    title,
+    kicker,
+    universes[]{
+      "key": coalesce(key.current, _key),
+      kicker,
+      title,
+      description,
+      linkLabel,
+      href,
+      media${MEDIA_FRAME}
+    }
+  },
+  recentWork{isVisible, headline${SPLIT_HEADLINE}, link${CALL_TO_ACTION}, emptyStateText},
+  proof{
+    isVisible,
+    kicker,
+    points[]{"key": _key, figure, description}
+  },
+  shopPreview{isVisible, title, link${CALL_TO_ACTION}, linkLabel, emptyStateText},
+  brandQuote{isVisible, quote, attribution},
+  finalCta{
+    isVisible,
+    headline${SPLIT_HEADLINE},
+    subtitle,
+    primaryCta${CALL_TO_ACTION},
+    secondaryCta${CALL_TO_ACTION}
+  }
+}`;
+
+/**
  * Everything the public site reads, in one round trip.
  *
  * Fields absent from the dataset come back as `null` and are filled in from
@@ -67,46 +112,9 @@ export const SITE_CONTENT_QUERY = defineQuery(`{
       "openGraphImageUrl": openGraphImage.asset->url
     }
   },
-  "homePage": *[_type == "homePage"][0]{
-    seo{title, description, "openGraphImageUrl": openGraphImage.asset->url},
-    hero{
-      kicker,
-      headline${SPLIT_HEADLINE},
-      subtitle,
-      primaryCta${CALL_TO_ACTION},
-      secondaryCta${CALL_TO_ACTION}
-    },
-    positioningMarquee{isVisible, text},
-    universes{
-      isVisible,
-      title,
-      kicker,
-      universes[]{
-        "key": coalesce(key.current, _key),
-        kicker,
-        title,
-        description,
-        linkLabel,
-        href,
-        media${MEDIA_FRAME}
-      }
-    },
-    recentWork{isVisible, headline${SPLIT_HEADLINE}, link${CALL_TO_ACTION}, emptyStateText},
-    proof{
-      isVisible,
-      kicker,
-      points[]{"key": _key, figure, description}
-    },
-    shopPreview{isVisible, title, link${CALL_TO_ACTION}, linkLabel, emptyStateText},
-    brandQuote{isVisible, quote, attribution},
-    finalCta{
-      isVisible,
-      headline${SPLIT_HEADLINE},
-      subtitle,
-      primaryCta${CALL_TO_ACTION},
-      secondaryCta${CALL_TO_ACTION}
-    }
-  },
+  "homePage": *[_type == "homePage"][0]${HOME_PAGE},
+  "brandingHomePage": *[_type == "brandingHomePage"][0]${HOME_PAGE},
+  "siteWebHomePage": *[_type == "siteWebHomePage"][0]${HOME_PAGE},
   "boutiquePage": *[_type == "boutiquePage"][0]{
     seo{title, description, "openGraphImageUrl": openGraphImage.asset->url},
     kicker,

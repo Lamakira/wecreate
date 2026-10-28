@@ -11,12 +11,14 @@ import { SAMPLE_PORTFOLIO_PROJECTS } from "./support/sample-content";
  * Colour contrast is owned by `contrast.spec.ts`, which samples painted hero
  * pixels axe cannot see. Keyboard operation of drawers, filters, comparison
  * and legal history lives in those pages' own specs. This file is the axe
- * sweep across the six public views plus a dialog, a filter, a table and the
+ * sweep across the public views plus a dialog, a filter, a table and the
  * cart drawer — the representative states issue #16 asks for.
  */
 
 const PUBLIC_VIEWS = [
   "/",
+  "/branding",
+  "/site-web",
   "/portfolio",
   "/services",
   "/boutique",
