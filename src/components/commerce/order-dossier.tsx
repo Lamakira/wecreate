@@ -294,7 +294,7 @@ function BuyerPanel({
           data-testid="buyer-forgotten"
           className="m-0 text-body font-light text-wc-white"
         >
-          Ces coordonnées ont été oubliées à l'issue de la période de
+          Ces coordonnées ont été oubliées à l&apos;issue de la période de
           conservation.
         </p>
       ) : (
