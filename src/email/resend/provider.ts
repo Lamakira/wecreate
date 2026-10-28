@@ -62,6 +62,15 @@ export const resendEmailProvider: EmailProvider = {
         html: message.html,
         text: message.body,
         ...(message.replyTo ? { reply_to: [message.replyTo] } : {}),
+        ...(message.attachments?.length
+          ? {
+              attachments: message.attachments.map((attachment) => ({
+                filename: attachment.filename,
+                content: attachment.content,
+                content_type: attachment.contentType,
+              })),
+            }
+          : {}),
       }),
       signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
     }).catch((error: unknown) => {

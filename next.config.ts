@@ -176,6 +176,8 @@ const SENSITIVE_SOURCES = [
   "/commerce/:path*",
   "/studio",
   "/studio/:path*",
+  "/questionnaire",
+  "/questionnaire/:path*",
 ] as const;
 
 const nextConfig: NextConfig = {

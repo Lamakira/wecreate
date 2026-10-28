@@ -127,3 +127,14 @@ earlier one. It changes which file that buyer may open and never what their
 Order Snapshot recorded, so what was paid for and what has since been given
 stay separately answerable.
 _Avoid_: Re-issue the file, update the order's version, replace the deliverable
+
+**Brand Questionnaire**:
+The five-step questionnaire a Branding client fills after agreeing a pack. Its
+answers are emailed to WeCreate and to the client, and never stored.
+_Avoid_: Brief form, intake form, order form
+
+**Questionnaire Invitation**:
+The personal, expiring, encrypted link WeCreate's team sends a client that opens
+their Brand Questionnaire. It carries client, brand, pack and reference
+unreadably.
+_Avoid_: Questionnaire URL, magic link, account

@@ -8,8 +8,8 @@
  *
  * Three things are deliberately absent, and each is a decision issue #1 made:
  * there are no lists, no templates and no marketing of any kind — a purchase
- * never implies consent to be written to again; there is no attachment, because
- * a Paid Deliverable is reached through Order Access rather than mailed; and
+ * never implies consent to be written to again; no Paid Deliverable is ever
+ * attached, because it is reached through Order Access rather than mailed; and
  * there is no way to *ask* whether a message arrived. Delivery is the
  * provider's business, and a Fulfillment State records only what WeCreate could
  * observe: that the send was accepted, or that it was not.
@@ -55,11 +55,30 @@ export interface TransactionalEmail {
   /**
    * Where a reply goes when that is not the sender.
    *
-   * Absent for a receipt, whose reply address is the sender's own. The contact
-   * form sets it to the visitor, so WeCreate answers them by pressing Reply in
-   * its own inbox rather than by copying an address out of the body.
+   * Absent for a receipt, whose reply address is the sender's own. A message
+   * written *to* WeCreate on somebody's behalf — the contact form, a brand
+   * questionnaire — sets it to that somebody, so WeCreate answers them by
+   * pressing Reply in its own inbox rather than by copying an address out of
+   * the body.
    */
   replyTo?: string;
+  /**
+   * Files carried by the message itself.
+   *
+   * Never a Paid Deliverable, which is reached through Order Access and not
+   * mailed. These are files a client chose to send WeCreate — the images
+   * attached to a brand questionnaire — and the message is the only place they
+   * exist on WeCreate's side, because nothing about the questionnaire is
+   * stored (#55, decision 3).
+   */
+  attachments?: EmailAttachment[];
+}
+
+/** One attached file, its bytes in base64. */
+export interface EmailAttachment {
+  filename: string;
+  contentType: string;
+  content: string;
 }
 
 /**
