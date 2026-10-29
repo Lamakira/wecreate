@@ -153,9 +153,9 @@ is what keeps the approved design and its accessibility guarantees intact
 (ADR-0001), and it is enforced by the schema in `src/sanity/schema/`.
 
 Neither of the two list sections owns its list. *Travaux récents* is the first
-six published Portfolio Projects of that Discipline — only Vidéographie has any
-today, so Branding and Site web show their empty state until projects can belong
-to them (issue #60) — and *La boutique* is the first three Digital
+six published Portfolio Projects of that Discipline (a Discipline with none
+shows its empty state, never another Discipline's work, and the section's link
+opens the portfolio filtered to it) — and *La boutique* is the first three Digital
 Products an editor marked featured, so each is written once and appears in both
 places.
 
@@ -169,16 +169,39 @@ do ship — see below.
 ## Portfolio Projects and video
 
 A Portfolio Project is a client-approved body of work with its editorial
-context, its poster and its Playback Asset. Editors create them in the Studio;
-`/portfolio` lists them, filters them by universe and opens each one as a
+context and its poster. Editors create them in the Studio;
+`/portfolio` lists them, filters them by Discipline and, for films, by universe,
+and opens each one as a
 lightbox, and `/portfolio/[slug]` is the same project as a page of its own — the
 one a shared link, a crawler or a visitor without JavaScript arrives at.
+
+Each project belongs to one Discipline, chosen first in the Studio form. A
+**Vidéographie** project is a film: it has a universe and a Playback Asset, and
+everything below about video applies to it. A **Branding** or **Site web**
+project is shown as images — the charter's boards, the website's screens — with
+no video field and no player: the lightbox and the project page show the images
+in order, and the first one is the card's poster unless an editor uploads
+another. Branding cards are 4:5 or 1:1, Site web cards 16:10, and they sit in
+the same mosaic as the films. A project created before Disciplines existed has
+none recorded and is read as Vidéographie, so existing films needed no
+migration.
+
+The Discipline filter has an address — `/portfolio?discipline=branding`, or
+`site-web`, `videographie` — which is where *Toutes les chartes* and *Tous les
+sites* on the Branding and Site web homepages lead. The page stays prerendered:
+the filter is read from the address in the browser, and the HTML a crawler or a
+visitor without JavaScript receives is the whole, unfiltered portfolio. The
+Discipline row only appears once two Disciplines have published work (or the
+address asks for one that has none, which then shows the portfolio's empty
+state), so with films alone the page is exactly what it was.
 
 **Publication is a decision, not a state.** `publicationRequirements()` in
 `src/managed-content/portfolio.ts` is the rule, and `readPortfolio()` applies it:
 a project missing its client, description, role, deliverables, poster,
-alternative text, video, the client's permission — or, when its speech carries
-meaning, captions or a transcript — is *absent* from what a visitor is served.
+alternative text, the client's permission — for a film, its universe, its video
+and, when its speech carries meaning, captions or a transcript; for Branding and
+Site web, at least one image and each image's alternative text — is *absent*
+from what a visitor is served.
 Nothing counts it, links to it, lists it in the sitemap or serves it at its own
 URL. In preview the gate is lifted and each project says what it still needs, so
 an editor reviews their work in the real page.

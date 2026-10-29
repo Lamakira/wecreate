@@ -14,6 +14,15 @@ const MEDIA_FRAME =
 const POSTER_FRAME =
   '{ratio, placeholderLabel, alternativeText, "imageUrl": image.asset->url + "?w=1600&auto=format"}';
 
+/** One image of a Branding or Site web project, at its largest display size. */
+const PROJECT_IMAGE = `{
+    "key": _key,
+    "url": image.asset->url + "?w=1600&auto=format",
+    alternativeText,
+    "width": image.asset->metadata.dimensions.width,
+    "height": image.asset->metadata.dimensions.height
+  }`;
+
 /** A product cover, asked for at the largest size the Boutique renders it. */
 const COVER_FRAME =
   '{ratio, placeholderLabel, alternativeText, "imageUrl": image.asset->url + "?w=1200&auto=format"}';
@@ -268,6 +277,7 @@ export const SITE_CONTENT_QUERY = defineQuery(`{
       "slug": slug.current,
       title,
       client,
+      discipline,
       universe,
       projectType,
       description,
@@ -275,6 +285,7 @@ export const SITE_CONTENT_QUERY = defineQuery(`{
       deliverables,
       media${POSTER_FRAME},
       "video": video.asset->${PLAYBACK_ASSOCIATION},
+      "images": images[]${PROJECT_IMAGE},
       hasPublicationPermission,
       spokenContent,
       transcript

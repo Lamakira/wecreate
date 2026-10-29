@@ -5,6 +5,7 @@ import type {
   LegalRevision,
   PlaybackAsset,
   PortfolioProject,
+  ProjectImage,
 } from "../../../src/managed-content/types";
 
 /**
@@ -74,6 +75,8 @@ export const SAMPLE_PORTFOLIO_PROJECTS: PortfolioProject[] = [
       alternativeText: "",
     },
     playbackAsset: samplePlayback(SAMPLE_POSTER),
+    discipline: "videographie",
+    images: [],
     hasPublicationPermission: true,
     spokenContent: "none",
     transcript: null,
@@ -96,6 +99,8 @@ export const SAMPLE_PORTFOLIO_PROJECTS: PortfolioProject[] = [
       alternativeText: "",
     },
     playbackAsset: samplePlayback(SAMPLE_POSTER),
+    discipline: "videographie",
+    images: [],
     hasPublicationPermission: true,
     spokenContent: "none",
     transcript: null,
@@ -120,6 +125,8 @@ export const SAMPLE_PORTFOLIO_PROJECTS: PortfolioProject[] = [
     // The one project here whose speech carries meaning: it has a voice-over,
     // so it may only be published with a transcript beside it.
     playbackAsset: samplePlayback(SAMPLE_POSTER),
+    discipline: "videographie",
+    images: [],
     hasPublicationPermission: true,
     spokenContent: "transcript",
     transcript:
@@ -143,6 +150,8 @@ export const SAMPLE_PORTFOLIO_PROJECTS: PortfolioProject[] = [
       alternativeText: "",
     },
     playbackAsset: samplePlayback(SAMPLE_POSTER),
+    discipline: "videographie",
+    images: [],
     hasPublicationPermission: true,
     spokenContent: "none",
     transcript: null,
@@ -165,6 +174,8 @@ export const SAMPLE_PORTFOLIO_PROJECTS: PortfolioProject[] = [
       alternativeText: "",
     },
     playbackAsset: samplePlayback(SAMPLE_POSTER),
+    discipline: "videographie",
+    images: [],
     hasPublicationPermission: true,
     spokenContent: "none",
     transcript: null,
@@ -186,9 +197,159 @@ export const SAMPLE_PORTFOLIO_PROJECTS: PortfolioProject[] = [
       alternativeText: "",
     },
     playbackAsset: samplePlayback(SAMPLE_POSTER),
+    discipline: "videographie",
+    images: [],
     hasPublicationPermission: true,
     spokenContent: "none",
     transcript: null,
+  },
+];
+
+/**
+ * One image of a Branding or Site web project, from the same-origin brand files
+ * so that nothing leaves the test browser.
+ */
+function sampleImage(
+  key: string,
+  url: string,
+  alternativeText: string,
+  width: number,
+  height: number,
+): ProjectImage {
+  return { key, url, alternativeText, width, height };
+}
+
+/** The fields every image project shares: no film, no universe, no transcript. */
+const IMAGE_PROJECT_BASE = {
+  universe: null,
+  playbackAsset: null,
+  spokenContent: "none",
+  transcript: null,
+  hasPublicationPermission: true,
+} as const;
+
+/**
+ * Branding projects, published as images. They exist only for the suite, like
+ * the films above: invented names, obviously test-only, and never anything a
+ * visitor could take for WeCreate's work. Ratios 4:5, 1:1 and 4:5 give the
+ * mosaic a mix of formats. No uploaded poster: the first image is the poster.
+ */
+export const SAMPLE_BRANDING_PROJECTS: PortfolioProject[] = [
+  {
+    ...IMAGE_PROJECT_BASE,
+    id: "charte-essai-nord",
+    slug: "charte-essai-nord",
+    title: "Charte d'essai Nord",
+    client: "Client d'essai A",
+    discipline: "branding",
+    projectType: "Charte graphique",
+    description: "Une charte d'essai pour vérifier l'affichage des planches.",
+    role: "Logo, palette, typographie.",
+    deliverables: ["Logo", "Charte PDF"],
+    media: {
+      ratio: "4 / 5",
+      placeholderLabel: "4:5",
+      imageUrl: null,
+      alternativeText: "",
+    },
+    images: [
+      sampleImage("a1", "/brand/logo-noir.svg", "Planche du logo Nord, sur fond clair.", 800, 1000),
+      sampleImage("a2", "/brand/icone-noir.svg", "Planche de l'icône Nord.", 800, 1000),
+      sampleImage("a3", "/brand/logo-blanc.svg", "Planche du logo Nord, en blanc.", 800, 1000),
+    ],
+  },
+  {
+    ...IMAGE_PROJECT_BASE,
+    id: "identite-essai-sud",
+    slug: "identite-essai-sud",
+    title: "Identité d'essai Sud",
+    client: "Client d'essai B",
+    discipline: "branding",
+    projectType: "Logo & déclinaisons",
+    description: "Une identité d'essai, en format carré.",
+    role: "Logo et déclinaisons.",
+    deliverables: ["Logo", "Déclinaisons"],
+    media: {
+      ratio: "1 / 1",
+      placeholderLabel: "1:1",
+      imageUrl: null,
+      alternativeText: "",
+    },
+    images: [
+      sampleImage("b1", "/brand/icone-noir.svg", "Planche de l'icône Sud.", 1000, 1000),
+      sampleImage("b2", "/brand/icone-blanc.svg", "Planche de l'icône Sud, en blanc.", 1000, 1000),
+    ],
+  },
+  {
+    ...IMAGE_PROJECT_BASE,
+    id: "marque-essai-est",
+    slug: "marque-essai-est",
+    title: "Marque d'essai Est",
+    client: "Client d'essai C",
+    discipline: "branding",
+    projectType: "Marque en mouvement",
+    description: "Une marque d'essai, en format portrait.",
+    role: "Direction artistique.",
+    deliverables: ["Charte PDF"],
+    media: {
+      ratio: "4 / 5",
+      placeholderLabel: "4:5",
+      imageUrl: null,
+      alternativeText: "",
+    },
+    images: [
+      sampleImage("c1", "/brand/logo-blanc.svg", "Planche du logo Est.", 800, 1000),
+      sampleImage("c2", "/brand/icone-blanc.svg", "Planche de l'icône Est.", 800, 1000),
+    ],
+  },
+];
+
+/** Site web projects, published as images of the screens, in 16:10. */
+export const SAMPLE_SITE_WEB_PROJECTS: PortfolioProject[] = [
+  {
+    ...IMAGE_PROJECT_BASE,
+    id: "site-essai-ouest",
+    slug: "site-essai-ouest",
+    title: "Site d'essai Ouest",
+    client: "Client d'essai D",
+    discipline: "site-web",
+    projectType: "Site vitrine",
+    description: "Un site d'essai pour vérifier l'affichage des écrans.",
+    role: "Design et développement.",
+    deliverables: ["Site vitrine"],
+    media: {
+      ratio: "16 / 10",
+      placeholderLabel: "16:10",
+      imageUrl: null,
+      alternativeText: "",
+    },
+    images: [
+      sampleImage("d1", "/brand/logo-noir.svg", "Écran d'accueil du site Ouest.", 1600, 1000),
+      sampleImage("d2", "/brand/icone-noir.svg", "Écran de contact du site Ouest.", 1600, 1000),
+      sampleImage("d3", "/brand/logo-blanc.svg", "Écran mobile du site Ouest.", 1600, 1000),
+    ],
+  },
+  {
+    ...IMAGE_PROJECT_BASE,
+    id: "boutique-essai-centre",
+    slug: "boutique-essai-centre",
+    title: "Boutique d'essai Centre",
+    client: "Client d'essai E",
+    discipline: "site-web",
+    projectType: "Boutique en ligne",
+    description: "Une boutique d'essai en ligne.",
+    role: "Design et développement.",
+    deliverables: ["Boutique en ligne"],
+    media: {
+      ratio: "16 / 10",
+      placeholderLabel: "16:10",
+      imageUrl: null,
+      alternativeText: "",
+    },
+    images: [
+      sampleImage("e1", "/brand/icone-blanc.svg", "Écran catalogue de la boutique Centre.", 1600, 1000),
+      sampleImage("e2", "/brand/logo-noir.svg", "Écran panier de la boutique Centre.", 1600, 1000),
+    ],
   },
 ];
 
@@ -220,6 +381,8 @@ export function seventhProject(
       alternativeText: "",
     },
     playbackAsset: samplePlayback(SAMPLE_POSTER),
+    discipline: "videographie",
+    images: [],
     hasPublicationPermission: true,
     spokenContent: "none",
     transcript: null,

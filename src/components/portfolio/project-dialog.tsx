@@ -1,7 +1,7 @@
 "use client";
 
 import { ProjectDetails } from "@/components/portfolio/project-details";
-import { ProjectPlayback } from "@/components/portfolio/project-playback";
+import { ProjectWork } from "@/components/portfolio/project-work";
 import { useModalDialog } from "@/lib/use-modal-dialog";
 import type { PortfolioProject } from "@/managed-content/types";
 
@@ -15,12 +15,12 @@ interface ProjectDialogProps {
 /**
  * A Portfolio Project, opened over the portfolio.
  *
- * The film first, then everything written about it — the design's lightbox. It
- * is a real modal dialog: named by the project's title, focused on open,
- * dismissed with Escape or the close button, and returning focus to the card it
- * was opened from. The same project is also a page of its own at
- * `/portfolio/[slug]`, which is where a shared link, a crawler, or a visitor
- * without JavaScript arrives.
+ * The work first (the film, or the images), then everything written about it —
+ * the design's lightbox. It is a real modal dialog: named by the project's
+ * title, focused on open, dismissed with Escape or the close button, and
+ * returning focus to the card it was opened from. The same project is also a
+ * page of its own at `/portfolio/[slug]`, which is where a shared link, a
+ * crawler, or a visitor without JavaScript arrives.
  */
 export function ProjectDialog({
   project,
@@ -58,7 +58,7 @@ export function ProjectDialog({
           </button>
         </div>
 
-        <ProjectPlayback project={project} />
+        <ProjectWork project={project} />
 
         <div className="pt-7">
           <ProjectDetails
