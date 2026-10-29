@@ -72,6 +72,8 @@ type SanityDigitalProduct = DeepPartial<Omit<DigitalProduct, "cover">> & {
 interface SanityContentResult {
   settings?: DeepPartial<SiteSettings> | null;
   homePage?: DeepPartial<HomePage> | null;
+  brandingHomePage?: DeepPartial<HomePage> | null;
+  siteWebHomePage?: DeepPartial<HomePage> | null;
   portfolioPage?: DeepPartial<Omit<PortfolioContent, "projects">> | null;
   portfolioProjects?: Array<SanityProject | null> | null;
   boutiquePage?: DeepPartial<Omit<BoutiqueContent, "products">> | null;
@@ -478,6 +480,8 @@ async function fetchSiteContent(
   const content = mergeContent(DEFAULT_SITE_CONTENT, {
     settings: result?.settings ?? undefined,
     homePage: result?.homePage ?? undefined,
+    brandingHomePage: result?.brandingHomePage ?? undefined,
+    siteWebHomePage: result?.siteWebHomePage ?? undefined,
   });
 
   return {

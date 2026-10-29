@@ -1,3 +1,5 @@
+import type { Discipline } from "@/discipline";
+
 import type { PortfolioProject } from "./types";
 
 /**
@@ -121,4 +123,19 @@ export function publicationRequirements(
  */
 export function isPublishable(project: PortfolioProject): boolean {
   return publicationRequirements(project).length === 0;
+}
+
+/**
+ * The Portfolio Projects a Discipline's homepage reel may show.
+ *
+ * Every Portfolio Project today is a film — publication requires one — so they
+ * all belong to Vidéographie. Branding and Site web work arrives as images with
+ * issue #60, which gives a project its Discipline; until then those homepages
+ * show their honest empty state rather than another Discipline's films.
+ */
+export function projectsInDiscipline(
+  projects: PortfolioProject[],
+  discipline: Discipline,
+): PortfolioProject[] {
+  return discipline === "videographie" ? projects : [];
 }

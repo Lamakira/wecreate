@@ -10,18 +10,21 @@ import {
   relativeLuminance,
 } from "./support/contrast";
 import { ManagedContent } from "./support/managed-content";
-import { SAMPLE_PORTFOLIO_PROJECTS } from "./support/sample-content";
+import {
+  SAMPLE_PORTFOLIO_PROJECTS,
+  approvedLegalDocuments,
+} from "./support/sample-content";
 
 /**
  * Issue #56: every page can declare its Discipline and gets that Discipline's
  * colour theme.
  *
- * Vidéographie is the homepage itself. Branding and Site web have no address
- * of their own until #59, so they are measured on the test-only previews that
- * render the same homepage composition in their theme. Vidéographie's own
- * pages are guarded unchanged by `visual.spec.ts` and `contrast.spec.ts`; this
- * file measures what the two new themes add, and that the three agree on the
- * rules every theme has to keep.
+ * Each Discipline is measured on its own homepage (#59): Vidéographie at `/`,
+ * Branding at `/branding`, Site web at `/site-web`. Vidéographie's own pages
+ * are guarded unchanged by `visual.spec.ts` and `contrast.spec.ts`; this file
+ * measures what the two new themes add, that the three agree on the rules
+ * every theme has to keep, and that leaving a Discipline's homepage for a page
+ * outside any Discipline drops its colours.
  */
 
 const THEMES = [
@@ -37,7 +40,7 @@ const THEMES = [
   },
   {
     discipline: "branding",
-    path: "/test/discipline/branding",
+    path: "/branding",
     ground: "rgb(239, 232, 220)",
     text: "rgb(26, 21, 17)",
     inverseText: "rgb(239, 232, 220)",
@@ -45,7 +48,7 @@ const THEMES = [
   },
   {
     discipline: "site-web",
-    path: "/test/discipline/site-web",
+    path: "/site-web",
     ground: "rgb(7, 13, 31)",
     text: "rgb(232, 238, 255)",
     inverseText: "rgb(7, 13, 31)",
@@ -224,20 +227,52 @@ for (const theme of THEMES) {
   });
 }
 
-test("pages outside a Discipline stay in Vidéographie's black and white", async ({
-  page,
-}) => {
+test.describe("Pages outside a Discipline", () => {
   // Issue #55, decision 4: the Boutique, À propos, Contact, legal and
   // transaction pages never take a Discipline's colours.
-  for (const path of ["/boutique", "/a-propos", "/contact"]) {
-    await page.goto(path);
-    await expect(page.getByRole("main")).toHaveAttribute(
-      "data-discipline",
-      "videographie",
-    );
-    expect(
-      await page.evaluate(() => getComputedStyle(document.body).backgroundColor),
-    ).toBe("rgb(10, 10, 10)");
+  for (const start of ["/branding", "/site-web"]) {
+    test(`stay in Vidéographie's black and white when reached from ${start}`, async ({
+      page,
+    }) => {
+      // The footer's own links, followed client-side: the honest "came from a
+      // themed page" case, where a theme left on the document would show.
+      //
+      // The legal links only show once a revision is in force, so the suite
+      // publishes the approved ones an editor would.
+      await content.editDraft({ legalDocuments: approvedLegalDocuments() });
+      await content.publish();
+
+      const links = [
+        { group: "Navigation du pied de page", name: "Boutique", path: "/boutique" },
+        { group: "Navigation du pied de page", name: "À propos", path: "/a-propos" },
+        { group: "Navigation du pied de page", name: "Contact", path: "/contact" },
+        { group: "Informations légales", name: null, path: null },
+      ];
+
+      for (const { group, name, path } of links) {
+        await page.goto(start);
+        const footer = page.getByRole("contentinfo");
+        const nav = footer.getByRole("navigation", { name: group });
+        const link =
+          name === null
+            ? nav.getByRole("link").first()
+            : nav.getByRole("link", { name, exact: true });
+        await link.click();
+        await page.waitForURL(
+          path === null ? /\/legal\// : (url) => url.pathname === path,
+        );
+
+        await expect(page.getByRole("main")).toHaveAttribute(
+          "data-discipline",
+          "videographie",
+        );
+        expect(
+          await page.evaluate(
+            () => getComputedStyle(document.body).backgroundColor,
+          ),
+        ).toBe("rgb(10, 10, 10)");
+      }
+    });
   }
 });
 

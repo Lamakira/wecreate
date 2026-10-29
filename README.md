@@ -145,13 +145,17 @@ Service Enquiries*).
 
 ### Homepage sections, not a page builder
 
-The homepage is a fixed, named set of sections. Editors change their copy and
+Each Discipline has its own homepage document in the Studio — Vidéographie's
+at `/`, Branding's at `/branding`, Site web's at `/site-web` — with the same
+fixed sections. Each one is a fixed, named set of sections. Editors change their copy and
 whether each is shown; they cannot add, remove, reorder or nest them. That line
 is what keeps the approved design and its accessibility guarantees intact
 (ADR-0001), and it is enforced by the schema in `src/sanity/schema/`.
 
 Neither of the two list sections owns its list. *Travaux récents* is the first
-six published Portfolio Projects, and *La boutique* is the first three Digital
+six published Portfolio Projects of that Discipline — only Vidéographie has any
+today, so Branding and Site web show their empty state until projects can belong
+to them (issue #60) — and *La boutique* is the first three Digital
 Products an editor marked featured, so each is written once and appears in both
 places.
 
@@ -1283,12 +1287,14 @@ the slices the published document actually feeds:
 
 1. In the Sanity project, add a webhook to `POST {origin}/api/revalidate`, with
    a secret, firing on create/update/delete of `siteSettings`, `homePage`,
-   `portfolioPage`, `portfolioProject`, `boutiquePage`, `digitalProduct`,
+   `brandingHomePage`, `siteWebHomePage`, `portfolioPage`, `portfolioProject`, `boutiquePage`, `digitalProduct`,
    `servicesPage`, `aboutPage`, `contactPage` and `legalDocument`. Leave the
    default document projection (or project `{_type}`): the endpoint reads the
    top-level `_type` of the signed body to decide what to expire. A projection
    that strips `_type`, and any type not in that list, is treated as unknown and
-   expires everything.
+   expires everything. An existing webhook's filter must be updated with
+   `brandingHomePage` and `siteWebHomePage`, otherwise publishing those two
+   homepages expires nothing until the next other publish or bearer call.
 2. Set the same value as `SANITY_WEBHOOK_SECRET`. The signature is verified
    against the raw request body.
 3. The endpoint expires the cache tags that document type affects, so the very
@@ -1304,18 +1310,21 @@ the pages a type expires are the entries carrying its tag:
 | `aboutPage`        | À propos                                                             |
 | `contactPage`      | Contact                                                              |
 | `servicesPage`     | Services                                                             |
-| `homePage`         | Homepage                                                             |
+| `homePage`         | Vidéographie homepage (`/`)                                          |
+| `brandingHomePage` | Branding homepage (`/branding`)                                      |
+| `siteWebHomePage`  | Site web homepage (`/site-web`)                                      |
 | `portfolioPage`    | Portfolio listing and project pages                                  |
-| `portfolioProject` | Portfolio listing and project pages, and the homepage recent-work reel |
+| `portfolioProject` | Portfolio listing and project pages, and the three Discipline homepages' recent-work reels |
 | `boutiquePage`     | Boutique listing and product pages                                   |
-| `digitalProduct`   | Boutique listing and product pages, and the homepage shop teaser     |
+| `digitalProduct`   | Boutique listing and product pages, and the three Discipline homepages' shop teasers |
 | `siteSettings`     | Every public page: header, footer, navigation, titles and descriptions |
 | `legalDocument`    | Every public page: footer legal links                                |
 | anything else      | Everything                                                           |
 
-Portfolio projects and digital products also expire the homepage, because it
-shows them. The Portfolio and Boutique *page* copy (`portfolioPage`,
-`boutiquePage`) does not appear on the homepage, so those two leave it cached.
+Portfolio projects and digital products also expire all three Discipline
+homepages, because each shows them. The Portfolio and Boutique *page* copy
+(`portfolioPage`, `boutiquePage`) does not appear on any homepage, so those two
+leave them cached. Each homepage document expires only its own homepage.
 
 Besides the per-page entries there is one **site entry**, tagged with every
 document type. It serves everything that is not a public page of its own and
@@ -1502,6 +1511,11 @@ mocked internals, no production credentials.
 ```
 tests/e2e/
 ├── homepage.spec.ts                  the approved design and its content
+├── discipline-themes.spec.ts         each Discipline's palette, brand mark and
+│                                     contrast, on its own homepage
+├── discipline-homepages.spec.ts      the three addresses, the switch by keyboard
+│                                     and without JavaScript, each homepage's
+│                                     own Studio content, metadata and sitemap
 ├── portfolio.spec.ts                 filters, counts, empty-universe filters
 │                                     hidden, no fabricated project in source,
 │                                     the project dialog and its keyboard,
@@ -1776,10 +1790,10 @@ from the document root, so the header, footer, grain and drawers follow too.
 Pages that are not a Discipline's own (Boutique, À propos, Contact, legal,
 transactions) declare nothing and stay Vidéographie. The hero's generated silk
 takes a ramp from each theme, and its scrim is mixed from the ground, so it is
-as legible on cream and night blue as on black. Branding and Site web have no
-address of their own yet: the acceptance suite measures them on
-`/test/discipline/branding` and `/test/discipline/site-web`, which exist only
-when the test hooks are on. `tests/e2e/discipline-themes.spec.ts` checks every
+as legible on cream and night blue as on black. Branding and Site web live at
+`/branding` and `/site-web`. The Discipline switch at the top of each homepage
+hero is three plain links, the current one marked `aria-current="page"`, and the
+suite measures each theme on its own homepage. `tests/e2e/discipline-themes.spec.ts` checks every
 text and ground pair of each palette at WCAG AA, as well as the pages.
 
 ## Typography

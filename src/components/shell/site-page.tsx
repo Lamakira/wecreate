@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { DisciplineRoot } from "@/components/shell/discipline-root";
 import { SiteFooter } from "@/components/shell/site-footer";
 import { SiteShell } from "@/components/shell/site-shell";
 import { DEFAULT_DISCIPLINE, type Discipline } from "@/discipline";
@@ -46,6 +47,7 @@ export async function SitePage({
   return (
     <>
       <JsonLdScript data={localBusinessJsonLd(settings, siteUrl())} />
+      <DisciplineRoot discipline={discipline} />
       <SiteShell settings={settings} discipline={discipline}>
         <main
           id="contenu"

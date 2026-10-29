@@ -8,8 +8,8 @@
  * publish expires is therefore exactly the cached entries tagged with that
  * type, and what an entry depends on is written once, as the list of tags it
  * is filled under (`published-read.ts`) — there is no second, hand-kept table
- * saying "a project change is also visible on the homepage". The homepage
- * entry simply carries the projects and products tags.
+ * saying "a project change is also visible on the homepage". Each Discipline's
+ * homepage entry simply carries the projects and products tags.
  *
  * The operator bearer token, and any webhook whose type is missing or unknown,
  * expire every tag.
@@ -18,6 +18,8 @@
 export const SETTINGS_TAG = "managed-content:settings";
 export const LEGAL_TAG = "managed-content:legal";
 export const HOME_TAG = "managed-content:home";
+export const BRANDING_HOME_TAG = "managed-content:home-branding";
+export const SITE_WEB_HOME_TAG = "managed-content:home-site-web";
 export const PORTFOLIO_PAGE_TAG = "managed-content:portfolio-page";
 export const PORTFOLIO_PROJECTS_TAG = "managed-content:portfolio-projects";
 export const BOUTIQUE_PAGE_TAG = "managed-content:boutique-page";
@@ -30,6 +32,8 @@ export const ALL_MANAGED_CONTENT_TAGS = [
   SETTINGS_TAG,
   LEGAL_TAG,
   HOME_TAG,
+  BRANDING_HOME_TAG,
+  SITE_WEB_HOME_TAG,
   PORTFOLIO_PAGE_TAG,
   PORTFOLIO_PROJECTS_TAG,
   BOUTIQUE_PAGE_TAG,
@@ -49,6 +53,8 @@ export const ALL_MANAGED_CONTENT_TAGS = [
 export const MANAGED_CONTENT_DOCUMENT_TYPES = [
   "siteSettings",
   "homePage",
+  "brandingHomePage",
+  "siteWebHomePage",
   "portfolioPage",
   "portfolioProject",
   "boutiquePage",
@@ -65,6 +71,8 @@ export type ManagedContentDocumentType =
 const DOCUMENT_TYPE_TAGS: Record<ManagedContentDocumentType, string> = {
   siteSettings: SETTINGS_TAG,
   homePage: HOME_TAG,
+  brandingHomePage: BRANDING_HOME_TAG,
+  siteWebHomePage: SITE_WEB_HOME_TAG,
   portfolioPage: PORTFOLIO_PAGE_TAG,
   portfolioProject: PORTFOLIO_PROJECTS_TAG,
   boutiquePage: BOUTIQUE_PAGE_TAG,

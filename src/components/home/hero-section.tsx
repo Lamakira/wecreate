@@ -1,11 +1,15 @@
 import { CtaLink } from "@/components/primitives/cta-link";
 import { SplitHeading } from "@/components/primitives/split-heading";
+import { DisciplineSwitch } from "@/components/home/discipline-switch";
 import { HeroBackdrop } from "@/components/home/hero-backdrop";
 import { HeroPlayback } from "@/components/home/hero-playback";
+import type { Discipline } from "@/discipline";
 import type { HeroContent } from "@/managed-content/types";
 
 interface HeroSectionProps {
   hero: HeroContent;
+  /** The Discipline whose homepage this is; the switch marks it as current. */
+  discipline: Discipline;
 }
 
 /**
@@ -13,16 +17,18 @@ interface HeroSectionProps {
  *
  * Fills the viewport, edge to edge and behind the fixed header.
  *
- * Four layers, each one optional except the first:
+ * Five layers, each one optional except the first:
  *
  * 1. the gradient and halo — the design's baseline, always painted, and what a
  *    visitor sees when everything above it is absent;
  * 2. the generated WebGL background, for visitors who have not asked for less
  *    motion and whose device can run it;
  * 3. an optional Playback Asset, when Managed Content has one;
- * 4. the copy, which never depends on any of the above.
+ * 4. the Discipline switch, pinned to the top. The section's top padding
+ *    reserves room for it below the header, so it never covers the heading;
+ * 5. the copy, which never depends on any of the above.
  */
-export function HeroSection({ hero }: HeroSectionProps) {
+export function HeroSection({ hero, discipline }: HeroSectionProps) {
   return (
     // Fills the viewport edge to edge. The negative margin cancels the padding
     // `main` uses to clear the fixed header, so the background runs up behind
@@ -31,7 +37,7 @@ export function HeroSection({ hero }: HeroSectionProps) {
     // retracting does not leave a strip of the next section showing.
     <section
       data-testid="hero"
-      className="relative -mt-header-offset flex min-h-dvh flex-col justify-end overflow-hidden pt-header-offset pb-section-xs"
+      className="relative -mt-header-offset flex min-h-dvh flex-col justify-end overflow-hidden pt-[calc(var(--spacing-header-offset)+96px)] pb-section-xs"
     >
       <div
         aria-hidden="true"
@@ -43,6 +49,10 @@ export function HeroSection({ hero }: HeroSectionProps) {
         aria-hidden="true"
         className="absolute inset-0 bg-(image:--wc-hero-halo)"
       />
+
+      <div className="absolute top-[calc(var(--spacing-header-offset)+18px)] left-1/2 z-[3] max-w-[calc(100%-32px)] -translate-x-1/2">
+        <DisciplineSwitch current={discipline} />
+      </div>
 
       <div className="wc-container relative">
         <div className="max-w-hero animate-wc-fade">

@@ -1,17 +1,36 @@
 /**
  * WeCreate's three lines of work (see `CONTEXT.md`).
  *
- * The identifiers are the addresses each Discipline is meant to own, so a
- * route and its theme share one name. Vidéographie owns `/` and is the default
- * everywhere a page declares nothing: the Boutique, À propos, Contact, the
- * legal and transaction pages stay in its black and white (issue #55,
- * decision 4).
+ * Each Discipline has an address and a homepage of its own (issue #59):
+ * Vidéographie owns `/`, Branding `/branding` and Site web `/site-web`. The
+ * identifiers double as the route segments and the theme names, so a route and
+ * its theme share one name. Vidéographie is the default everywhere a page
+ * declares nothing: the Boutique, À propos, Contact, the legal and transaction
+ * pages stay in its black and white (issue #55, decision 4).
  */
 export const DISCIPLINES = ["videographie", "branding", "site-web"] as const;
 
 export type Discipline = (typeof DISCIPLINES)[number];
 
 export const DEFAULT_DISCIPLINE: Discipline = "videographie";
+
+/** What a Discipline is called to a visitor, and where its homepage lives. */
+const DISCIPLINE_DETAILS: Record<Discipline, { label: string; path: string }> =
+  {
+    videographie: { label: "Vidéographie", path: "/" },
+    branding: { label: "Branding", path: "/branding" },
+    "site-web": { label: "Site web", path: "/site-web" },
+  };
+
+/** The address of a Discipline's homepage. */
+export function disciplinePath(discipline: Discipline): string {
+  return DISCIPLINE_DETAILS[discipline].path;
+}
+
+/** The name a visitor sees for a Discipline, as the switch spells it. */
+export function disciplineLabel(discipline: Discipline): string {
+  return DISCIPLINE_DETAILS[discipline].label;
+}
 
 /**
  * The brand mark each Discipline's ground calls for.

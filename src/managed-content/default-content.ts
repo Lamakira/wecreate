@@ -4,6 +4,7 @@ import type {
   ContactContent,
   DigitalProduct,
   DigitalProductFamily,
+  HomePage,
   LegalDocument,
   ServicesContent,
   SiteContent,
@@ -1027,6 +1028,254 @@ const LEGAL_DOCUMENTS: LegalDocument[] = [
 ];
 
 /**
+ * The Branding and Site web homepages.
+ *
+ * Copy adapted from the v2 handoff, minus what issue #55 says must not ship
+ * from it: no Branding pack names or prices and no payment terms (decision 6 —
+ * those come from WeCreate's brochures, issue #61), no unconfirmed Celtiis Cash
+ * (decision 8), and no fictitious projects (decision 7). The positioning
+ * marquee and the shop teaser are Vidéographie's, since they describe WeCreate
+ * rather than a Discipline; the brand quote is hidden because Vidéographie's is
+ * a video client's words and nothing is invented for the others.
+ */
+const BRANDING_HOME_CONTENT: HomePage = {
+  seo: {
+    title: "Identité de marque",
+    description:
+      "Logo, palette, typographie, charte : WeCreate construit à Calavi Tankpè des identités de marque qui tiennent à l'écran comme sur une enseigne, puis les fait vivre en vidéo.",
+    openGraphImageUrl: null,
+  },
+  hero: {
+    kicker: "Identité de marque",
+    headline: { lead: "Une marque pensée pour ", emphasis: "bouger", trail: "." },
+    subtitle:
+      "Logo, palette, typographie, charte : on construit une identité qui tient à l'écran comme sur une enseigne - puis on la fait vivre en vidéo.",
+    primaryCta: { label: "Voir les offres", href: "/services" },
+    secondaryCta: { label: "Nous contacter", href: "/contact" },
+    playbackAsset: null,
+  },
+  positioningMarquee: {
+    isVisible: true,
+    text: "Premium · Cinématographique · Différent",
+  },
+  universes: {
+    isVisible: true,
+    title: "Ce qu'on fait",
+    kicker: "Trois savoir-faire · une seule exigence",
+    universes: [
+      {
+        key: "logo",
+        kicker: "Identité visuelle",
+        title: "Logo & déclinaisons",
+        description:
+          "Logo principal et déclinaisons, palette, typographies. La base solide pour démarrer.",
+        linkLabel: "Voir les offres",
+        href: "/services",
+        media: {
+          ratio: "4 / 5",
+          placeholderLabel: "visuel logo",
+          imageUrl: null,
+          alternativeText: "",
+        },
+      },
+      {
+        key: "charte",
+        kicker: "Système de marque",
+        title: "Charte graphique",
+        description:
+          "Couleurs, typographies, usages : un guide clair, livré en PDF, pour que la marque reste la même partout.",
+        linkLabel: "Voir les offres",
+        href: "/services",
+        media: {
+          ratio: "4 / 5",
+          placeholderLabel: "visuel charte",
+          imageUrl: null,
+          alternativeText: "",
+        },
+      },
+      {
+        key: "mouvement",
+        kicker: "Logo animé",
+        title: "Marque en mouvement",
+        description:
+          "Une identité dessinée pour l'écran, puis animée. Votre marque vit en vidéo.",
+        linkLabel: "Voir les offres",
+        href: "/services",
+        media: {
+          ratio: "4 / 5",
+          placeholderLabel: "visuel animation",
+          imageUrl: null,
+          alternativeText: "",
+        },
+      },
+    ],
+  },
+  recentWork: {
+    isVisible: true,
+    headline: { lead: "Travaux ", emphasis: "récents", trail: "" },
+    link: { label: "Toutes les chartes", href: "/portfolio" },
+    emptyStateText:
+      "Les chartes publiées apparaîtront ici dès leur mise en ligne.",
+  },
+  proof: {
+    isVisible: true,
+    kicker: "La différence WeCreate",
+    points: [
+      {
+        key: "mouvement",
+        figure: "Pensée pour bouger",
+        description:
+          "Chaque logo est dessiné pour l'écran et animé. Votre marque vit en vidéo.",
+      },
+      {
+        key: "questionnaire",
+        figure: "Questionnaire",
+        description:
+          "On part de votre histoire, pas d'un catalogue de logos. Dix minutes pour cadrer.",
+      },
+      {
+        key: "charte",
+        figure: "Charte complète",
+        description:
+          "Logo, couleurs, typographies, usages : un guide clair, livré en PDF.",
+      },
+      {
+        key: "studio",
+        figure: "Un seul studio",
+        description:
+          "Votre marque et vos films, faits par la même équipe, avec la même exigence.",
+      },
+    ],
+  },
+  shopPreview: {
+    isVisible: true,
+    title: "La boutique",
+    link: { label: "Tout voir", href: "/boutique" },
+    linkLabel: "Voir le détail",
+    emptyStateText:
+      "Les produits numériques apparaîtront ici dès leur mise en vente.",
+  },
+  brandQuote: { isVisible: false, quote: "", attribution: "" },
+  finalCta: {
+    isVisible: true,
+    headline: { lead: "Parlons de votre ", emphasis: "projet", trail: "." },
+    subtitle: "Devis sous 24-48h.",
+    primaryCta: { label: "WhatsApp", href: WHATSAPP_URL },
+    secondaryCta: { label: "Nous contacter", href: "/contact" },
+  },
+};
+
+const SITE_WEB_HOME_CONTENT: HomePage = {
+  seo: {
+    title: "Création de sites web",
+    description:
+      "Sites vitrines, boutiques en ligne, pages de lancement : WeCreate conçoit à Calavi Tankpè des sites sur mesure, rapides et pensés pour le téléphone, avec vos films en ouverture.",
+    openGraphImageUrl: null,
+  },
+  hero: {
+    kicker: "Sites web",
+    headline: { lead: "Un site qui se ", emphasis: "regarde", trail: " comme un film." },
+    subtitle:
+      "Sites vitrines, boutiques en ligne, pages de lancement : design sur mesure, vidéo intégrée, paiement Mobile Money. Rapides, élégants, faits pour convertir.",
+    primaryCta: { label: "Demander un devis", href: "/contact" },
+    secondaryCta: { label: "Voir nos réalisations", href: "/portfolio" },
+    playbackAsset: null,
+  },
+  positioningMarquee: {
+    isVisible: true,
+    text: "Premium · Cinématographique · Différent",
+  },
+  universes: {
+    isVisible: true,
+    title: "Ce qu'on fait",
+    kicker: "Trois formats · une seule exigence",
+    universes: [
+      {
+        key: "vitrine",
+        kicker: "Présence",
+        title: "Site vitrine",
+        description:
+          "Quelques pages soignées, vidéo en ouverture, formulaire et WhatsApp. Votre carte de visite en ligne.",
+        linkLabel: "Demander un devis",
+        href: "/contact",
+        media: {
+          ratio: "4 / 5",
+          placeholderLabel: "maquette vitrine",
+          imageUrl: null,
+          alternativeText: "",
+        },
+      },
+      {
+        key: "boutique",
+        kicker: "E-commerce",
+        title: "Boutique en ligne",
+        description:
+          "Catalogue, panier, paiement Mobile Money. Vendez vos produits 24 h/24.",
+        linkLabel: "Demander un devis",
+        href: "/contact",
+        media: {
+          ratio: "4 / 5",
+          placeholderLabel: "maquette boutique",
+          imageUrl: null,
+          alternativeText: "",
+        },
+      },
+      {
+        key: "lancement",
+        kicker: "Campagne",
+        title: "Page de lancement",
+        description:
+          "Une page unique, pensée pour un produit ou un événement. Rapide à livrer, faite pour convertir.",
+        linkLabel: "Demander un devis",
+        href: "/contact",
+        media: {
+          ratio: "4 / 5",
+          placeholderLabel: "maquette landing",
+          imageUrl: null,
+          alternativeText: "",
+        },
+      },
+    ],
+  },
+  recentWork: {
+    isVisible: true,
+    headline: { lead: "Travaux ", emphasis: "récents", trail: "" },
+    link: { label: "Tous les sites", href: "/portfolio" },
+    emptyStateText:
+      "Les sites publiés apparaîtront ici dès leur mise en ligne.",
+  },
+  proof: {
+    isVisible: true,
+    kicker: "La différence WeCreate",
+    points: [
+      {
+        key: "mobile",
+        figure: "Mobile d'abord",
+        description: "Pensé pour le téléphone, là où vos clients vous trouvent.",
+      },
+      {
+        key: "video",
+        figure: "Vidéo intégrée",
+        description: "Vos films WeCreate en ouverture, légers et rapides.",
+      },
+      {
+        key: "mobile-money",
+        figure: "Mobile Money",
+        description: "MTN MoMo et Moov Money : vos clients paient en ligne.",
+      },
+      {
+        key: "whatsapp",
+        figure: "WhatsApp",
+        description: "Chaque page mène à une conversation.",
+      },
+    ],
+  },
+  shopPreview: BRANDING_HOME_CONTENT.shopPreview,
+  brandQuote: { isVisible: false, quote: "", attribution: "" },
+  finalCta: BRANDING_HOME_CONTENT.finalCta,
+};
+
+/**
  * The canonical starting state of WeCreate's Managed Content.
  *
  * Copy comes from the approved design handoff, corrected where the canonical
@@ -1239,6 +1488,8 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
       },
     },
   },
+  brandingHomePage: BRANDING_HOME_CONTENT,
+  siteWebHomePage: SITE_WEB_HOME_CONTENT,
   portfolio: {
     seo: {
       title: "Portfolio",
