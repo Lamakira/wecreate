@@ -4,30 +4,43 @@ import { signOutAction } from "@/commerce/actions";
 
 import { CommerceButton } from "./commerce-button";
 
-/** The two surfaces a Commerce Operator works on, and nothing else. */
+/**
+ * The surfaces of the back office. `commerce` marks the ones that hold commerce
+ * data, which a staff member who does not administer commerce is not offered:
+ * they would only be refused (ADR-0013).
+ */
 const SURFACES = [
-  { href: "/commerce", label: "Fichiers livrés" },
-  { href: "/commerce/commandes", label: "Commandes" },
+  { href: "/commerce", label: "Fichiers livrés", commerce: true },
+  { href: "/commerce/commandes", label: "Commandes", commerce: true },
+  {
+    href: "/commerce/questionnaire",
+    label: "Questionnaire de marque",
+    commerce: false,
+  },
 ] as const;
 
 /**
- * Who is working, what they are looking at, and the way to the other surface.
+ * Who is working, what they are looking at, and the way to the other surfaces.
  *
- * The back office is two jobs — the files WeCreate sells, and the orders
- * somebody has a problem with — and an operator moves between them all day
- * (issue #15). The individual's own address is printed beside the way out
- * because every audit entry is going to name it: there is no shared account
- * here, and the surface says whose hands are on it.
+ * The back office is three jobs — the files WeCreate sells, the orders
+ * somebody has a problem with, and the questionnaire links for Branding
+ * clients — and staff move between them all day (issues #15, #63). The
+ * individual's own address is printed beside the way out because every audit
+ * entry is going to name it: there is no shared account here, and the surface
+ * says whose hands are on it.
  */
 export function OperatorBar({
   title,
   operatorEmail,
   current = "/commerce",
+  showCommerce = true,
 }: {
   title: string;
   operatorEmail: string;
   /** Which surface this is, so the link to it is not offered again. */
   current?: string;
+  /** False for staff who do not administer commerce: its surfaces are hidden. */
+  showCommerce?: boolean;
 }) {
   return (
     <div className="mb-8">
@@ -47,7 +60,9 @@ export function OperatorBar({
         aria-label="Espace commerce"
         className="mt-4 flex flex-wrap gap-x-6 gap-y-2"
       >
-        {SURFACES.map((surface) =>
+        {SURFACES.filter(
+          (surface) => showCommerce || !surface.commerce,
+        ).map((surface) =>
           surface.href === current ? (
             // The surface being looked at is named rather than linked. Partly
             // because a link to the page you are on is furniture nobody presses

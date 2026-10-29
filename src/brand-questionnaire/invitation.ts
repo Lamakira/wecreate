@@ -9,6 +9,8 @@ import {
 
 import { siteUrl } from "@/site-config";
 
+import { INVITATION_FIELD_MAX } from "./invitation-message";
+
 /**
  * The personal link that opens a client's brand questionnaire (issue #57).
  *
@@ -77,12 +79,17 @@ const KEY_INFO = "wecreate brand questionnaire invitation v1";
 /**
  * Long enough for any honest payload, short enough that nothing is decrypted
  * for a string nobody could have been given. Every field is capped by
- * `FIELD_MAX` below, so a real token is a few hundred characters.
+ * `INVITATION_FIELD_MAX` below, so a real token is a few hundred characters.
  */
 const TOKEN_SHAPE = /^[A-Za-z0-9_-]{40,1200}$/;
 
-/** Characters kept per field, when sealing. The page prints these. */
-const FIELD_MAX = 120;
+/**
+ * Characters kept per field, when sealing. The page prints these.
+ *
+ * Defined in `invitation-message.ts`, which the link maker's client component
+ * can import and this `server-only` module cannot be.
+ */
+export { INVITATION_FIELD_MAX };
 
 /**
  * The derived key, or `undefined` on a deployment that has no secret.
@@ -102,7 +109,7 @@ export function invitationsAreConfigured(): boolean {
 }
 
 function clip(value: string): string {
-  return Array.from(value.trim()).slice(0, FIELD_MAX).join("");
+  return Array.from(value.trim()).slice(0, INVITATION_FIELD_MAX).join("");
 }
 
 /**

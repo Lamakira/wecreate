@@ -2,7 +2,13 @@ import "server-only";
 
 import { redirect } from "next/navigation";
 
-import { accessRefusal, type AccessRefusal } from "./operators";
+import {
+  accessRefusal,
+  isStaff,
+  staffRefusal,
+  type AccessRefusal,
+  type StaffRefusal,
+} from "./operators";
 import { getCommerceProvider, type CommerceProvider } from "./provider";
 import { readOperatorCredentials, readSignedInOperator } from "./session";
 import type { CommerceOperator, OperatorCredentials } from "./types";
@@ -50,6 +56,19 @@ export async function readWorkingOperator(
   return { operator, provider, credentials };
 }
 
+/**
+ * Send a staff session to the one place that resolves its refusal, if it has
+ * one the session can resolve itself.
+ */
+function sendToResolve(refusal: StaffRefusal | undefined): void {
+  if (refusal === "notSignedIn" || refusal === "secondFactorNotVerified") {
+    redirect("/commerce/connexion");
+  }
+  if (refusal === "noSecondFactor") {
+    redirect("/commerce/securite");
+  }
+}
+
 export type BackOfficeEntry =
   | {
       status: "working";
@@ -73,12 +92,7 @@ export async function reachBackOffice(): Promise<BackOfficeEntry> {
   const operator = await readSignedInOperator();
   const refusal = accessRefusal(operator);
 
-  if (refusal === "notSignedIn" || refusal === "secondFactorNotVerified") {
-    redirect("/commerce/connexion");
-  }
-  if (refusal === "noSecondFactor") {
-    redirect("/commerce/securite");
-  }
+  if (refusal !== "notACommerceOperator") sendToResolve(refusal);
   if (refusal || !operator) {
     return { status: "refused", refusal: refusal ?? "notSignedIn" };
   }
@@ -93,4 +107,19 @@ export async function reachBackOffice(): Promise<BackOfficeEntry> {
   }
 
   return { status: "working", operator, provider, credentials };
+}
+
+/**
+ * Who is working, for a tool that asks only that they are on the team.
+ *
+ * The questionnaire link maker (ADR-0013) needs a fully authenticated staff
+ * account and nothing of the commerce role, so there is no refusal to render:
+ * every way of not being staff is the session's own to resolve, and each is
+ * sent to the place that does.
+ */
+export async function reachStaffTool(): Promise<CommerceOperator> {
+  const operator = await readSignedInOperator();
+  sendToResolve(staffRefusal(operator));
+  if (!isStaff(operator)) redirect("/commerce/connexion");
+  return operator;
 }

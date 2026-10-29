@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { signOutAction } from "@/commerce/actions";
 import { ACCESS_REFUSAL_LABELS, type AccessRefusal } from "@/commerce/operators";
 
@@ -21,6 +23,18 @@ export function AccessRefused({ refusal }: { refusal: AccessRefusal }) {
         <p data-testid="commerce-refusal" className="m-0 text-body font-light">
           {ACCESS_REFUSAL_LABELS[refusal]}
         </p>
+        {refusal === "notACommerceOperator" ? (
+          // A fully authenticated staff member still has somewhere to go: the
+          // questionnaire tool asks for no commerce role (ADR-0013).
+          <p className="mt-5 mb-0 text-body-sm">
+            <Link
+              href="/commerce/questionnaire"
+              className="text-wc-text underline underline-offset-4"
+            >
+              Envoyer un questionnaire de marque
+            </Link>
+          </p>
+        ) : null}
         <form action={signOutAction} className="mt-5">
           <CommerceButton secondary pendingLabel="Déconnexion…">
             Se déconnecter

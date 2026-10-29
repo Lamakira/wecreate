@@ -38,6 +38,33 @@ export const ACCESS_REFUSAL_LABELS: Record<AccessRefusal, string> = {
     "Votre compte n'administre pas le commerce. Les fichiers livrés et le journal des opérations sont réservés aux opératrices et opérateurs commerce.",
 };
 
+/** Why a session is not a fully authenticated staff member. */
+export type StaffRefusal = Exclude<AccessRefusal, "notACommerceOperator">;
+
+/**
+ * Why this session is not a fully authenticated staff member, or `undefined`
+ * if it is: signed in, with a second factor, and that factor proved.
+ *
+ * These are the first three checks of `accessRefusal`, on their own. Making a
+ * questionnaire link needs a fully authenticated staff account, not the
+ * commerce role (ADR-0013).
+ */
+export function staffRefusal(
+  operator: CommerceOperator | undefined,
+): StaffRefusal | undefined {
+  if (!operator) return "notSignedIn";
+  if (operator.factors.length === 0) return "noSecondFactor";
+  if (operator.assurance !== "aal2") return "secondFactorNotVerified";
+  return undefined;
+}
+
+/** Whether this session is a fully authenticated staff member (ADR-0013). */
+export function isStaff(
+  operator: CommerceOperator | undefined,
+): operator is CommerceOperator {
+  return staffRefusal(operator) === undefined;
+}
+
 /**
  * Why this session may not reach commerce data, or `undefined` if it may.
  *
@@ -53,10 +80,9 @@ export const ACCESS_REFUSAL_LABELS: Record<AccessRefusal, string> = {
 export function accessRefusal(
   operator: CommerceOperator | undefined,
 ): AccessRefusal | undefined {
-  if (!operator) return "notSignedIn";
-  if (operator.factors.length === 0) return "noSecondFactor";
-  if (operator.assurance !== "aal2") return "secondFactorNotVerified";
-  if (!operator.administersCommerce) return "notACommerceOperator";
+  const refusal = staffRefusal(operator);
+  if (refusal) return refusal;
+  if (!operator?.administersCommerce) return "notACommerceOperator";
   return undefined;
 }
 
