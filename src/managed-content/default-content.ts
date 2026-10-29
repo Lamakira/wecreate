@@ -277,6 +277,21 @@ const SERVICES_CONTENT: ServicesContent = {
       ],
     },
   ],
+  // The Branding packs and their conditions come from WeCreate's brochures and
+  // are entered in the Studio (issue #61): none ships here, so the section is
+  // absent until an editor publishes a pack.
+  branding: {
+    kicker: "Identité de marque",
+    title: "Branding",
+    intro: "",
+    contactFormLabel: "Écrire via le formulaire",
+    packs: [],
+    conditions: {
+      kicker: "Branding · Conditions",
+      title: "Conditions Branding",
+      conditions: [],
+    },
+  },
   comparison: {
     isVisible: true,
     kicker: "Comparatif · Abonnements Entreprises",
