@@ -53,10 +53,11 @@ export function RecentWorkSection({ section, projects }: RecentWorkSectionProps)
         />
       ) : (
         // Columns rather than a grid, the same mosaic as `/portfolio`. The reel
-        // mixes 9:16 and 16:9 cards, and a grid lines them up in rows: every
-        // landscape card beside a portrait one leaves a hole the height of the
-        // difference under it. Columns stack each card straight under the one
-        // above, so the reel keeps its mixed formats and loses the holes.
+        // mixes 9:16, 16:9, 4:5, 1:1 and 16:10 cards, and a grid lines them up
+        // in rows: every landscape card beside a portrait one leaves a hole the
+        // height of the difference under it. Columns stack each card straight
+        // under the one above, so the reel keeps its mixed formats and loses
+        // the holes.
         <ul
           data-testid="recent-work-reel"
           className="m-0 list-none p-0"

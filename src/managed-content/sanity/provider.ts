@@ -1,5 +1,6 @@
 import "server-only";
 
+import { DEFAULT_DISCIPLINE, DISCIPLINES, type Discipline } from "@/discipline";
 import { getSanityClient } from "@/sanity/client";
 import { assertSanityConfigured } from "@/sanity/env";
 import type { PlaybackAssociation } from "@/video-playback/provider";
@@ -26,6 +27,7 @@ import type {
   PortfolioContent,
   PortfolioProject,
   PortfolioUniverse,
+  ProjectImage,
   ServiceAddOn,
   ServiceComparisonRow,
   ServicePack,
@@ -48,8 +50,9 @@ import { SITE_CONTENT_QUERY } from "./query";
  * an editor has only just created.
  */
 type SanityProject = DeepPartial<
-  Omit<PortfolioProject, "playbackAsset" | "media">
+  Omit<PortfolioProject, "playbackAsset" | "media" | "images">
 > & {
+  images?: Array<DeepPartial<ProjectImage> | null> | null;
   media?: DeepPartial<MediaFrameContent> | null;
   video?: DeepPartial<PlaybackAssociation> | null;
 };
@@ -90,6 +93,14 @@ function toUniverse(value: string | null | undefined): PortfolioUniverse | null 
 }
 
 /**
+ * A project written before Disciplines existed has none, and is a film:
+ * Vidéographie. No migration.
+ */
+function toDiscipline(value: string | null | undefined): Discipline {
+  return DISCIPLINES.find((discipline) => discipline === value) ?? DEFAULT_DISCIPLINE;
+}
+
+/**
  * One Sanity document, in the application's own vocabulary.
  *
  * Every field falls back to something empty rather than to something invented:
@@ -97,7 +108,12 @@ function toUniverse(value: string | null | undefined): PortfolioUniverse | null 
  * what the publication rule reads to decide it may not be shown.
  */
 function toPortfolioProject(document: SanityProject): PortfolioProject {
-  const association = document.video;
+  const discipline = toDiscipline(document.discipline);
+  const filmed = discipline === "videographie";
+  // Sanity keeps the value of a field the Studio hides, so a project an editor
+  // switched from Vidéographie to Branding still carries its old video,
+  // universe and transcript. They are ignored unless the project is a film.
+  const association = filmed ? document.video : null;
 
   return {
     // Sanity prefixes an unpublished document's id with `drafts.`; stripping it
@@ -106,7 +122,8 @@ function toPortfolioProject(document: SanityProject): PortfolioProject {
     slug: document.slug ?? "",
     title: document.title ?? "",
     client: document.client ?? "",
-    universe: toUniverse(document.universe),
+    discipline,
+    universe: filmed ? toUniverse(document.universe) : null,
     projectType: document.projectType ?? "",
     description: document.description ?? "",
     role: document.role ?? "",
@@ -125,9 +142,27 @@ function toPortfolioProject(document: SanityProject): PortfolioProject {
           textTracks: association.textTracks ?? [],
         })
       : null,
+    // An image without a file is a row an editor added and has not filled in.
+    images: filmed
+      ? []
+      : (document.images ?? []).flatMap((image) =>
+          image?.url?.trim()
+            ? [
+                {
+                  key: image.key ?? "",
+                  url: image.url,
+                  alternativeText: image.alternativeText ?? "",
+                  width: image.width ?? null,
+                  height: image.height ?? null,
+                },
+              ]
+            : [],
+        ),
     hasPublicationPermission: document.hasPublicationPermission === true,
-    spokenContent: (document.spokenContent ?? "none") as SpokenContentSupport,
-    transcript: document.transcript ?? null,
+    spokenContent: filmed
+      ? ((document.spokenContent ?? "none") as SpokenContentSupport)
+      : "none",
+    transcript: filmed ? (document.transcript ?? null) : null,
   };
 }
 

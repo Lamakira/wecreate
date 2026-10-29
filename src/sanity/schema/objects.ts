@@ -134,6 +134,8 @@ export const mediaFrame = defineType({
           { title: "Horizontal 16:9", value: "16 / 9" },
           { title: "Portrait 4:5", value: "4 / 5" },
           { title: "Paysage 4:3", value: "4 / 3" },
+          { title: "Carré 1:1", value: "1 / 1" },
+          { title: "Écran 16:10", value: "16 / 10" },
         ],
         layout: "radio",
       },

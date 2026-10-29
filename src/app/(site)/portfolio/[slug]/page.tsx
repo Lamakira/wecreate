@@ -3,7 +3,7 @@ import { draftMode } from "next/headers";
 import Link from "next/link";
 
 import { ProjectDetails } from "@/components/portfolio/project-details";
-import { ProjectPlayback } from "@/components/portfolio/project-playback";
+import { ProjectWork } from "@/components/portfolio/project-work";
 import { NotFoundContent } from "@/components/shell/not-found-content";
 import { SitePage } from "@/components/shell/site-page";
 import { gatePortfolio, readPortfolioPage } from "@/managed-content";
@@ -105,7 +105,7 @@ export default async function ProjectRoute({ params }: ProjectRouteProps) {
           ← Retour au portfolio
         </Link>
 
-        <ProjectPlayback project={project} />
+        <ProjectWork project={project} />
 
         <div className="pt-heading-gap">
           <ProjectDetails project={project} as="h1" showRequirements={isPreview} />
