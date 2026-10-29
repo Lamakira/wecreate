@@ -688,6 +688,42 @@ export interface ServiceAddOnsContent extends SectionVisibility {
 }
 
 /**
+ * One condition of the Branding offer — start, revisions, ownership, printing,
+ * VAT. Stated so a client can prepare; nothing on the site enforces it.
+ */
+export interface ServiceCondition {
+  key: string;
+  title: string;
+  text: string;
+}
+
+export interface BrandingConditionsContent {
+  kicker: string;
+  title: string;
+  conditions: ServiceCondition[];
+}
+
+/**
+ * The Branding Discipline's packs, sold through conversation like every other
+ * service (ADR-0006).
+ *
+ * Names and prices come from WeCreate's own brochures (spec #55 decision 6), so
+ * none ships in source. It is a field of its own rather than a fourth
+ * `ServiceUniverse` because universes are the video offers the comparison and
+ * the add-ons describe.
+ */
+export interface BrandingOfferContent {
+  kicker: string;
+  title: string;
+  intro: string;
+  /** Label of the link to the contact form, its subject set to Branding. */
+  contactFormLabel: string;
+  /** Display order is this array's order. Empty: the section is absent. */
+  packs: ServicePack[];
+  conditions: BrandingConditionsContent;
+}
+
+/**
  * What a service CTA is, and the words it carries.
  *
  * Both actions leave the site: a prefilled WhatsApp conversation, and a hosted
@@ -707,7 +743,7 @@ export interface ServiceEnquiryContent {
 
 /**
  * The Services page: WeCreate's method, its three universes and their packs,
- * the Entreprises comparison and the add-ons.
+ * the Entreprises comparison, the add-ons and the Branding offer.
  *
  * Like the homepage this is a fixed set of named sections. An editor changes
  * copy, prices, inclusions, order and whether the last two sections are shown —
@@ -723,6 +759,7 @@ export interface ServicesContent {
   onRequestLabel: string;
   enquiry: ServiceEnquiryContent;
   universes: ServiceUniverse[];
+  branding: BrandingOfferContent;
   comparison: ServiceComparisonContent;
   addOns: ServiceAddOnsContent;
 }

@@ -28,6 +28,7 @@ import type {
   PortfolioUniverse,
   ServiceAddOn,
   ServiceComparisonRow,
+  ServiceCondition,
   ServicePack,
   ServiceUniverse,
   ServicesContent,
@@ -265,12 +266,28 @@ function toServiceAddOn(
   };
 }
 
+function toServiceCondition(
+  document: DeepPartial<ServiceCondition>,
+  index: number,
+): ServiceCondition {
+  return {
+    key: document.key ?? `condition-${index}`,
+    title: document.title ?? "",
+    text: document.text ?? "",
+  };
+}
+
 function toServices(
   document: DeepPartial<ServicesContent> | null | undefined,
 ): ServicesContent {
   const merged = mergeContent(DEFAULT_SITE_CONTENT.services, {
     ...document,
     universes: undefined,
+    branding: {
+      ...document?.branding,
+      packs: undefined,
+      conditions: { ...document?.branding?.conditions, conditions: undefined },
+    },
     comparison: { ...document?.comparison, rows: undefined },
     addOns: { ...document?.addOns, addOns: undefined },
   });
@@ -280,6 +297,18 @@ function toServices(
     universes: document?.universes
       ? document.universes.map(toServiceUniverse)
       : merged.universes,
+    branding: {
+      ...merged.branding,
+      packs: document?.branding?.packs
+        ? document.branding.packs.map(toServicePack)
+        : merged.branding.packs,
+      conditions: {
+        ...merged.branding.conditions,
+        conditions: document?.branding?.conditions?.conditions
+          ? document.branding.conditions.conditions.map(toServiceCondition)
+          : merged.branding.conditions.conditions,
+      },
+    },
     comparison: {
       ...merged.comparison,
       rows: document?.comparison?.rows

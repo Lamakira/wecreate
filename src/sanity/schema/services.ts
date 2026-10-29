@@ -4,7 +4,7 @@ import { visibilityField } from "./objects";
 
 /**
  * The Services page: WeCreate's three universes, their packs, the Entreprises
- * comparison and the add-ons.
+ * comparison, the add-ons and the Branding packs with their conditions.
  *
  * A singleton with a fixed set of named sections, like the homepage. Editors
  * own the prices, the inclusions, the wording and the order — the arrays below
@@ -207,6 +207,7 @@ export const servicesPage = defineType({
     { name: "intro", title: "En-tête", default: true },
     { name: "enquiry", title: "Demande de service" },
     { name: "offers", title: "Offres" },
+    { name: "branding", title: "Branding" },
     { name: "seo", title: "Référencement" },
   ],
   fields: [
@@ -304,6 +305,75 @@ export const servicesPage = defineType({
       of: [{ type: "serviceUniverse" }],
       group: "offers",
       description: "L'ordre de cette liste est l'ordre d'affichage sur la page.",
+    }),
+
+    defineField({
+      name: "branding",
+      title: "Branding",
+      type: "object",
+      group: "branding",
+      description:
+        "Les packs Branding et leurs conditions, saisis depuis les plaquettes WeCreate. Sans pack publié, la section n'apparaît pas sur la page services.",
+      fields: [
+        defineField({ name: "kicker", title: "Sur-titre", type: "string" }),
+        defineField({ name: "title", title: "Titre", type: "string" }),
+        defineField({ name: "intro", title: "Introduction", type: "text", rows: 3 }),
+        defineField({
+          name: "contactFormLabel",
+          title: "Libellé du lien vers le formulaire",
+          type: "string",
+          description:
+            "Ouvre le formulaire de contact avec le sujet Branding déjà choisi.",
+        }),
+        defineField({
+          name: "packs",
+          title: "Packs",
+          type: "array",
+          of: [{ type: "servicePack" }],
+          description:
+            "L'ordre de cette liste est l'ordre d'affichage. Le nom du pack est repris dans le message WhatsApp prérempli.",
+        }),
+        defineField({
+          name: "conditions",
+          title: "Conditions Branding",
+          type: "object",
+          fields: [
+            defineField({ name: "kicker", title: "Sur-titre", type: "string" }),
+            defineField({ name: "title", title: "Titre", type: "string" }),
+            defineField({
+              name: "conditions",
+              title: "Conditions",
+              type: "array",
+              description:
+                "Par exemple démarrage, révisions, propriété, impression, TVA.",
+              of: [
+                {
+                  type: "object",
+                  name: "serviceCondition",
+                  title: "Condition",
+                  fields: [
+                    defineField({
+                      name: "key",
+                      title: "Identifiant",
+                      type: "slug",
+                      options: { source: "title" },
+                      validation: (rule) => rule.required(),
+                    }),
+                    defineField({
+                      name: "title",
+                      title: "Titre",
+                      type: "string",
+                      validation: (rule) => rule.required(),
+                    }),
+                    defineField({ name: "text", title: "Texte", type: "text", rows: 2 }),
+                  ],
+                  preview: { select: { title: "title", subtitle: "text" } },
+                },
+              ],
+            }),
+          ],
+        }),
+      ],
     }),
 
     defineField({
