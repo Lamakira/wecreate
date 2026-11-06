@@ -1,7 +1,9 @@
+import { Fragment } from "react";
+
 import { CtaLink } from "@/components/primitives/cta-link";
 import { formatXof } from "@/lib/format";
 import { prefilledMessage, whatsAppMessageUrl } from "@/lib/whatsapp";
-import type { ServicePack } from "@/managed-content/types";
+import type { CallToAction, ServicePack } from "@/managed-content/types";
 import {
   serviceOfferLabel,
   type ServiceEnquiryContext,
@@ -12,13 +14,19 @@ interface ServicePackCardProps {
   /** The universe the pack belongs to, named in the enquiry message. */
   universeTitle: string;
   serviceEnquiry: ServiceEnquiryContext;
+  /**
+   * A third way to talk: the contact form, its subject already chosen. Branding
+   * packs carry it; the video packs do not.
+   */
+  contactForm?: CallToAction;
 }
 
 /**
- * One service offer, and the two ways to talk about it.
+ * One service offer, and the ways to talk about it.
  *
- * Both actions are plain links to somewhere else: a WhatsApp conversation
- * prefilled with this pack's name, and WeCreate's hosted Discovery Call page.
+ * The actions are plain links to somewhere else: a WhatsApp conversation
+ * prefilled with this pack's name, and WeCreate's hosted Discovery Call page —
+ * plus, for a Branding pack, the contact form with its subject chosen.
  * Neither is a button, because neither does anything on this site — there is no
  * "Ajouter au panier" and no "Réserver" here, and there cannot be: a service
  * offer never enters the Digital Cart or reaches FedaPay (ADR-0006).
@@ -30,12 +38,22 @@ export function ServicePackCard({
   pack,
   universeTitle,
   serviceEnquiry: { enquiry, contact, onRequestLabel },
+  contactForm,
 }: ServicePackCardProps) {
   const offer = serviceOfferLabel(pack.name, universeTitle);
   const whatsappHref = whatsAppMessageUrl(
     contact.whatsappUrl,
     prefilledMessage(enquiry.whatsappMessageTemplate, offer),
   );
+
+  // A term an editor left empty is left out with its label, and a card with
+  // none has no list at all.
+  const terms: Array<[string, string]> = [
+    ["Cible", pack.audience],
+    ["Engagement", pack.commitment],
+    ["Paiement", pack.paymentTerms],
+  ];
+  const hasTerms = terms.some(([, value]) => value !== "");
 
   return (
     <article
@@ -77,20 +95,20 @@ export function ServicePackCard({
       {/* Micro-label terms with ordinary-case definitions, the meta treatment
         * used everywhere else on the site. The payment conditions are a
         * sentence, and a sentence set in capitals stops being readable. */}
-      <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 border-t border-wc-line pt-3.5 text-body-sm font-light text-wc-text-muted">
-        <dt className="m-0 text-[10px] font-medium tracking-16 uppercase">
-          Cible
-        </dt>
-        <dd className="m-0">{pack.audience}</dd>
-        <dt className="m-0 text-[10px] font-medium tracking-16 uppercase">
-          Engagement
-        </dt>
-        <dd className="m-0">{pack.commitment}</dd>
-        <dt className="m-0 text-[10px] font-medium tracking-16 uppercase">
-          Paiement
-        </dt>
-        <dd className="m-0">{pack.paymentTerms}</dd>
-      </dl>
+      {hasTerms ? (
+        <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 border-t border-wc-line pt-3.5 text-body-sm font-light text-wc-text-muted">
+          {terms.map(([label, value]) =>
+            value ? (
+              <Fragment key={label}>
+                <dt className="m-0 text-[10px] font-medium tracking-16 uppercase">
+                  {label}
+                </dt>
+                <dd className="m-0">{value}</dd>
+              </Fragment>
+            ) : null,
+          )}
+        </dl>
+      ) : null}
 
       <div className="flex flex-col gap-2">
         <CtaLink
@@ -108,6 +126,14 @@ export function ServicePackCard({
           size="block"
           context={offer}
         />
+        {contactForm ? (
+          <CtaLink
+            cta={contactForm}
+            variant="underline"
+            context={offer}
+            className="mt-1 self-center"
+          />
+        ) : null}
       </div>
     </article>
   );

@@ -5,6 +5,8 @@ import type {
   LegalRevision,
   PlaybackAsset,
   PortfolioProject,
+  ServiceCondition,
+  ServicePack,
 } from "../../../src/managed-content/types";
 
 /**
@@ -357,3 +359,65 @@ export const SAMPLE_HERO_PLAYBACK: PlaybackAsset = {
   preview: null,
   captions: [],
 };
+
+/*
+ * Stand-ins for the Branding values WeCreate enters in the Studio from its
+ * brochures. They live here because no Branding pack or condition ships in
+ * `src/` (issue #61). Deliberately fictitious: they cannot be mistaken for the
+ * real offer, and the names and amounts below are not WeCreate's.
+ */
+const BRANDING_PAYMENT_TERMS =
+  "Payable en 3 fois : 40 % à la commande, 30 % à la validation du logo, 30 % à la livraison.";
+
+export const SAMPLE_BRANDING_PACKS: ServicePack[] = [
+  {
+    id: "branding-repere",
+    name: "Pack Repère",
+    priceXof: 180000,
+    priceUnit: "forfait",
+    isOnRequest: false,
+    audience: "Commerces qui ouvrent",
+    commitment: "",
+    paymentTerms: BRANDING_PAYMENT_TERMS,
+    inclusions: ["2 pistes de logo", "Palette et typographies"],
+  },
+  {
+    id: "branding-systeme",
+    name: "Pack Système",
+    priceXof: 360000,
+    priceUnit: "forfait",
+    isOnRequest: false,
+    audience: "Marques qui se structurent",
+    commitment: "",
+    paymentTerms: BRANDING_PAYMENT_TERMS,
+    inclusions: [
+      "3 pistes de logo",
+      "Charte graphique en 12 pages",
+      "Déclinaisons pour les réseaux",
+    ],
+  },
+  {
+    id: "branding-univers",
+    name: "Pack Univers",
+    priceXof: 720000,
+    priceUnit: "forfait",
+    isOnRequest: false,
+    audience: "Marques qui changent d'échelle",
+    commitment: "",
+    paymentTerms: BRANDING_PAYMENT_TERMS,
+    inclusions: [
+      "Logo et territoire visuel complets",
+      "Charte graphique détaillée",
+      "Gabarits de communication",
+    ],
+  },
+];
+
+export const SAMPLE_BRANDING_CONDITIONS: ServiceCondition[] = [
+  { key: "demarrage", title: "Démarrage", text: "Le travail commence à la réception du premier versement." },
+  { key: "revisions", title: "Révisions", text: "Deux tours de retouches sont compris dans chaque pack." },
+  { key: "propriete", title: "Propriété", text: "Les fichiers sources sont remis après le dernier versement." },
+  { key: "impression", title: "Impression", text: "Les frais d'impression sont à la charge du client." },
+  { key: "tva", title: "TVA", text: "Les montants affichés s'entendent hors taxes éventuelles." },
+  { key: "delais", title: "Délais", text: "Le calendrier est fixé avec vous avant le démarrage." },
+];

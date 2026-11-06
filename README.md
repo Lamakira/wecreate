@@ -1032,6 +1032,22 @@ cannot drift back:
   price stays in Managed Content — it is what the quote starts from — and the
   page never prints it.
 
+**The Branding packs ship empty.** After the video offers comes the Branding
+Discipline: its packs, then *Conditions Branding* (start, revisions, ownership,
+printing, VAT…). Unlike the video catalogue, none of it is in `src/`: pack names
+and prices come from WeCreate's own brochures (spec #55, decision 6), because the
+design handoff names the same three packs two different ways and its prices are
+prototype values. An editor enters them in the Studio, under *Page services →
+Branding*. Until one pack is published the section is simply absent — there is
+no placeholder price to mistake for an offer — and the conditions never show
+without a pack. Branding packs are the same `ServicePack` as the video ones and
+end the same way: WhatsApp naming the pack, the Discovery Call, and a third link
+to the contact form with the *Branding* subject chosen. They come after the
+comparison and the add-ons, which stay about the video packs. The page stays
+black and white; the Branding colours belong to `/branding`. Everything lives in
+the `servicesPage` document, so no webhook filter changes; the section is
+reachable at `/services#branding`.
+
 **Calendly is a URL, not an integration.** `settings.contact.discoveryCallUrl`
 is an address an editor maintains, and no Calendly script or iframe is ever
 loaded (issue #1, ADR-0003). A wrong address is therefore a broken link and
@@ -1559,6 +1575,9 @@ tests/e2e/
 ├── services.spec.ts                  canonical packs and prices, the prefilled
 │                                     WhatsApp message, the hosted Discovery
 │                                     Call, the comparison, no service commerce
+├── services-branding.spec.ts         Branding packs and conditions absent until
+│                                     published, their three enquiry links, the
+│                                     comparison and add-ons kept video-only
 ├── about.spec.ts                     the story, the placeholder portrait, roles
 │                                     without names, the method, no testimonial
 ├── contact.spec.ts                   the three channels, the absent form,

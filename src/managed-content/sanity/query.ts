@@ -2,6 +2,17 @@ import { defineQuery } from "next-sanity";
 
 const CALL_TO_ACTION = "{label, href}";
 const SPLIT_HEADLINE = "{lead, emphasis, trail}";
+const SERVICE_PACK = `{
+  "id": coalesce(id.current, _key),
+  name,
+  priceXof,
+  priceUnit,
+  isOnRequest,
+  audience,
+  commitment,
+  paymentTerms,
+  inclusions
+}`;
 const MEDIA_FRAME =
   '{ratio, placeholderLabel, alternativeText, "imageUrl": image.asset->url}';
 
@@ -164,16 +175,18 @@ export const SITE_CONTENT_QUERY = defineQuery(`{
       kicker,
       title,
       intro,
-      packs[]{
-        "id": coalesce(id.current, _key),
-        name,
-        priceXof,
-        priceUnit,
-        isOnRequest,
-        audience,
-        commitment,
-        paymentTerms,
-        inclusions
+      packs[]${SERVICE_PACK}
+    },
+    branding{
+      kicker,
+      title,
+      intro,
+      contactFormLabel,
+      packs[]${SERVICE_PACK},
+      conditions{
+        kicker,
+        title,
+        conditions[]{"key": coalesce(key.current, _key), title, text}
       }
     },
     comparison{
