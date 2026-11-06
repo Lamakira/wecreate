@@ -36,6 +36,7 @@ import type {
   ServicesContent,
   SiteContent,
   SiteSettings,
+  SiteWebFormat,
   SpokenContentSupport,
 } from "../types";
 import {
@@ -312,6 +313,17 @@ function toServiceCondition(
   };
 }
 
+function toSiteWebFormat(
+  document: DeepPartial<SiteWebFormat>,
+  index: number,
+): SiteWebFormat {
+  return {
+    key: document.key ?? `format-${index}`,
+    title: document.title ?? "",
+    description: document.description ?? "",
+  };
+}
+
 function toServices(
   document: DeepPartial<ServicesContent> | null | undefined,
 ): ServicesContent {
@@ -323,6 +335,7 @@ function toServices(
       packs: undefined,
       conditions: { ...document?.branding?.conditions, conditions: undefined },
     },
+    siteWeb: { ...document?.siteWeb, formats: undefined },
     comparison: { ...document?.comparison, rows: undefined },
     addOns: { ...document?.addOns, addOns: undefined },
   });
@@ -343,6 +356,12 @@ function toServices(
           ? document.branding.conditions.conditions.map(toServiceCondition)
           : merged.branding.conditions.conditions,
       },
+    },
+    siteWeb: {
+      ...merged.siteWeb,
+      formats: document?.siteWeb?.formats
+        ? document.siteWeb.formats.map(toSiteWebFormat)
+        : merged.siteWeb.formats,
     },
     comparison: {
       ...merged.comparison,

@@ -292,6 +292,40 @@ const SERVICES_CONTENT: ServicesContent = {
       conditions: [],
     },
   },
+  // The copy ships here because the offer has no price or pack (decision 5).
+  siteWeb: {
+    kicker: "Création de sites",
+    title: "Site web",
+    intro:
+      "Chaque site est conçu sur mesure, pensé d'abord pour le téléphone. Le prix dépend de votre projet : décrivez-le, WeCreate vous répond avec un devis.",
+    quoteLabel: "Sur devis",
+    formats: [
+      {
+        key: "vitrine",
+        title: "Site vitrine",
+        description:
+          "Quelques pages soignées, vidéo en ouverture, formulaire et WhatsApp. Votre carte de visite en ligne.",
+      },
+      {
+        key: "boutique",
+        title: "Boutique en ligne",
+        description:
+          "Catalogue, panier, paiement Mobile Money. Vendez vos produits 24 h/24.",
+      },
+      {
+        key: "institutionnel",
+        title: "Site institutionnel",
+        description:
+          "Une structure claire pour présenter votre organisation, ses missions et ses actualités.",
+      },
+      {
+        key: "lancement",
+        title: "Page de lancement",
+        description:
+          "Une page unique, pensée pour un produit ou un événement. Rapide à livrer, faite pour convertir.",
+      },
+    ],
+  },
   comparison: {
     isVisible: true,
     kicker: "Comparatif · Abonnements Entreprises",
