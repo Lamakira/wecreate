@@ -8,6 +8,40 @@ import { FRAGMENT_SHADER, PRESET, VERTEX_SHADER } from "./hero-background-shader
 type Uniform = { value: unknown };
 
 /**
+ * The silk drifts slowly and its grain already steps at 24 Hz in the shader, so
+ * 30 frames per second shows nothing that 60 would, at half the cost.
+ */
+const FRAME_INTERVAL_MS = 1000 / 30;
+/**
+ * A display refreshing at 60 Hz hands out timestamps about 16.7 ms apart, so
+ * two of them can land a hair under the interval. Without this slack a frame
+ * would be skipped for being 0.1 ms early and the cap would become 20 fps.
+ */
+const FRAME_TOLERANCE_MS = 2;
+/** Fractions of the device pixel ratio to render at, sharpest first. */
+const RESOLUTION_SCALES = [1, 0.5, 0.25];
+/** Rendered frames to ignore after mount or a scale change: shader compile. */
+const WARMUP_FRAMES = 2;
+/** Rendered frames averaged, after the warm-up, to judge the device. */
+const SAMPLE_FRAMES = 6;
+/** An average gap between rendered frames above this means the GPU is slow. */
+const SLOW_FRAME_MS = 45;
+/**
+ * A gap this long is a hidden tab or a scrolled-away hero, not a slow GPU, so
+ * it is left out of the measurement.
+ */
+const PAUSE_FRAME_MS = 1000;
+
+/**
+ * What this visit has learned about the device, kept outside the component so
+ * the hero on the next page (`/` to `/branding` to `/site-web`) starts where
+ * the last one ended instead of re-learning from full resolution. It only ever
+ * moves down: a device that was too slow once is not given another chance.
+ */
+let learnedScaleIndex = 0;
+let learnedStill = false;
+
+/**
  * The silk's colour ramp, as the current Discipline theme paints it.
  *
  * Read from the `--wc-hero-silk-*` custom properties in `globals.css` rather
@@ -48,6 +82,10 @@ function hexToRgb(hex: string) {
  * - It stops rendering as soon as the hero scrolls out of view. A full-screen
  *   fragment shader running while someone reads the footer is battery spent for
  *   nothing, which matters on the low-memory Android hardware this site targets.
+ * - It keeps to a frame budget: 30 frames per second at most, with the
+ *   resolution stepped down when the first frames show a slow device and, as a
+ *   last resort, a single still frame left on the canvas. What it learns is
+ *   kept for the rest of the visit, so each hero does not repeat the lesson.
  * - If WebGL2 is unavailable or the context is lost, it removes itself and the
  *   gradient underneath simply shows through.
  *
@@ -68,13 +106,17 @@ export function HeroBackground({ className = "" }: { className?: string }) {
       return;
     }
 
+    const baseDpr = Math.min(window.devicePixelRatio || 1, 2);
+    let scaleIndex = learnedScaleIndex;
+    let still = learnedStill;
+
     let renderer: Renderer;
     try {
       renderer = new Renderer({
         webgl: 2,
         alpha: false,
         antialias: false,
-        dpr: Math.min(window.devicePixelRatio || 1, 2),
+        dpr: baseDpr * RESOLUTION_SCALES[scaleIndex],
       });
     } catch {
       // No WebGL2 on this device. The gradient underneath is the design.
@@ -146,6 +188,13 @@ export function HeroBackground({ className = "" }: { className?: string }) {
     const mesh = new Mesh(gl, { geometry, program });
 
     let needsRender = true;
+    let lost = false;
+    let elapsed = 0;
+    const draw = () => {
+      (program.uniforms.uTime as Uniform).value = elapsed / 1000;
+      renderer.render({ scene: mesh });
+      needsRender = false;
+    };
     const resize = () => {
       const bounds = container.getBoundingClientRect();
       renderer.setSize(
@@ -157,6 +206,10 @@ export function HeroBackground({ className = "" }: { className?: string }) {
       resolution[0] = gl.drawingBufferWidth;
       resolution[1] = gl.drawingBufferHeight;
       needsRender = true;
+      // Resizing clears the canvas, and a still hero has no loop to repaint it.
+      if (still && !lost) {
+        draw();
+      }
     };
     const resizeObserver = new ResizeObserver(resize);
     resizeObserver.observe(container);
@@ -175,9 +228,38 @@ export function HeroBackground({ className = "" }: { className?: string }) {
     visibilityObserver.observe(container);
 
     let frame = 0;
-    let elapsed = 0;
     let previous = 0;
-    let lost = false;
+
+    // Judging the device: skip the warm-up frames, then average the gap between
+    // the next few rendered frames.
+    let measuring = !still;
+    let warmupLeft = WARMUP_FRAMES;
+    let samples = 0;
+    let totalGap = 0;
+    const restartMeasuring = () => {
+      measuring = true;
+      warmupLeft = WARMUP_FRAMES;
+      samples = 0;
+      totalGap = 0;
+    };
+    const judgeDevice = () => {
+      measuring = false;
+      if (totalGap / samples <= SLOW_FRAME_MS) {
+        return;
+      }
+      if (scaleIndex < RESOLUTION_SCALES.length - 1) {
+        scaleIndex += 1;
+        learnedScaleIndex = scaleIndex;
+        renderer.dpr = baseDpr * RESOLUTION_SCALES[scaleIndex];
+        resize();
+        restartMeasuring();
+        return;
+      }
+      // Even the smallest buffer is too slow: keep the last frame and stop.
+      still = true;
+      learnedStill = true;
+      cancelAnimationFrame(frame);
+    };
 
     const onContextLost = (event: Event) => {
       event.preventDefault();
@@ -192,22 +274,37 @@ export function HeroBackground({ className = "" }: { className?: string }) {
         return;
       }
 
-      if (!previous) {
-        previous = now;
-      }
-      const delta = Math.min(40, now - previous);
-      previous = now;
-
       if (!isOnScreen && !needsRender) {
+        // Paused: the gap until the next frame says nothing about the GPU.
+        previous = 0;
+        return;
+      }
+      if (previous && now - previous < FRAME_INTERVAL_MS - FRAME_TOLERANCE_MS) {
         return;
       }
 
-      elapsed += delta;
-      (program.uniforms.uTime as Uniform).value = elapsed / 1000;
-      renderer.render({ scene: mesh });
-      needsRender = false;
+      // Time since the previous rendered frame, clamped so a long pause does
+      // not make the animation jump.
+      const gap = previous ? now - previous : 0;
+      previous = now;
+      elapsed += Math.min(40, gap);
+      draw();
+
+      if (measuring && gap > 0 && gap < PAUSE_FRAME_MS) {
+        if (warmupLeft > 0) {
+          warmupLeft -= 1;
+        } else {
+          totalGap += gap;
+          samples += 1;
+          if (samples === SAMPLE_FRAMES) {
+            judgeDevice();
+          }
+        }
+      }
     };
-    frame = requestAnimationFrame(render);
+    if (!still) {
+      frame = requestAnimationFrame(render);
+    }
 
     return () => {
       cancelAnimationFrame(frame);

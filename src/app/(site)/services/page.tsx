@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { SplitHeading } from "@/components/primitives/split-heading";
+import { BrandingOfferSection } from "@/components/services/branding-offer-section";
 import { ServiceAddOnsSection } from "@/components/services/service-add-ons-section";
 import { ServiceComparisonSection } from "@/components/services/service-comparison-section";
 import { ServiceEnquiryNotice } from "@/components/services/service-enquiry-notice";
@@ -30,6 +31,9 @@ export async function generateMetadata(): Promise<Metadata> {
  * WeCreate's method, then the three universes and their packs, then the
  * Entreprises comparison and the add-ons — a fixed sequence, like the homepage,
  * whose copy, prices and order an editor owns but whose structure they do not.
+ *
+ * The Branding packs and their conditions close the page when WeCreate has
+ * published them, and the contact form is a third way to talk about them.
  *
  * Every offer here ends outside the site, in a prefilled WhatsApp conversation
  * or on WeCreate's hosted Discovery Call page. Nothing on this page adds to the
@@ -92,6 +96,13 @@ export default async function ServicesPage() {
 
       {services.addOns.isVisible ? (
         <ServiceAddOnsSection section={services.addOns} />
+      ) : null}
+
+      {services.branding.packs.length > 0 ? (
+        <BrandingOfferSection
+          branding={services.branding}
+          serviceEnquiry={serviceEnquiry}
+        />
       ) : null}
     </SitePage>
   );
