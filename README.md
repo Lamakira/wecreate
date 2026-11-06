@@ -1071,6 +1071,16 @@ black and white; the Branding colours belong to `/branding`. Everything lives in
 the `servicesPage` document, so no webhook filter changes; the section is
 reachable at `/services#branding`.
 
+**The Site web offer is quoted.** After Branding comes a presentation of what
+WeCreate builds (a showcase site, an online shop, an institutional site, a
+launch page), with no pack and no price (spec #55, decision 5). It has one call
+to action, *Sur devis*, which opens the contact form with the *Site web* subject
+chosen: a Service Enquiry, never the Digital Cart. Unlike Branding, the default
+copy ships in `src/`, since it holds no commercial figure; an editor replaces it
+in the Studio, under *Page services → Site web*. The page stays black and white.
+It lives in the `servicesPage` document, so no webhook filter changes; the
+section is reachable at `/services#site-web`.
+
 **Calendly is a URL, not an integration.** `settings.contact.discoveryCallUrl`
 is an address an editor maintains, and no Calendly script or iframe is ever
 loaded (issue #1, ADR-0003). A wrong address is therefore a broken link and
@@ -1601,6 +1611,8 @@ tests/e2e/
 ├── services-branding.spec.ts         Branding packs and conditions absent until
 │                                     published, their three enquiry links, the
 │                                     comparison and add-ons kept video-only
+├── services-site-web.spec.ts         the offer without price or pack, its one
+│                                     link to the contact form, editor-owned copy
 ├── about.spec.ts                     the story, the placeholder portrait, roles
 │                                     without names, the method, no testimonial
 ├── contact.spec.ts                   the three channels, the absent form,

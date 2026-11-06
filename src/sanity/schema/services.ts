@@ -4,7 +4,8 @@ import { visibilityField } from "./objects";
 
 /**
  * The Services page: WeCreate's three universes, their packs, the Entreprises
- * comparison, the add-ons and the Branding packs with their conditions.
+ * comparison, the add-ons, the Branding packs with their conditions and the
+ * Site web offer, a presentation with no price or pack.
  *
  * A singleton with a fixed set of named sections, like the homepage. Editors
  * own the prices, the inclusions, the wording and the order — the arrays below
@@ -208,6 +209,7 @@ export const servicesPage = defineType({
     { name: "enquiry", title: "Demande de service" },
     { name: "offers", title: "Offres" },
     { name: "branding", title: "Branding" },
+    { name: "siteWeb", title: "Site web" },
     { name: "seo", title: "Référencement" },
   ],
   fields: [
@@ -371,6 +373,63 @@ export const servicesPage = defineType({
                 },
               ],
             }),
+          ],
+        }),
+      ],
+    }),
+
+    defineField({
+      name: "siteWeb",
+      title: "Site web",
+      type: "object",
+      group: "siteWeb",
+      description:
+        "La présentation de l'offre Site web, sans pack ni prix. Un champ laissé vide garde le texte livré avec le site.",
+      fields: [
+        defineField({ name: "kicker", title: "Sur-titre", type: "string" }),
+        defineField({ name: "title", title: "Titre", type: "string" }),
+        defineField({ name: "intro", title: "Introduction", type: "text", rows: 3 }),
+        defineField({
+          name: "quoteLabel",
+          title: "Libellé du bouton",
+          type: "string",
+          description:
+            "Ce bouton ouvre le formulaire de contact avec le sujet Site web déjà choisi.",
+        }),
+        defineField({
+          name: "formats",
+          title: "Formats de site",
+          type: "array",
+          description:
+            "Ce que WeCreate construit, dans l'ordre d'affichage. Dès qu'un format est saisi ici, cette liste remplace entièrement celle livrée avec le site.",
+          of: [
+            {
+              type: "object",
+              name: "siteWebFormat",
+              title: "Format",
+              fields: [
+                defineField({
+                  name: "key",
+                  title: "Identifiant",
+                  type: "slug",
+                  options: { source: "title" },
+                  validation: (rule) => rule.required(),
+                }),
+                defineField({
+                  name: "title",
+                  title: "Titre",
+                  type: "string",
+                  validation: (rule) => rule.required(),
+                }),
+                defineField({
+                  name: "description",
+                  title: "Description",
+                  type: "text",
+                  rows: 2,
+                }),
+              ],
+              preview: { select: { title: "title", subtitle: "description" } },
+            },
           ],
         }),
       ],

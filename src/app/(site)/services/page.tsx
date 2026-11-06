@@ -6,6 +6,7 @@ import { ServiceAddOnsSection } from "@/components/services/service-add-ons-sect
 import { ServiceComparisonSection } from "@/components/services/service-comparison-section";
 import { ServiceEnquiryNotice } from "@/components/services/service-enquiry-notice";
 import { ServiceUniverseSection } from "@/components/services/service-universe-section";
+import { SiteWebOfferSection } from "@/components/services/site-web-offer-section";
 import { SitePage } from "@/components/shell/site-page";
 import { readServicesPage } from "@/managed-content";
 import { pageMetadata } from "@/seo/page-metadata";
@@ -32,8 +33,10 @@ export async function generateMetadata(): Promise<Metadata> {
  * Entreprises comparison and the add-ons — a fixed sequence, like the homepage,
  * whose copy, prices and order an editor owns but whose structure they do not.
  *
- * The Branding packs and their conditions close the page when WeCreate has
- * published them, and the contact form is a third way to talk about them.
+ * The Branding packs and their conditions follow when WeCreate has published
+ * them, and the contact form is a third way to talk about them. The Site web
+ * offer closes the page, presented with no price, and its one action is the
+ * contact form.
  *
  * Every offer here ends outside the site, in a prefilled WhatsApp conversation
  * or on WeCreate's hosted Discovery Call page. Nothing on this page adds to the
@@ -104,6 +107,8 @@ export default async function ServicesPage() {
           serviceEnquiry={serviceEnquiry}
         />
       ) : null}
+
+      <SiteWebOfferSection siteWeb={services.siteWeb} />
     </SitePage>
   );
 }

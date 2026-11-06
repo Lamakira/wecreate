@@ -198,6 +198,13 @@ export const SITE_CONTENT_QUERY = defineQuery(`{
         conditions[]{"key": coalesce(key.current, _key), title, text}
       }
     },
+    siteWeb{
+      kicker,
+      title,
+      intro,
+      quoteLabel,
+      formats[]{"key": coalesce(key.current, _key), title, description}
+    },
     comparison{
       isVisible,
       kicker,

@@ -758,6 +758,29 @@ export interface BrandingOfferContent {
   conditions: BrandingConditionsContent;
 }
 
+/** One kind of site WeCreate builds, presented on the Services page. */
+export interface SiteWebFormat {
+  key: string;
+  title: string;
+  description: string;
+}
+
+/**
+ * The Site web Discipline's offer: a presentation and one way to ask for a
+ * quote. WeCreate has no packs or prices for it yet (spec #55 decision 5), so
+ * this type has no price to fill in. The default copy ships in source because
+ * nothing in it is a commercial figure; an editor replaces it in the Studio.
+ */
+export interface SiteWebOfferContent {
+  kicker: string;
+  title: string;
+  intro: string;
+  /** Label of the one call to action, which opens the contact form. */
+  quoteLabel: string;
+  /** Display order is this array's order. Empty: the list is left out. */
+  formats: SiteWebFormat[];
+}
+
 /**
  * What a service CTA is, and the words it carries.
  *
@@ -778,7 +801,8 @@ export interface ServiceEnquiryContent {
 
 /**
  * The Services page: WeCreate's method, its three universes and their packs,
- * the Entreprises comparison, the add-ons and the Branding offer.
+ * the Entreprises comparison, the add-ons, the Branding offer and the Site web
+ * offer.
  *
  * Like the homepage this is a fixed set of named sections. An editor changes
  * copy, prices, inclusions, order and whether the last two sections are shown —
@@ -795,6 +819,7 @@ export interface ServicesContent {
   enquiry: ServiceEnquiryContent;
   universes: ServiceUniverse[];
   branding: BrandingOfferContent;
+  siteWeb: SiteWebOfferContent;
   comparison: ServiceComparisonContent;
   addOns: ServiceAddOnsContent;
 }
