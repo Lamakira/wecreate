@@ -1,6 +1,42 @@
 import { defineArrayMember, defineField, defineType } from "sanity";
 
+import {
+  DEFAULT_DISCIPLINE,
+  DISCIPLINES,
+  disciplineLabel,
+  type Discipline,
+} from "@/discipline";
 import { PORTFOLIO_UNIVERSES } from "@/managed-content/types";
+
+/**
+ * The Discipline a document belongs to. A project created before Disciplines
+ * existed has none, and is Vidéographie.
+ */
+function disciplineOf(document: unknown): Discipline {
+  const value = (document as { discipline?: string } | undefined)?.discipline;
+  return (
+    DISCIPLINES.find((discipline) => discipline === value) ?? DEFAULT_DISCIPLINE
+  );
+}
+
+/** A Vidéographie project is published as a film, the others as images. */
+function isFilmedDocument(document: unknown): boolean {
+  return disciplineOf(document) === "videographie";
+}
+
+/** The formats a Branding or Site web project's card may take. */
+const IMAGE_RATIOS: Partial<
+  Record<Discipline, { ratios: string[]; message: string }>
+> = {
+  branding: {
+    ratios: ["4 / 5", "1 / 1"],
+    message: "Une charte s'affiche en 4:5 ou en 1:1.",
+  },
+  "site-web": {
+    ratios: ["16 / 10"],
+    message: "Un site s'affiche en 16:10.",
+  },
+};
 
 /**
  * Portfolio Projects, and the page that lists them.
@@ -9,11 +45,15 @@ import { PORTFOLIO_UNIVERSES } from "@/managed-content/types";
  * a singleton. Projects are created, ordered and retired by editors, which is
  * exactly what a portfolio is.
  *
- * The required fields below mirror the publication rule in
- * `src/managed-content/portfolio.ts`. The Studio asks for them so an editor is
- * told at the point of writing; the application enforces them at read time so a
- * project that slipped through — imported, or drafted before the rule existed —
- * still cannot reach a visitor.
+ * A project's Discipline decides what it is published with: a film for
+ * Vidéographie, images for Branding and Site web. The Studio hides the fields
+ * of the other kind, and the required fields below mirror the publication rule
+ * per Discipline in `src/managed-content/portfolio.ts`. A hidden field is still
+ * validated, so every rule that belongs to one kind checks the Discipline
+ * first. The Studio asks for them so an editor is told at the point of
+ * writing; the application enforces them at read time so a project that
+ * slipped through — imported, or drafted before the rule existed — still
+ * cannot reach a visitor.
  */
 
 export const portfolioProject = defineType({
@@ -26,6 +66,24 @@ export const portfolioProject = defineType({
     { name: "rights", title: "Droits et accessibilité" },
   ],
   fields: [
+    defineField({
+      name: "discipline",
+      title: "Discipline",
+      type: "string",
+      group: "editorial",
+      options: {
+        list: DISCIPLINES.map((discipline) => ({
+          title: disciplineLabel(discipline),
+          value: discipline,
+        })),
+        layout: "radio",
+      },
+      initialValue: "videographie",
+      description:
+        "Vidéographie : le projet est publié avec son film. Branding et Site web : avec ses images. Un projet créé avant ce choix est en Vidéographie.",
+      // Not required: an unset value already means Vidéographie, and requiring
+      // it would block editing every project that predates the choice.
+    }),
     defineField({
       name: "title",
       title: "Titre",
@@ -63,7 +121,13 @@ export const portfolioProject = defineType({
         })),
         layout: "radio",
       },
-      validation: (rule) => rule.required(),
+      hidden: ({ document }) => !isFilmedDocument(document),
+      validation: (rule) =>
+        rule.custom((value, context) =>
+          isFilmedDocument(context.document) && !value
+            ? "Choisissez l'univers du film."
+            : true,
+        ),
     }),
     defineField({
       name: "projectType",
@@ -112,19 +176,33 @@ export const portfolioProject = defineType({
       type: "mediaFrame",
       group: "media",
       description:
-        "Le format de la carte, et l'affiche si vous en fournissez une. Sans image, l'affiche est générée à partir de la vidéo - le texte alternatif reste obligatoire dans les deux cas.",
+        "Le format de la carte, et l'affiche si vous en fournissez une. Sans image, l'affiche est générée à partir de la vidéo (Vidéographie) ou reprend la première image (Branding, Site web). Le texte alternatif reste obligatoire dès qu'il y a une image.",
       validation: (rule) =>
-        rule.required().custom((value) => {
-          // `mediaFrame` asks for alternative text only once an image is
-          // uploaded, which is right for a card that may stay a placeholder.
-          // A Portfolio Project always ends up with a poster — the editor's, or
-          // the one the video platform generates — so it always needs
-          // describing, and the publication rule refuses the project without
-          // it. Saying so here means an editor is told while writing rather
-          // than by an empty portfolio.
-          const media = value as { alternativeText?: string } | undefined;
-          if (!media?.alternativeText?.trim()) {
-            return "Décrivez l'affiche : elle est visible même quand la vidéo ne se lit pas.";
+        rule.required().custom((value, context) => {
+          const media = value as
+            | { alternativeText?: string; ratio?: string; image?: unknown }
+            | undefined;
+          if (isFilmedDocument(context.document)) {
+            // `mediaFrame` asks for alternative text only once an image is
+            // uploaded, which is right for a card that may stay a placeholder.
+            // A film always ends up with a poster — the editor's, or the one
+            // the video platform generates — so it always needs describing, and
+            // the publication rule refuses the project without it. Saying so
+            // here means an editor is told while writing rather than by an
+            // empty portfolio.
+            if (!media?.alternativeText?.trim()) {
+              return "Décrivez l'affiche : elle est visible même quand la vidéo ne se lit pas.";
+            }
+            return true;
+          }
+          // Images carry their own descriptions, so the poster needs one only
+          // when the editor uploads a separate image for it.
+          if (media?.image && !media.alternativeText?.trim()) {
+            return "Décrivez l'affiche.";
+          }
+          const formats = IMAGE_RATIOS[disciplineOf(context.document)];
+          if (formats && media?.ratio && !formats.ratios.includes(media.ratio)) {
+            return formats.message;
           }
           return true;
         }),
@@ -136,7 +214,53 @@ export const portfolioProject = defineType({
       group: "media",
       description:
         "Déposez le fichier : l'encodage, le streaming adaptatif et l'affiche sont pris en charge automatiquement.",
-      validation: (rule) => rule.required(),
+      hidden: ({ document }) => !isFilmedDocument(document),
+      validation: (rule) =>
+        rule.custom((value, context) =>
+          isFilmedDocument(context.document) && !value
+            ? "Un projet Vidéographie est publié avec son film."
+            : true,
+        ),
+    }),
+    defineField({
+      name: "images",
+      title: "Images",
+      type: "array",
+      group: "media",
+      description:
+        "Les planches de la charte ou les captures du site, dans l'ordre où elles s'affichent. La première sert d'affiche si aucune n'est fournie.",
+      of: [
+        defineArrayMember({
+          type: "object",
+          name: "projectImage",
+          title: "Image",
+          fields: [
+            defineField({
+              name: "image",
+              title: "Image",
+              type: "image",
+              options: { hotspot: true },
+              validation: (rule) => rule.required(),
+            }),
+            defineField({
+              name: "alternativeText",
+              title: "Texte alternatif",
+              type: "string",
+              description:
+                "Décrit l'image pour les personnes qui ne la voient pas.",
+              validation: (rule) => rule.required(),
+            }),
+          ],
+          preview: { select: { media: "image", title: "alternativeText" } },
+        }),
+      ],
+      hidden: ({ document }) => isFilmedDocument(document),
+      validation: (rule) =>
+        rule.custom((value, context) =>
+          !isFilmedDocument(context.document) && (!value || value.length === 0)
+            ? "Ajoutez au moins une image : c'est ce que le projet montre."
+            : true,
+        ),
     }),
 
     defineField({
@@ -174,7 +298,13 @@ export const portfolioProject = defineType({
         ],
         layout: "radio",
       },
-      validation: (rule) => rule.required(),
+      hidden: ({ document }) => !isFilmedDocument(document),
+      validation: (rule) =>
+        rule.custom((value, context) =>
+          isFilmedDocument(context.document) && !value
+            ? "Indiquez si la parole porte du sens."
+            : true,
+        ),
     }),
     defineField({
       name: "transcript",
@@ -182,13 +312,18 @@ export const portfolioProject = defineType({
       type: "text",
       rows: 8,
       group: "rights",
-      hidden: ({ parent }) => parent?.spokenContent !== "transcript",
+      hidden: ({ document, parent }) =>
+        !isFilmedDocument(document) || parent?.spokenContent !== "transcript",
       validation: (rule) =>
         rule.custom((value, context) => {
           const parent = context.parent as
             | { spokenContent?: string }
             | undefined;
-          if (parent?.spokenContent === "transcript" && !value) {
+          if (
+            isFilmedDocument(context.document) &&
+            parent?.spokenContent === "transcript" &&
+            !value
+          ) {
             return "Une vidéo dont la parole porte du sens doit avoir une transcription.";
           }
           return true;
@@ -203,10 +338,22 @@ export const portfolioProject = defineType({
     },
   ],
   preview: {
-    select: { title: "title", client: "client", universe: "universe" },
-    prepare: ({ title, client, universe }) => ({
+    select: {
+      title: "title",
+      client: "client",
+      universe: "universe",
+      discipline: "discipline",
+    },
+    prepare: ({ title, client, universe, discipline }) => ({
       title,
-      subtitle: [client, universe].filter(Boolean).join(" · "),
+      subtitle: [
+        client,
+        isFilmedDocument({ discipline })
+          ? universe
+          : disciplineLabel(disciplineOf({ discipline })),
+      ]
+        .filter(Boolean)
+        .join(" · "),
     }),
   },
 });

@@ -209,6 +209,7 @@ test.describe("The shipped Branding and Site web content", () => {
       cardHref: "/services",
       proof: ["Pensée pour bouger", "Questionnaire", "Charte complète", "Un seul studio"],
       workLink: "Toutes les chartes",
+      workHref: "/portfolio?discipline=branding",
       empty: "Les chartes publiées apparaîtront ici dès leur mise en ligne.",
       emphasis: "bouger",
     },
@@ -218,6 +219,7 @@ test.describe("The shipped Branding and Site web content", () => {
       cardHref: "/contact",
       proof: ["Mobile d'abord", "Vidéo intégrée", "Mobile Money", "WhatsApp"],
       workLink: "Tous les sites",
+      workHref: "/portfolio?discipline=site-web",
       empty: "Les sites publiés apparaîtront ici dès leur mise en ligne.",
       emphasis: "regarde",
     },
@@ -267,7 +269,7 @@ test.describe("The shipped Branding and Site web content", () => {
         const section = page.getByRole("region", { name: /Travaux récents/ });
         await expect(
           section.getByRole("link", { name: shipped.workLink }),
-        ).toHaveAttribute("href", "/portfolio");
+        ).toHaveAttribute("href", shipped.workHref);
         await expect(section.getByTestId("recent-work-empty")).toHaveText(
           shipped.empty,
         );

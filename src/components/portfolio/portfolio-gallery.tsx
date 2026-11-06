@@ -1,13 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type MouseEvent } from "react";
+import { useSearchParams } from "next/navigation";
+import {
+  Suspense,
+  useLayoutEffect,
+  useState,
+  type MouseEvent,
+} from "react";
 
 import { ProjectDialog } from "@/components/portfolio/project-dialog";
 import { ProjectPoster } from "@/components/portfolio/project-poster";
 import { PublicationNotice } from "@/components/portfolio/publication-notice";
 import { SectionEmptyState } from "@/components/primitives/section-empty-state";
 import { SplitHeading } from "@/components/primitives/split-heading";
+import { DISCIPLINES, disciplineLabel, type Discipline } from "@/discipline";
 import {
   PORTFOLIO_UNIVERSES,
   type PortfolioContent,
@@ -31,29 +38,68 @@ function projectCount(count: number): string {
 /**
  * The portfolio: its filters, its count and its masonry of Portfolio Projects.
  *
+ * Projects are narrowed by Discipline first, then by universe. The Discipline
+ * lives in the address (`/portfolio?discipline=branding`) so a homepage can
+ * link straight to its own work and a filtered view can be shared; the universe
+ * stays local, since it only ever refines films.
+ *
+ * The page is prerendered without knowing its address, so the grid is rendered
+ * and hydrated unfiltered, exactly as before Disciplines existed, and
+ * {@link AddressedDiscipline} narrows it once the browser has read the address.
+ * Reading the address in the gallery itself would make the whole grid render
+ * in the browser only, and a tap that arrived before it did would land on a
+ * card or a filter that does nothing.
+ *
  * Filtering happens here rather than on the server. The whole approved list is
  * already on the page — it is the page — so narrowing it is instant and costs a
  * visitor on a Benin mobile connection nothing at all, which a round trip per
  * filter would not be. A visitor without JavaScript sees every project and every
  * card still leads to its own page.
  *
- * Only universes that actually have published work are offered: an empty filter
- * advertises a category WeCreate cannot yet prove it works in.
+ * Only universes and Disciplines that actually have published work are offered
+ * — plus the Discipline the address asks for, so it never lands on a page whose
+ * active filter is missing. An empty filter advertises a category WeCreate
+ * cannot yet prove it works in.
  */
 export function PortfolioGallery({
   portfolio,
   showRequirements,
 }: PortfolioGalleryProps) {
   const { projects, kicker, allUniversesLabel, emptyStateText } = portfolio;
+  const [discipline, setDiscipline] = useState<Discipline | null>(null);
   const [filter, setFilter] = useState<Filter>(null);
   const [openProjectId, setOpenProjectId] = useState<string | null>(null);
 
-  const visible = filter
-    ? projects.filter((project) => project.universe === filter)
+  const offeredDisciplines = DISCIPLINES.filter(
+    (candidate) =>
+      candidate === discipline ||
+      projects.some((project) => project.discipline === candidate),
+  );
+  const inDiscipline = discipline
+    ? projects.filter((project) => project.discipline === discipline)
     : projects;
+  const visible = filter
+    ? inDiscipline.filter((project) => project.universe === filter)
+    : inDiscipline;
   const universes = PORTFOLIO_UNIVERSES.filter((universe) =>
     projects.some((project) => project.universe === universe),
   );
+  const showsDisciplines = offeredDisciplines.length >= 2;
+  const showsUniverses =
+    universes.length > 0 && (!discipline || discipline === "videographie");
+
+  function selectDiscipline(next: Discipline | null) {
+    setDiscipline(next);
+    setFilter(null);
+    // The address follows the filter, so the view can be shared. A native
+    // history call rather than the router's: it changes the address without
+    // asking the server for the page again.
+    window.history.replaceState(
+      null,
+      "",
+      next ? `/portfolio?discipline=${next}` : "/portfolio",
+    );
+  }
   const openProject = projects.find((project) => project.id === openProjectId);
 
   function open(event: MouseEvent<HTMLAnchorElement>, project: PortfolioProject) {
@@ -68,6 +114,10 @@ export function PortfolioGallery({
 
   return (
     <>
+      <Suspense fallback={null}>
+        <AddressedDiscipline onRead={setDiscipline} />
+      </Suspense>
+
       <section className="wc-container pt-[clamp(28px,5vw,64px)]">
         <p
           data-testid="portfolio-count"
@@ -81,11 +131,37 @@ export function PortfolioGallery({
           className="m-0 max-w-[22ch] font-display text-page-title font-medium"
         />
 
-        {universes.length > 0 ? (
+        {showsDisciplines ? (
+          <div
+            role="group"
+            aria-label="Filtrer par discipline"
+            className="mt-[clamp(30px,4vw,48px)] flex flex-wrap gap-2.5 border-t border-wc-line pt-[26px]"
+          >
+            <FilterPill
+              label={allUniversesLabel}
+              isActive={discipline === null}
+              onSelect={() => selectDiscipline(null)}
+            />
+            {offeredDisciplines.map((offered) => (
+              <FilterPill
+                key={offered}
+                label={disciplineLabel(offered)}
+                isActive={discipline === offered}
+                onSelect={() => selectDiscipline(offered)}
+              />
+            ))}
+          </div>
+        ) : null}
+
+        {showsUniverses ? (
           <div
             role="group"
             aria-label="Filtrer par univers"
-            className="mt-[clamp(30px,4vw,48px)] flex flex-wrap gap-2.5 border-t border-wc-line pt-[26px]"
+            className={
+              showsDisciplines
+                ? "mt-2.5 flex flex-wrap gap-2.5"
+                : "mt-[clamp(30px,4vw,48px)] flex flex-wrap gap-2.5 border-t border-wc-line pt-[26px]"
+            }
           >
             <FilterPill
               label={allUniversesLabel}
@@ -156,6 +232,31 @@ export function PortfolioGallery({
       ) : null}
     </>
   );
+}
+
+/**
+ * Reads the Discipline the address asks for, and hands it to the gallery.
+ *
+ * Renders nothing. It is the one part of the portfolio that `useSearchParams`
+ * keeps out of the prerendered page, so the boundary around it costs the grid
+ * nothing. A layout effect, so a visitor arriving from a homepage's link sees
+ * the filtered portfolio on the first paint. An unknown value asks for no
+ * filter at all.
+ */
+function AddressedDiscipline({
+  onRead,
+}: {
+  onRead: (discipline: Discipline | null) => void;
+}) {
+  const requested = useSearchParams().get("discipline");
+  const discipline =
+    DISCIPLINES.find((candidate) => candidate === requested) ?? null;
+
+  useLayoutEffect(() => {
+    onRead(discipline);
+  }, [discipline, onRead]);
+
+  return null;
 }
 
 interface FilterPillProps {

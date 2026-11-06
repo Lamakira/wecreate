@@ -8,6 +8,8 @@
  * without any component being mocked.
  */
 
+import type { Discipline } from "@/discipline";
+
 /**
  * Which revision of Managed Content to read.
  *
@@ -139,7 +141,13 @@ export interface PlaybackAsset {
 }
 
 /** Aspect ratio of a media frame, expressed as a CSS `aspect-ratio` value. */
-export type MediaRatio = "9 / 16" | "16 / 9" | "4 / 5" | "4 / 3";
+export type MediaRatio =
+  | "9 / 16"
+  | "16 / 9"
+  | "4 / 5"
+  | "4 / 3"
+  | "1 / 1"
+  | "16 / 10";
 
 /**
  * The media a card shows before its real asset exists. The design handoff ships
@@ -406,6 +414,21 @@ export const PORTFOLIO_UNIVERSES: readonly PortfolioUniverse[] = [
 export type SpokenContentSupport = "none" | "captions" | "transcript";
 
 /**
+ * One image of a Branding or Site web project: a board of the brand charter,
+ * a screen of the website. Shown in order, in the lightbox and on the
+ * project's own page. Its size is carried so the page reserves its space
+ * before it arrives.
+ */
+export interface ProjectImage {
+  /** Stable within the project, for React keys. */
+  key: string;
+  url: string;
+  alternativeText: string;
+  width: number | null;
+  height: number | null;
+}
+
+/**
  * A client-approved body of WeCreate work, with its editorial context, poster
  * and adaptive Playback Asset.
  *
@@ -422,7 +445,16 @@ export interface PortfolioProject {
   title: string;
   /** Who the work was for. */
   client: string;
-  /** Null until an editor has chosen one; a project without it cannot publish. */
+  /**
+   * Which of WeCreate's lines of work the project belongs to. Vidéographie is
+   * published as a film; Branding and Site web as images. A project created
+   * before Disciplines existed is Vidéographie.
+   */
+  discipline: Discipline;
+  /**
+   * Vidéographie only; always null for Branding and Site web. Null until an
+   * editor has chosen one; a film without it cannot publish.
+   */
   universe: PortfolioUniverse | null;
   /** The kind of engagement, e.g. `Visite premium`. Shown beside the client. */
   projectType: string;
@@ -433,7 +465,10 @@ export interface PortfolioProject {
   deliverables: string[];
   /** The card's visual: its format, its poster and that poster's description. */
   media: MediaFrameContent;
+  /** Vidéographie only; always null for Branding and Site web. */
   playbackAsset: PlaybackAsset | null;
+  /** Branding and Site web only; always empty for a Vidéographie project. */
+  images: ProjectImage[];
   /** Whether the client has agreed to this work being published. */
   hasPublicationPermission: boolean;
   spokenContent: SpokenContentSupport;

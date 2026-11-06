@@ -21,7 +21,7 @@ A 30-minute Calendly conversation used to understand a prospective service proje
 _Avoid_: Consultation order, service booking, reservation
 
 **Portfolio Project**:
-A client-approved body of WeCreate work presented with its editorial context, poster, and adaptive playback asset.
+A client-approved body of WeCreate work presented with its editorial context and poster. It belongs to one Discipline: a Vidéographie project is published with its adaptive Playback Asset, a Branding or Site web project with its images (charter boards, website screens) and no video.
 _Avoid_: Video file, gallery item, post
 
 **Playback Asset**:

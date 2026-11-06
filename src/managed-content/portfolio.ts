@@ -22,7 +22,9 @@ export type PublicationRequirement =
   | "alternativeText"
   | "publicationPermission"
   | "playbackAsset"
-  | "captionsOrTranscript";
+  | "captionsOrTranscript"
+  | "images"
+  | "imagesAlternativeText";
 
 /** French wording for each requirement, shown to editors in preview. */
 export const PUBLICATION_REQUIREMENT_LABELS: Record<
@@ -42,6 +44,8 @@ export const PUBLICATION_REQUIREMENT_LABELS: Record<
   publicationPermission: "l'autorisation de publication du client",
   playbackAsset: "la vidéo",
   captionsOrTranscript: "les sous-titres ou la transcription",
+  images: "les images",
+  imagesAlternativeText: "le texte alternatif de chaque image",
 };
 
 function isBlank(value: string | null | undefined): boolean {
@@ -49,17 +53,28 @@ function isBlank(value: string | null | undefined): boolean {
 }
 
 /**
+ * Whether the project is published as a film. A Vidéographie project is; the
+ * other two Disciplines are published as images.
+ */
+export function isFilmed(project: PortfolioProject): boolean {
+  return project.discipline === "videographie";
+}
+
+/**
  * The still image that stands in for a project everywhere it is listed.
  *
- * An editor may upload one, but they rarely need to: the video platform
- * generates a poster from the film itself, which is both better framed and one
- * fewer thing to remember. The uploaded image wins when there is one.
+ * An editor may upload one, but they rarely need to: for a film the video
+ * platform generates a poster from the film itself, which is both better framed
+ * and one fewer thing to remember, and for images the first one stands in. The
+ * uploaded image wins when there is one.
  */
 export function posterUrl(project: PortfolioProject): string | null {
   if (!isBlank(project.media.imageUrl)) {
     return project.media.imageUrl;
   }
-  const generated = project.playbackAsset?.posterUrl ?? "";
+  const generated = isFilmed(project)
+    ? (project.playbackAsset?.posterUrl ?? "")
+    : (project.images[0]?.url ?? "");
   return isBlank(generated) ? null : generated;
 }
 
@@ -67,6 +82,9 @@ export function posterUrl(project: PortfolioProject): string | null {
 export function posterAlternativeText(project: PortfolioProject): string {
   if (!isBlank(project.media.imageUrl)) {
     return project.media.alternativeText;
+  }
+  if (!isFilmed(project)) {
+    return project.images[0]?.alternativeText ?? "";
   }
   return project.playbackAsset?.alternativeText || project.media.alternativeText;
 }
@@ -82,6 +100,10 @@ export function posterAlternativeText(project: PortfolioProject): string {
  * Speech is the one requirement the model cannot infer. An editor declares
  * whether the film's spoken content carries meaning; when it does, captions or
  * an equivalent transcript become as required as the client's permission.
+ *
+ * A film (Vidéographie) is held to its universe, poster, video and speech; a
+ * Branding or Site web project to its images and their descriptions. The first
+ * image is the poster, so "the images" already covers a missing poster.
  */
 export function publicationRequirements(
   project: PortfolioProject,
@@ -91,11 +113,27 @@ export function publicationRequirements(
   if (isBlank(project.title)) missing.push("title");
   if (isBlank(project.slug)) missing.push("slug");
   if (isBlank(project.client)) missing.push("client");
-  if (!project.universe) missing.push("universe");
+  const filmed = isFilmed(project);
+  if (filmed && !project.universe) missing.push("universe");
   if (isBlank(project.projectType)) missing.push("projectType");
   if (isBlank(project.description)) missing.push("description");
   if (isBlank(project.role)) missing.push("role");
   if (project.deliverables.length === 0) missing.push("deliverables");
+  if (!filmed) {
+    if (
+      !isBlank(project.media.imageUrl) &&
+      isBlank(project.media.alternativeText)
+    ) {
+      missing.push("alternativeText");
+    }
+    if (!project.hasPublicationPermission) missing.push("publicationPermission");
+    if (project.images.length === 0) missing.push("images");
+    if (project.images.some((image) => isBlank(image.alternativeText))) {
+      missing.push("imagesAlternativeText");
+    }
+    return missing;
+  }
+
   if (isBlank(posterUrl(project))) missing.push("poster");
   if (isBlank(posterAlternativeText(project))) missing.push("alternativeText");
   if (!project.hasPublicationPermission) missing.push("publicationPermission");
@@ -126,16 +164,12 @@ export function isPublishable(project: PortfolioProject): boolean {
 }
 
 /**
- * The Portfolio Projects a Discipline's homepage reel may show.
- *
- * Every Portfolio Project today is a film — publication requires one — so they
- * all belong to Vidéographie. Branding and Site web work arrives as images with
- * issue #60, which gives a project its Discipline; until then those homepages
- * show their honest empty state rather than another Discipline's films.
+ * The Portfolio Projects a Discipline's homepage reel may show: the ones that
+ * belong to it, a film for Vidéographie and images for the other two.
  */
 export function projectsInDiscipline(
   projects: PortfolioProject[],
   discipline: Discipline,
 ): PortfolioProject[] {
-  return discipline === "videographie" ? projects : [];
+  return projects.filter((project) => project.discipline === discipline);
 }

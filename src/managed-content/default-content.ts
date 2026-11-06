@@ -1128,7 +1128,7 @@ const BRANDING_HOME_CONTENT: HomePage = {
   recentWork: {
     isVisible: true,
     headline: { lead: "Travaux ", emphasis: "récents", trail: "" },
-    link: { label: "Toutes les chartes", href: "/portfolio" },
+    link: { label: "Toutes les chartes", href: "/portfolio?discipline=branding" },
     emptyStateText:
       "Les chartes publiées apparaîtront ici dès leur mise en ligne.",
   },
@@ -1255,7 +1255,7 @@ const SITE_WEB_HOME_CONTENT: HomePage = {
   recentWork: {
     isVisible: true,
     headline: { lead: "Travaux ", emphasis: "récents", trail: "" },
-    link: { label: "Tous les sites", href: "/portfolio" },
+    link: { label: "Tous les sites", href: "/portfolio?discipline=site-web" },
     emptyStateText:
       "Les sites publiés apparaîtront ici dès leur mise en ligne.",
   },
